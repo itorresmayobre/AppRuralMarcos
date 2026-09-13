@@ -101,7 +101,7 @@ export const RoleSelector: React.FC = () => {
 
       {/* Popover Desplegable Estilizado */}
       {estaAbierto && (
-        <div className="absolute right-0 mt-2 w-72 sm:w-80 rounded-2xl bg-slate-900/98 backdrop-blur-xl border border-slate-800 shadow-2xl z-50 p-2 space-y-1 animate-in fade-in slide-in-from-top-2 duration-150">
+        <div className="absolute right-0 mt-2 w-[calc(100vw-3rem)] max-w-[280px] sm:w-80 rounded-2xl bg-slate-900/98 backdrop-blur-xl border border-slate-800 shadow-2xl z-50 p-2 space-y-1 animate-in fade-in slide-in-from-top-2 duration-150">
           
           <header className="px-3 py-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center justify-between border-b border-slate-800/80 mb-1">
             <span>Simular Permisos de Usuario</span>

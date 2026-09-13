@@ -13,6 +13,14 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Check,
+  MapPin,
+  Building2,
+  Beef,
+  Shield,
+  Droplets,
+  Tractor,
+  Wrench,
+  ChevronDown
 } from 'lucide-react';
 
 interface AccionesRapidasModalProps {
@@ -20,6 +28,19 @@ interface AccionesRapidasModalProps {
   onClose: () => void;
   tabInicial?: 'FINANZAS' | 'PLUVIOMETRO' | 'NOTA';
 }
+
+const CATEGORIAS_INFO: Record<CategoriaFinanciera, { label: string; icono: string }> = {
+  VENTA_HACIENDA: { label: 'Venta Hacienda', icono: '🐮' },
+  COMPRA_HACIENDA: { label: 'Compra Hacienda', icono: '🐂' },
+  INSUMOS_VETERINARIOS: { label: 'Sanidad & Veterinaria', icono: '💊' },
+  RACION_SUPLEMENTOS: { label: 'Ración & Suplemento', icono: '🌾' },
+  COMBUSTIBLE: { label: 'Gasoil & Combustible', icono: '🚜' },
+  PASTURAS_AGRO: { label: 'Semillas & Agroquímicos', icono: '🌱' },
+  MANTENIMIENTO_ALAMBRES: { label: 'Alambres & Agua', icono: '🛠️' },
+  ARRENDAMIENTO_CAMPO: { label: 'Arrendamiento Campo', icono: '🏡' },
+  HONORARIOS_SERVICIOS: { label: 'Servicios / Pastoreo', icono: '🤝' },
+  GASTOS_GENERALES: { label: 'Gastos Generales', icono: '📋' },
+};
 
 export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
   isOpen,
@@ -39,7 +60,6 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
     !puedeVerFinanzas && tabInicial === 'FINANZAS' ? 'PLUVIOMETRO' : tabInicial
   );
 
-  // Estancia objetivo (si está en TODAS, tomamos la primera disponible o pedimos elegir)
   const estanciaActual = obtenerEstanciaActual();
   const [estanciaFormId, setEstanciaFormId] = useState<string>(
     estanciaActual?.id || (estancias[0]?.id ?? 'est-1')
@@ -125,18 +145,22 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
     onClose();
   };
 
+  const categoriasDisponibles: CategoriaFinanciera[] = tipoFinanciero === 'INGRESO' 
+    ? ['VENTA_HACIENDA', 'HONORARIOS_SERVICIOS', 'GASTOS_GENERALES']
+    : ['INSUMOS_VETERINARIOS', 'RACION_SUPLEMENTOS', 'COMBUSTIBLE', 'COMPRA_HACIENDA', 'PASTURAS_AGRO', 'MANTENIMIENTO_ALAMBRES', 'ARRENDAMIENTO_CAMPO'];
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh]">
 
         {/* Cabecera del Modal */}
-        <header className="bg-slate-900 text-white p-5 flex items-center justify-between border-b border-slate-800">
+        <header className="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between border-b border-slate-800 flex-shrink-0">
           <div>
             <h3 className="text-base font-extrabold flex items-center gap-2">
               <span>Acción Rápida de Campo</span>
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              Establecimiento: <strong className="text-emerald-400">{estancias.find(e => e.id === estanciaFormId)?.nombre || 'General'}</strong>
+              Predio: <strong className="text-emerald-400">{estancias.find(e => e.id === estanciaFormId)?.nombre || 'General'}</strong>
             </p>
           </div>
           <button
@@ -147,31 +171,42 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
           </button>
         </header>
 
-        {/* Selector de Estancia Objetivo */}
-        <div className="px-5 pt-4 pb-2 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between">
-          <label className="text-xs font-bold text-slate-700">Establecimiento:</label>
-          <select
-            value={estanciaFormId}
-            onChange={(e) => setEstanciaFormId(e.target.value)}
-            className="bg-white border border-slate-300 text-slate-800 text-xs font-bold rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[36px]"
-          >
-            {estancias.map((est) => (
-              <option key={est.id} value={est.id}>
-                {est.nombre} ({est.departamento})
-              </option>
-            ))}
-          </select>
+        {/* Custom Selector de Estancia Objetivo (Pills en lugar de select nativo) */}
+        <div className="p-3 bg-slate-50 border-b border-slate-200/80 space-y-1.5 flex-shrink-0">
+          <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block">Establecimiento Destino:</label>
+          <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1">
+            {estancias.map((est) => {
+              const esSeleccionado = estanciaFormId === est.id;
+              return (
+                <button
+                  key={est.id}
+                  type="button"
+                  onClick={() => setEstanciaFormId(est.id)}
+                  className={`px-3 py-2 rounded-xl text-xs font-extrabold flex items-center space-x-1.5 transition-all cursor-pointer flex-shrink-0 border ${
+                    esSeleccionado
+                      ? 'bg-emerald-700 text-white border-emerald-600 shadow-sm'
+                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                  }`}
+                >
+                  <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="truncate">{est.nombre}</span>
+                  {esSeleccionado && <Check className="w-3.5 h-3.5 ml-1 text-emerald-200 flex-shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Pestañas de Navegación del Modal */}
-        <div className="flex border-b border-slate-200 bg-white">
+        <div className="flex border-b border-slate-200 bg-white flex-shrink-0">
           {puedeVerFinanzas && (
             <button
               onClick={() => setTabActiva('FINANZAS')}
-              className={`flex-1 py-3 px-3 text-xs font-extrabold flex items-center justify-center space-x-1.5 border-b-2 transition-all cursor-pointer ${tabActiva === 'FINANZAS'
-                ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
+              className={`flex-1 py-3 px-3 text-xs font-extrabold flex items-center justify-center space-x-1.5 border-b-2 transition-all cursor-pointer ${
+                tabActiva === 'FINANZAS'
+                  ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
             >
               <DollarSign className="w-4 h-4" />
               <span>Transacción</span>
@@ -180,10 +215,11 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
 
           <button
             onClick={() => setTabActiva('PLUVIOMETRO')}
-            className={`flex-1 py-3 px-3 text-xs font-extrabold flex items-center justify-center space-x-1.5 border-b-2 transition-all cursor-pointer ${tabActiva === 'PLUVIOMETRO'
-              ? 'border-blue-600 text-blue-700 bg-blue-50/50'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
+            className={`flex-1 py-3 px-3 text-xs font-extrabold flex items-center justify-center space-x-1.5 border-b-2 transition-all cursor-pointer ${
+              tabActiva === 'PLUVIOMETRO'
+                ? 'border-blue-600 text-blue-700 bg-blue-50/50'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
           >
             <CloudDrizzle className="w-4 h-4" />
             <span>Pluviómetro</span>
@@ -191,18 +227,19 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
 
           <button
             onClick={() => setTabActiva('NOTA')}
-            className={`flex-1 py-3 px-3 text-xs font-extrabold flex items-center justify-center space-x-1.5 border-b-2 transition-all cursor-pointer ${tabActiva === 'NOTA'
-              ? 'border-purple-600 text-purple-700 bg-purple-50/50'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
+            className={`flex-1 py-3 px-3 text-xs font-extrabold flex items-center justify-center space-x-1.5 border-b-2 transition-all cursor-pointer ${
+              tabActiva === 'NOTA'
+                ? 'border-purple-600 text-purple-700 bg-purple-50/50'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
           >
             <FileText className="w-4 h-4" />
             <span>Nota / Alerta</span>
           </button>
         </div>
 
-        {/* Cuerpo del Modal según Pestaña */}
-        <div className="p-5 overflow-y-auto space-y-4 flex-1">
+        {/* Cuerpo del Modal */}
+        <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
 
           {/* TAB 1: FINANZAS */}
           {tabActiva === 'FINANZAS' && puedeVerFinanzas && (
@@ -213,10 +250,11 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
                 <button
                   type="button"
                   onClick={() => { setTipoFinanciero('INGRESO'); setCategoria('VENTA_HACIENDA'); }}
-                  className={`p-3 rounded-xl border font-bold text-xs flex items-center justify-center space-x-2 transition-all cursor-pointer ${tipoFinanciero === 'INGRESO'
-                    ? 'bg-emerald-100 border-emerald-500 text-emerald-900 shadow-sm'
-                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                    }`}
+                  className={`p-3 rounded-2xl border font-extrabold text-xs flex items-center justify-center space-x-2 transition-all cursor-pointer ${
+                    tipoFinanciero === 'INGRESO'
+                      ? 'bg-emerald-100 border-emerald-500 text-emerald-950 shadow-sm ring-1 ring-emerald-500/50'
+                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
                 >
                   <ArrowUpRight className="w-4 h-4 text-emerald-600" />
                   <span>INGRESO</span>
@@ -225,32 +263,54 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
                 <button
                   type="button"
                   onClick={() => { setTipoFinanciero('EGRESO'); setCategoria('INSUMOS_VETERINARIOS'); }}
-                  className={`p-3 rounded-xl border font-bold text-xs flex items-center justify-center space-x-2 transition-all cursor-pointer ${tipoFinanciero === 'EGRESO'
-                    ? 'bg-rose-100 border-rose-500 text-rose-900 shadow-sm'
-                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                    }`}
+                  className={`p-3 rounded-2xl border font-extrabold text-xs flex items-center justify-center space-x-2 transition-all cursor-pointer ${
+                    tipoFinanciero === 'EGRESO'
+                      ? 'bg-rose-100 border-rose-500 text-rose-950 shadow-sm ring-1 ring-rose-500/50'
+                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
                 >
                   <ArrowDownRight className="w-4 h-4 text-rose-600" />
                   <span>EGRESO</span>
                 </button>
               </div>
 
-              {/* Moneda y Monto */}
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Moneda</label>
-                  <select
-                    value={moneda}
-                    onChange={(e) => setMoneda(e.target.value as Moneda)}
-                    className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs font-extrabold rounded-xl p-3 focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
+              {/* Custom Moneda Selector (Chips táctiles en vez de select nativo) */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">Moneda de la Operación</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMoneda('USD')}
+                    className={`p-2.5 rounded-xl border text-xs font-black flex items-center justify-center space-x-2 transition-all cursor-pointer ${
+                      moneda === 'USD'
+                        ? 'bg-emerald-950 text-emerald-300 border-emerald-700 shadow-sm'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    }`}
                   >
-                    <option value="USD">USD ($ US)</option>
-                    <option value="UYU">UYU ($ UYU)</option>
-                  </select>
-                </div>
+                    <span>💵 Dólares (USD)</span>
+                  </button>
 
-                <div className="col-span-2">
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Monto Total</label>
+                  <button
+                    type="button"
+                    onClick={() => setMoneda('UYU')}
+                    className={`p-2.5 rounded-xl border text-xs font-black flex items-center justify-center space-x-2 transition-all cursor-pointer ${
+                      moneda === 'UYU'
+                        ? 'bg-blue-950 text-blue-300 border-blue-700 shadow-sm'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span>🇺🇾 Pesos (UYU)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Monto Total */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Monto Total ({moneda})</label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-500">
+                    {moneda === 'USD' ? '$ US' : '$ UYU'}
+                  </span>
                   <input
                     type="number"
                     step="0.01"
@@ -258,45 +318,43 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
                     placeholder="ej: 14500"
                     value={monto}
                     onChange={(e) => setMonto(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs font-bold rounded-xl p-3 focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
+                    className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm font-black rounded-xl pl-16 pr-4 py-3 focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
                   />
                 </div>
               </div>
 
-              {/* Categoría */}
+              {/* Custom Selector de Categoría Rubro (Chips interactivos sin select nativo) */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Categoría Rubro</label>
-                <select
-                  value={categoria}
-                  onChange={(e) => setCategoria(e.target.value as CategoriaFinanciera)}
-                  className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs font-bold rounded-xl p-3 focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
-                >
-                  {tipoFinanciero === 'INGRESO' ? (
-                    <>
-                      <option value="VENTA_HACIENDA">Venta de Hacienda (Ganado)</option>
-                      <option value="HONORARIOS_SERVICIOS">Servicios / Pastoreo</option>
-                      <option value="GASTOS_GENERALES">Otros Ingresos</option>
-                    </>
-                  ) : (
-                    <>
-                      <option value="INSUMOS_VETERINARIOS">Insumos Veterinarios & Sanidad</option>
-                      <option value="RACION_SUPLEMENTOS">Ración & Suplementación</option>
-                      <option value="COMBUSTIBLE">Combustible & Gasoil</option>
-                      <option value="COMPRA_HACIENDA">Compra de Hacienda</option>
-                      <option value="PASTURAS_AGRO">Agroquímicos & Semillas Pastura</option>
-                      <option value="MANTENIMIENTO_ALAMBRES">Mantenimiento de Alambres & Agua</option>
-                      <option value="ARRENDAMIENTO_CAMPO">Arrendamiento de Campo</option>
-                    </>
-                  )}
-                </select>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">Rubro / Categoría Financiera</label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar p-1 border border-slate-200 rounded-2xl bg-slate-50/50">
+                  {categoriasDisponibles.map((catKey) => {
+                    const info = CATEGORIAS_INFO[catKey];
+                    const esSeleccionada = categoria === catKey;
+                    return (
+                      <button
+                        key={catKey}
+                        type="button"
+                        onClick={() => setCategoria(catKey)}
+                        className={`p-2 rounded-xl text-left text-[11px] font-bold border transition-all flex items-center space-x-1.5 cursor-pointer ${
+                          esSeleccionada
+                            ? 'bg-emerald-800 text-white border-emerald-600 shadow-sm ring-1 ring-emerald-500/50'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        <span className="text-sm">{info.icono}</span>
+                        <span className="truncate">{info.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Descripción */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Descripción / Detalle</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Descripción / Detalle de la Operación</label>
                 <input
                   type="text"
-                  placeholder="ej: Compra 20 bolsas ración destete"
+                  placeholder="ej: Venta novillos remate o compra ración destete"
                   value={descripcionFinanciera}
                   onChange={(e) => setDescripcionFinanciera(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl p-3 focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
@@ -376,24 +434,26 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
                 />
               </div>
 
+              {/* Custom Selector de Prioridad (Chips táctiles en vez de select) */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Prioridad</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Nivel de Nivel / Prioridad</label>
                 <div className="grid grid-cols-3 gap-2">
                   {(['BAJA', 'MEDIA', 'ALTA'] as const).map((p) => (
                     <button
                       key={p}
                       type="button"
                       onClick={() => setPrioridadNota(p)}
-                      className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${prioridadNota === p
-                        ? p === 'ALTA'
-                          ? 'bg-rose-100 border-rose-500 text-rose-900'
-                          : p === 'MEDIA'
-                            ? 'bg-amber-100 border-amber-500 text-amber-900'
-                            : 'bg-slate-200 border-slate-400 text-slate-900'
-                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                        }`}
+                      className={`py-2.5 px-3 rounded-xl border text-xs font-black transition-all cursor-pointer ${
+                        prioridadNota === p
+                          ? p === 'ALTA'
+                            ? 'bg-rose-950 text-rose-200 border-rose-700 shadow-sm ring-1 ring-rose-500'
+                            : p === 'MEDIA'
+                            ? 'bg-amber-950 text-amber-200 border-amber-700 shadow-sm ring-1 ring-amber-500'
+                            : 'bg-slate-900 text-slate-200 border-slate-700 shadow-sm ring-1 ring-slate-400'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
                     >
-                      {p}
+                      {p === 'ALTA' ? '🔴 ALTA' : p === 'MEDIA' ? '🟡 MEDIA' : '🟢 BAJA'}
                     </button>
                   ))}
                 </div>
