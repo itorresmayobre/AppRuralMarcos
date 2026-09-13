@@ -1,0 +1,113 @@
+import { useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { Navbar } from './components/layout/Navbar';
+import { Sidebar } from './components/layout/Sidebar';
+import { ToastNotification } from './components/ui/ToastNotification';
+import { ProtectedRoute } from './components/routes/ProtectedRoute';
+import { LoginPage } from './pages/LoginPage';
+import { EstanciasPage } from './pages/EstanciasPage';
+import { UsuariosPage } from './pages/UsuariosPage';
+import { DashboardView } from './components/dashboard/DashboardView';
+import { HaciendaView } from './components/hacienda/HaciendaView';
+import { FinanzasView } from './components/finanzas/FinanzasView';
+import { SqlView } from './components/sql/SqlView';
+
+function MainLayout() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  return (
+    <div className="min-h-screen flex flex-col bg-slate-50">
+      <Navbar 
+        isMobileMenuOpen={isMobileMenuOpen}
+        onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+      />
+
+      <div className="flex flex-1">
+        <Sidebar 
+          isMobileMenuOpen={isMobileMenuOpen}
+          onCloseMobileMenu={() => setIsMobileMenuOpen(false)}
+        />
+
+        <main className="flex-1 p-3 sm:p-6 max-w-7xl mx-auto w-full overflow-x-hidden">
+          <Outlet />
+        </main>
+      </div>
+
+      {/* Sistema Global de Notificaciones Flotantes (Toasts) */}
+      <ToastNotification />
+    </div>
+  );
+}
+
+export function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+
+        <Route element={<MainLayout />}>
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardView />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/estancias"
+            element={
+              <ProtectedRoute>
+                <EstanciasPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/ganado"
+            element={
+              <ProtectedRoute>
+                <HaciendaView />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route path="/hacienda" element={<Navigate to="/ganado" replace />} />
+
+          <Route
+            path="/finanzas"
+            element={
+              <ProtectedRoute rolesPermitidos={['ADMIN', 'CONTADOR']}>
+                <FinanzasView />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/sql"
+            element={
+              <ProtectedRoute>
+                <SqlView />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/usuarios"
+            element={
+              <ProtectedRoute rolesPermitidos={['ADMIN']}>
+                <UsuariosPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;
