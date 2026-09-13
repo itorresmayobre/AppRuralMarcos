@@ -41,14 +41,14 @@ export const EstanciasPage: React.FC = () => {
   };
 
   return (
-    <section aria-label="Gestión de Estancias y Campos" className="space-y-6">
+    <section aria-label="Gestión de Establecimientos y Campos" className="space-y-6">
       
       {/* Encabezado */}
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm">
         <div>
           <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 flex items-center gap-2">
             <Building2 className="w-6 h-6 text-emerald-600 flex-shrink-0" />
-            <span>Estancias y Campos de la Empresa</span>
+            <span>Establecimientos y Campos de la Empresa</span>
           </h2>
           <p className="text-xs text-slate-500 font-medium mt-1">
             Administración de propiedades rurales, DICOSE predial y superficie pastoreable.
@@ -61,7 +61,7 @@ export const EstanciasPage: React.FC = () => {
             className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold text-xs px-4 py-3 rounded-xl shadow-md min-h-[44px] cursor-pointer hover:shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all"
           >
             <Plus className="w-4 h-4" />
-            <span>Registrar Nueva Estancia</span>
+            <span>Registrar Nuevo Establecimiento</span>
           </button>
         )}
       </header>
@@ -69,7 +69,7 @@ export const EstanciasPage: React.FC = () => {
       {/* Resumen Consolidado de Hectáreas */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <article className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total de Estancias</p>
+          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total de Establecimientos</p>
           <p className="text-2xl font-black text-slate-900 mt-1">{estancias.length} Campos</p>
           <p className="text-xs text-slate-500 mt-1">En producción activa</p>
         </article>
@@ -143,19 +143,19 @@ export const EstanciasPage: React.FC = () => {
                 }`}
               >
                 {esSeleccionada && <CheckCircle2 className="w-4 h-4" />}
-                <span>{esSeleccionada ? 'Estancia Seleccionada' : 'Filtrar App por esta Estancia'}</span>
+                <span>{esSeleccionada ? 'Establecimiento Seleccionado' : 'Filtrar App por este Establecimiento'}</span>
               </button>
             </article>
           );
         })}
       </div>
 
-      {/* Modal para Registrar Nueva Estancia */}
+      {/* Modal para Registrar Nuevo Establecimiento */}
       {mostrarModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-5 border border-slate-200">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-lg font-extrabold text-slate-900">Registrar Nueva Estancia / Campo</h3>
+              <h3 className="text-lg font-extrabold text-slate-900">Registrar Nuevo Establecimiento / Campo</h3>
               <button onClick={() => setMostrarModal(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer p-1">
                 <X className="w-5 h-5" />
               </button>
@@ -163,11 +163,11 @@ export const EstanciasPage: React.FC = () => {
 
             <form onSubmit={handleSubmit} className="space-y-4 text-xs">
               <div className="space-y-1">
-                <label className="font-bold text-slate-700">Nombre de la Estancia o Campo</label>
+                <label className="font-bold text-slate-700">Nombre del Establecimiento o Campo</label>
                 <input
                   type="text"
                   required
-                  placeholder="Ej. Estancia La Paloma"
+                  placeholder="Ej. Establecimiento La Paloma"
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
@@ -244,7 +244,7 @@ export const EstanciasPage: React.FC = () => {
                 type="submit"
                 className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold py-3.5 rounded-xl shadow-md text-xs min-h-[44px] cursor-pointer active:scale-98 transition-all"
               >
-                Guardar Estancia
+                Guardar Establecimiento
               </button>
             </form>
           </div>

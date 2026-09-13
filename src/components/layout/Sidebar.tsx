@@ -53,7 +53,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const menuItems = [
     { path: '/dashboard', label: 'Dashboard General', icon: LayoutDashboard, allowed: true },
-    { path: '/estancias', label: 'Estancias y Campos', icon: Building2, allowed: true },
+    { path: '/estancias', label: 'Establecimientos y Campos', icon: Building2, allowed: true },
     { path: '/ganado', label: 'Ganado y Stock', icon: Beef, allowed: true },
     { path: '/finanzas', label: 'Ingresos / Egresos', icon: DollarSign, allowed: canViewFinances },
     { path: '/usuarios', label: 'Roles y Permisos', icon: Users, allowed: currentRole === 'ADMIN' },
@@ -148,9 +148,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </ul>
       </nav>
 
-      {/* Info de la Estancia Seleccionada + Botón Salir */}
+      {/* Info del Establecimiento Seleccionado + Botón Salir */}
       <div className="space-y-3 mt-4">
-        <section aria-label="Información de la Estancia Activa" className="p-3.5 bg-slate-950 rounded-xl border border-emerald-900/40 shadow-inner text-xs text-slate-400 space-y-1">
+        <section aria-label="Información del Establecimiento Activo" className="p-3.5 bg-slate-950 rounded-xl border border-emerald-900/40 shadow-inner text-xs text-slate-400 space-y-1">
           <div className="flex items-center space-x-1.5 text-emerald-400 font-bold text-xs">
             <MapPin className="w-4 h-4 flex-shrink-0" />
             <span className="truncate">
@@ -160,7 +160,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <p className="text-[11px] text-slate-300 font-medium pl-5.5">
             {estanciaActual 
               ? `${estanciaActual.hectareas_totales} Ha • ${estanciaActual.departamento}` 
-              : `${estancias.reduce((a, b) => a + b.hectareas_totales, 0)} Ha • ${estancias.length} Estancias`}
+              : `${estancias.reduce((a, b) => a + b.hectareas_totales, 0)} Ha • ${estancias.length} Establecimientos`}
           </p>
           <p className="text-[10px] text-slate-500 pl-5.5">
             {estanciaActual ? `DICOSE: ${estanciaActual.dicose}` : 'Vista consolidada'}

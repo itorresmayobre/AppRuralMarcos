@@ -2,7 +2,6 @@ import React from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useEstanciasStore } from '../../stores/useEstanciasStore';
 import { StatCard } from './StatCard';
-import { ClimaWidget } from './ClimaWidget';
 import { AccionesRapidasBar } from './AccionesRapidasBar';
 import { Beef, DollarSign, TrendingUp, ShieldAlert, Award, MapPin } from 'lucide-react';
 
@@ -14,18 +13,17 @@ export const DashboardView: React.FC = () => {
   const estanciaActual = obtenerEstanciaActual();
   const canSeeMoney = currentRole === 'ADMIN' || currentRole === 'CONTADOR';
 
-  // Si no hay estancia seleccionada (o 'TODAS'), mostramos el acumulado consolidado
+  // Si no hay establecimiento seleccionado (o 'TODAS'), mostramos el acumulado consolidado
   const totalHectareas = estanciaActual 
     ? estanciaActual.hectareas_totales 
     : estancias.reduce((acc, curr) => acc + curr.hectareas_totales, 0);
 
-  const nombreEstanciaVista = estanciaActual ? estanciaActual.nombre : 'Consolidado Empresa (Todas las Estancias)';
+  const nombreEstanciaVista = estanciaActual ? estanciaActual.nombre : 'Consolidado Empresa (Todos los Establecimientos)';
   const dicoseVista = estanciaActual ? estanciaActual.dicose : 'Multi-DICOSE';
-  const departamentoClima = estanciaActual?.departamento;
 
   return (
     <div className="space-y-6">
-      {/* Banner Principal Adaptado a la Estancia Seleccionada */}
+      {/* Banner Principal Adaptado al Establecimiento Seleccionado */}
       <section aria-label="Resumen Ejecutivo de la Zafra" className="relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-900 text-white p-6 sm:p-7 rounded-2xl shadow-xl border border-emerald-800/40">
         <div className="space-y-2 z-10">
           <div className="flex flex-wrap items-center gap-2">
@@ -47,9 +45,6 @@ export const DashboardView: React.FC = () => {
           </figcaption>
         </figure>
       </section>
-
-      {/* Widget Agrometeorológico del Clima a 7 Días */}
-      <ClimaWidget departamento={departamentoClima} nombreEstancia={nombreEstanciaVista} />
 
       {/* Panel de Acciones Rápidas Operativas & Bitácora del Campo */}
       <AccionesRapidasBar />

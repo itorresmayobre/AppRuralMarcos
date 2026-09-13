@@ -164,8 +164,8 @@ export const UsuariosPage: React.FC = () => {
     { clave: 'editar_ganado', label: 'Registrar / Ajustar Ganado' },
     { clave: 'ver_finanzas', label: 'Ver Finanzas (USD / UYU)' },
     { clave: 'editar_finanzas', label: 'Registrar Ingresos / Egresos' },
-    { clave: 'ver_estancias', label: 'Ver Estancias y Campos' },
-    { clave: 'editar_estancias', label: 'Crear / Editar Estancias' },
+    { clave: 'ver_estancias', label: 'Ver Establecimientos y Campos' },
+    { clave: 'editar_estancias', label: 'Crear / Editar Establecimientos' },
     { clave: 'administrar_usuarios', label: 'Administrar Usuarios y Roles' },
   ];
 
@@ -187,7 +187,7 @@ export const UsuariosPage: React.FC = () => {
             <span>Usuarios, Seguridad & Roles</span>
           </h2>
           <p className="text-xs text-slate-500 font-medium mt-1">
-            Gestión de empleados de la estancia, asignación a múltiples campos y matriz de accesos.
+            Gestión de empleados de la empresa, asignación a múltiples campos y matriz de accesos.
           </p>
         </div>
 
@@ -270,7 +270,7 @@ export const UsuariosPage: React.FC = () => {
               {usuarios.map((u) => {
                 const tieneTodas = u.estancias_asignadas_ids?.includes('TODAS');
                 const estanciasNombres = tieneTodas
-                  ? ['Acceso Total a Todas las Estancias']
+                  ? ['Acceso Total a Todos los Establecimientos']
                   : estancias
                       .filter(e => u.estancias_asignadas_ids?.includes(e.id))
                       .map(e => e.nombre);
@@ -299,9 +299,9 @@ export const UsuariosPage: React.FC = () => {
                       </span>
                     </div>
 
-                    {/* Estancias Asignadas (Multi-Campo Badges) */}
+                    {/* Establecimientos Asignados (Multi-Campo Badges) */}
                     <div className="pt-2 border-t border-slate-100 text-xs space-y-1.5">
-                      <p className="text-[10px] font-bold text-slate-500 uppercase">Estancias / Campos Asignados:</p>
+                      <p className="text-[10px] font-bold text-slate-500 uppercase">Establecimientos / Campos Asignados:</p>
                       <div className="flex flex-wrap gap-1">
                         {estanciasNombres.map((nombreEst, idx) => (
                           <span key={idx} className="inline-flex items-center gap-1 text-[10px] font-bold bg-slate-100 text-slate-800 px-2 py-0.5 rounded-md border border-slate-200">
@@ -574,10 +574,10 @@ export const UsuariosPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Selector Estilizado de Múltiples Estancias / Campos */}
+              {/* Selector Estilizado de Múltiples Establecimientos / Campos */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="font-bold text-slate-700 block">Asignar a Estancias / Campos (Multiselección)</label>
+                  <label className="font-bold text-slate-700 block">Asignar a Establecimientos / Campos (Multiselección)</label>
                   <span className="text-[10px] text-slate-400 font-medium">Puedes elegir varias</span>
                 </div>
 
@@ -595,7 +595,7 @@ export const UsuariosPage: React.FC = () => {
                     <div className="flex items-center space-x-2.5">
                       <Building2 className={`w-4 h-4 ${estanciasSeleccionadasForm.includes('TODAS') ? 'text-emerald-400' : 'text-slate-400'}`} />
                       <div>
-                        <p className="font-bold text-xs">Acceso Total a Todas las Estancias</p>
+                        <p className="font-bold text-xs">Acceso Total a Todos los Establecimientos</p>
                         <p className={`text-[10px] ${estanciasSeleccionadasForm.includes('TODAS') ? 'text-slate-300' : 'text-slate-500'}`}>
                           El empleado podrá visualizar y trabajar en cualquier campo de la empresa
                         </p>
@@ -604,7 +604,7 @@ export const UsuariosPage: React.FC = () => {
                     {estanciasSeleccionadasForm.includes('TODAS') && <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />}
                   </button>
 
-                  {/* Lista de Estancias Individuales */}
+                  {/* Lista de Establecimientos Individuales */}
                   {estancias.map((est) => {
                     const esSeleccionada = estanciasSeleccionadasForm.includes(est.id);
                     return (
@@ -646,7 +646,7 @@ export const UsuariosPage: React.FC = () => {
                     <span>Guardando en Supabase...</span>
                   </>
                 ) : (
-                  <span>Crear Empleado y Asignar Estancias</span>
+                  <span>Crear Empleado y Asignar Establecimientos</span>
                 )}
               </button>
             </form>
