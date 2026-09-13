@@ -13,14 +13,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Check,
-  MapPin,
-  Building2,
-  Beef,
-  Shield,
-  Droplets,
-  Tractor,
-  Wrench,
-  ChevronDown
+  MapPin
 } from 'lucide-react';
 
 interface AccionesRapidasModalProps {
@@ -48,7 +41,7 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
   tabInicial = 'FINANZAS',
 }) => {
   const { usuario } = useAuthStore();
-  const { estancias, estanciaSeleccionadaId, obtenerEstanciaActual } = useEstanciasStore();
+  const { estancias, obtenerEstanciaActual } = useEstanciasStore();
   const { agregarTransaccion } = useFinanzasStore();
   const { agregarPluviometro, agregarNotaCampo } = useCampoNotasStore();
   const { mostrarToast } = useToastStore();
