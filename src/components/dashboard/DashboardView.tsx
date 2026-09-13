@@ -3,6 +3,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useEstanciasStore } from '../../stores/useEstanciasStore';
 import { StatCard } from './StatCard';
 import { AccionesRapidasBar } from './AccionesRapidasBar';
+import { FiltroEstablecimientosRapido } from './FiltroEstablecimientosRapido';
 import { Beef, DollarSign, TrendingUp, ShieldAlert, Award, MapPin } from 'lucide-react';
 
 export const DashboardView: React.FC = () => {
@@ -45,6 +46,9 @@ export const DashboardView: React.FC = () => {
           </figcaption>
         </figure>
       </section>
+
+      {/* Acciones Rápidas de Filtro por Establecimiento / Campo */}
+      <FiltroEstablecimientosRapido />
 
       {/* Panel de Acciones Rápidas Operativas & Bitácora del Campo */}
       <AccionesRapidasBar />
