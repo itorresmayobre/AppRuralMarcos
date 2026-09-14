@@ -27,7 +27,7 @@ import {
 export const EstadisticasView: React.FC = () => {
   const { usuario } = useAuthStore();
   const { estancias, estanciaSeleccionadaId } = useEstanciasStore();
-  const { obtenerTransaccionesEstancia, transacciones } = useFinanzasStore();
+  const { obtenerTransaccionesEstancia } = useFinanzasStore();
   const { catalog } = useConceptosFinancierosStore();
   const { movimientos } = useGanadoStore();
 
@@ -461,7 +461,7 @@ export const EstadisticasView: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs font-medium">
               {estancias.map((est) => {
-                const txEst = transacciones.filter((t) => t.estancia_id === est.id && t.moneda === monedaFiltro);
+                const txEst = obtenerTransaccionesEstancia(est.id).filter((t) => t.moneda === monedaFiltro);
                 const ventasReales = txEst.filter((t) => t.tipo === 'INGRESO').reduce((a, b) => a + b.monto, 0);
                 const egresosReales = txEst.filter((t) => t.tipo === 'EGRESO').reduce((a, b) => a + b.monto, 0);
 

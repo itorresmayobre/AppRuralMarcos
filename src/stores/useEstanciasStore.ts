@@ -4,9 +4,12 @@ import type { Estancia } from '../types';
 interface EstanciasState {
   estancias: Estancia[];
   estanciaSeleccionadaId: string; // 'TODAS' o el id específico de la estancia
+  reglasProrrateo: Record<string, number>; // estancia_id -> porcentaje (ej: { 'est-1': 35, 'est-2': 24 })
   seleccionarEstancia: (id: string) => void;
   agregarEstancia: (nueva: Omit<Estancia, 'id' | 'activa'>) => void;
   obtenerEstanciaActual: () => Estancia | null;
+  actualizarReglasProrrateo: (reglas: Record<string, number>) => void;
+  calcularProrrateoPorHectareas: () => Record<string, number>;
 }
 
 const estanciasIniciales: Estancia[] = [
@@ -45,9 +48,20 @@ const estanciasIniciales: Estancia[] = [
   },
 ];
 
+// Inicialización por defecto de reglas de prorrateo por hectáreas
+const calcularInicialProrrateo = (lista: Estancia[]) => {
+  const totalHa = lista.reduce((a, b) => a + b.hectareas_totales, 0) || 1;
+  const res: Record<string, number> = {};
+  lista.forEach((e) => {
+    res[e.id] = Math.round((e.hectareas_totales / totalHa) * 100);
+  });
+  return res;
+};
+
 export const useEstanciasStore = create<EstanciasState>((set, get) => ({
   estancias: estanciasIniciales,
   estanciaSeleccionadaId: 'TODAS', // Por defecto muestra el Consolidado Empresa (Todas)
+  reglasProrrateo: calcularInicialProrrateo(estanciasIniciales),
 
   seleccionarEstancia: (id: string) => {
     set({ estanciaSeleccionadaId: id });
@@ -60,15 +74,28 @@ export const useEstanciasStore = create<EstanciasState>((set, get) => ({
       activa: true,
     };
 
-    set((state) => ({
-      estancias: [...state.estancias, nuevaEstancia],
-      estanciaSeleccionadaId: nuevaEstancia.id, // Selecciona automáticamente la nueva estancia creada
-    }));
+    set((state) => {
+      const nuevasEstancias = [...state.estancias, nuevaEstancia];
+      return {
+        estancias: nuevasEstancias,
+        estanciaSeleccionadaId: nuevaEstancia.id,
+        reglasProrrateo: calcularInicialProrrateo(nuevasEstancias),
+      };
+    });
   },
 
   obtenerEstanciaActual: () => {
     const { estancias, estanciaSeleccionadaId } = get();
     if (estanciaSeleccionadaId === 'TODAS') return null;
     return estancias.find((e) => e.id === estanciaSeleccionadaId) || null;
+  },
+
+  actualizarReglasProrrateo: (reglas) => {
+    set({ reglasProrrateo: reglas });
+  },
+
+  calcularProrrateoPorHectareas: () => {
+    const { estancias } = get();
+    return calcularInicialProrrateo(estancias);
   },
 }));

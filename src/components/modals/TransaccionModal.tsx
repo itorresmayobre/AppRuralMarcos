@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useEstanciasStore } from '../../stores/useEstanciasStore';
 import { useFinanzasStore } from '../../stores/useFinanzasStore';
 import { useConceptosFinancierosStore } from '../../stores/useConceptosFinancierosStore';
 import { useToastStore } from '../../stores/useToastStore';
+import { cotizacionService } from '../../services/api/cotizacionService';
 import { calcularEjercicioYMesAgricola } from '../../utils/periodoAgricola';
-import type { Moneda, TipoTransaccion } from '../../types';
+import type { Moneda, TipoTransaccion, DistribucionProrrateoItem } from '../../types';
 import {
   X,
   DollarSign,
@@ -14,7 +15,9 @@ import {
   Check,
   MapPin,
   Calendar,
-  Layers
+  Layers,
+  PieChart,
+  RefreshCw
 } from 'lucide-react';
 
 interface TransaccionModalProps {
@@ -24,7 +27,7 @@ interface TransaccionModalProps {
 
 export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onClose }) => {
   const { usuario } = useAuthStore();
-  const { estancias, obtenerEstanciaActual } = useEstanciasStore();
+  const { estancias, obtenerEstanciaActual, reglasProrrateo } = useEstanciasStore();
   const { agregarTransaccion } = useFinanzasStore();
   const { catalog, obtenerConceptosActivosPorTipo } = useConceptosFinancierosStore();
   const { mostrarToast } = useToastStore();
@@ -49,6 +52,20 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
   const [descripcionFinanciera, setDescripcionFinanciera] = useState<string>('');
   const [fecha, setFecha] = useState<string>(new Date().toISOString().split('T')[0]);
 
+  // Cotización Bimoneda y Prorrateo State
+  const [tipoCambio, setTipoCambio] = useState<number>(40.50);
+  const [esProrrateado, setEsProrrateado] = useState<boolean>(false);
+  const [customProrrateo, setCustomProrrateo] = useState<Record<string, number>>(reglasProrrateo);
+
+  // Obtener cotización oficial al cambiar fecha
+  useEffect(() => {
+    let unmounted = false;
+    cotizacionService.obtenerCotizacionDolar(fecha).then((tc) => {
+      if (!unmounted && tc > 0) setTipoCambio(tc);
+    });
+    return () => { unmounted = true; };
+  }, [fecha]);
+
   const { ejercicio: ejercicioAgricola, mes: mesAgricola } = calcularEjercicioYMesAgricola(fecha);
 
   if (!isOpen || !puedeVerFinanzas) return null;
@@ -57,6 +74,9 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
     setCategoria(conceptoItem.nombre);
     if (conceptoItem.naturaleza_costo) {
       setNaturalezaCosto(conceptoItem.naturaleza_costo);
+    }
+    if (conceptoItem.es_recurrente_mensual || conceptoItem.naturaleza_costo === 'FIJO') {
+      setEsProrrateado(true);
     }
   };
 
@@ -69,8 +89,23 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
       return;
     }
 
+    const conversion = cotizacionService.convertirMonto(valMonto, moneda, tipoCambio);
+
+    let distribucion: DistribucionProrrateoItem[] | undefined = undefined;
+    if (esProrrateado) {
+      distribucion = estancias.map((est) => {
+        const pct = customProrrateo[est.id] || 0;
+        const montoParcial = Math.round((valMonto * (pct / 100)) * 100) / 100;
+        return {
+          estancia_id: est.id,
+          porcentaje: pct,
+          monto: montoParcial,
+        };
+      });
+    }
+
     agregarTransaccion({
-      estancia_id: estanciaFormId,
+      estancia_id: esProrrateado ? 'TODAS' : estanciaFormId,
       tipo: tipoFinanciero,
       moneda,
       monto: valMonto,
@@ -80,12 +115,22 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
       ejercicio_agricola: ejercicioAgricola,
       periodo_mes: mesAgricola,
       naturaleza_costo: tipoFinanciero === 'EGRESO' ? naturalezaCosto : undefined,
+      es_prorrateado: esProrrateado,
+      distribucion_prorrateo: distribucion,
+      moneda_original: moneda,
+      monto_original: valMonto,
+      tipo_cambio: tipoCambio,
+      monto_usd: conversion.monto_usd,
+      monto_uyu: conversion.monto_uyu,
     });
 
-    const nombreEstablecimiento = estancias.find(e => e.id === estanciaFormId)?.nombre || 'Establecimiento';
+    const nombreEstablecimiento = esProrrateado
+      ? 'Prorrateado entre Campos'
+      : estancias.find(e => e.id === estanciaFormId)?.nombre || 'Establecimiento';
+
     mostrarToast(
       'Transacción Registrada',
-      `${tipoFinanciero} por ${moneda} ${valMonto.toLocaleString()} (${mesAgricola} - Ej. ${ejercicioAgricola}) en ${nombreEstablecimiento}`,
+      `${tipoFinanciero} por ${moneda} ${valMonto.toLocaleString()} (USD ${conversion.monto_usd.toLocaleString()}) en ${nombreEstablecimiento}`,
       'EXITO'
     );
 
@@ -228,9 +273,15 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
             </div>
           </div>
 
-          {/* Monto Total */}
+          {/* Monto Total y Conversión Bimoneda */}
           <div className="space-y-1">
-            <label className="font-extrabold text-slate-700 block">Monto Total ({moneda})</label>
+            <div className="flex items-center justify-between">
+              <label className="font-extrabold text-slate-700 block">Monto Total ({moneda})</label>
+              <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md flex items-center gap-1">
+                <RefreshCw className="w-3 h-3 text-emerald-600" /> TC: $ {tipoCambio}
+              </span>
+            </div>
+
             <div className="relative">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-500">
                 {moneda === 'USD' ? '$ US' : '$ UYU'}
@@ -245,6 +296,80 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
                 className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm font-black rounded-xl pl-16 pr-4 py-3 focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
               />
             </div>
+
+            {/* Vista Previa Conversión Bimoneda Automática */}
+            {parseFloat(monto) > 0 && (
+              <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-950 flex items-center justify-between text-xs font-bold">
+                <span>Equivalente estimado:</span>
+                <span className="font-black text-emerald-800">
+                  {moneda === 'USD'
+                    ? `$ ${(parseFloat(monto) * tipoCambio).toLocaleString('es-UY')} UYU`
+                    : `USD ${(parseFloat(monto) / tipoCambio).toLocaleString('es-UY', { maximumFractionDigits: 2 })}`}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Bloque Prorratear entre Campos */}
+          <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl space-y-3">
+            <label className="flex items-center space-x-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={esProrrateado}
+                onChange={(e) => setEsProrrateado(e.target.checked)}
+                className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer"
+              />
+              <span className="font-extrabold text-slate-900 text-xs flex items-center gap-1.5">
+                <PieChart className="w-4 h-4 text-emerald-600" />
+                <span>🌐 Repartir este gasto entre varios campos (Prorrateo)</span>
+              </span>
+            </label>
+
+            {esProrrateado && (
+              <div className="space-y-2.5 pt-2 border-t border-slate-200/80 animate-fadeIn">
+                <p className="text-[11px] text-slate-500 font-medium">
+                  Carga los porcentajes asignados a cada campo para esta transacción:
+                </p>
+
+                <div className="space-y-2">
+                  {estancias.map((est) => {
+                    const pct = customProrrateo[est.id] || 0;
+                    const valMonto = parseFloat(monto) || 0;
+                    const montoParcial = Math.round((valMonto * (pct / 100)) * 100) / 100;
+
+                    return (
+                      <div key={est.id} className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+                        <div className="flex items-center space-x-2">
+                          <MapPin className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                          <span className="font-extrabold text-slate-800">{est.nombre}</span>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={pct}
+                            onChange={(e) => {
+                              const v = Math.min(100, Math.max(0, parseInt(e.target.value, 10) || 0));
+                              setCustomProrrateo({ ...customProrrateo, [est.id]: v });
+                            }}
+                            className="w-12 text-center text-xs font-black bg-slate-50 border border-slate-300 rounded-lg py-1 focus:ring-2 focus:ring-emerald-500"
+                          />
+                          <span className="font-extrabold text-slate-500">%</span>
+
+                          {valMonto > 0 && (
+                            <span className="text-[11px] font-mono font-black text-emerald-800 ml-1">
+                              ({moneda} {montoParcial.toLocaleString()})
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Categorías / Rubros Habilitados por el Admin */}

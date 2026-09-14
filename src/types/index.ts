@@ -85,6 +85,17 @@ export type CategoriaFinanciera =
 
 export type NaturalezaCosto = 'FIJO' | 'VARIABLE';
 
+export interface DistribucionProrrateoItem {
+  estancia_id: string;
+  porcentaje: number;
+  monto: number;
+}
+
+export interface ReglaProrrateoEstablecimiento {
+  estancia_id: string;
+  porcentaje_predeterminado: number;
+}
+
 export interface TransaccionFinanciera {
   id: string;
   estancia_id: string;
@@ -98,6 +109,15 @@ export interface TransaccionFinanciera {
   ejercicio_agricola?: string; // ej: "2025-2026"
   periodo_mes?: string; // ej: "Julio", "Agosto", ..., "Junio"
   naturaleza_costo?: NaturalezaCosto;
+  // Campos de Prorrateo entre Campos
+  es_prorrateado?: boolean;
+  distribucion_prorrateo?: DistribucionProrrateoItem[];
+  // Campos de Cotización Bimoneda
+  moneda_original?: Moneda;
+  monto_original?: number;
+  tipo_cambio?: number;
+  monto_usd?: number;
+  monto_uyu?: number;
 }
 
 export interface ConceptoFinanciero {

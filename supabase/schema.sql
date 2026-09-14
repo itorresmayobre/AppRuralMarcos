@@ -69,8 +69,25 @@ CREATE TABLE public.transacciones_financieras (
   ejercicio_agricola VARCHAR(10), -- ej: '2025/2026' (Julio a Junio)
   periodo_mes VARCHAR(15), -- ej: 'Setiembre', 'Julio', etc.
   naturaleza_costo TEXT CHECK (naturaleza_costo IN ('FIJO', 'VARIABLE')),
+  -- Prorrateo entre campos
+  es_prorrateado BOOLEAN NOT NULL DEFAULT false,
+  distribucion_prorrateo JSONB, -- listado de {estancia_id, porcentaje, monto}
+  -- Cotización Bimoneda Automática USD / UYU
+  moneda_original tipo_moneda DEFAULT 'USD',
+  monto_original NUMERIC(12,2),
+  tipo_cambio NUMERIC(8,4) DEFAULT 40.50,
+  monto_usd NUMERIC(12,2),
+  monto_uyu NUMERIC(12,2),
   creado_por UUID REFERENCES public.perfiles(id) ON DELETE SET NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 6b. TABLA DE REGLAS PREDETERMINADAS DE PRORRATEO CORPORATIVO
+CREATE TABLE public.reglas_prorrateo_establecimiento (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  establecimiento_id UUID REFERENCES public.establecimientos(id) ON DELETE CASCADE NOT NULL UNIQUE,
+  porcentaje_predeterminado NUMERIC(5,2) NOT NULL CHECK (porcentaje_predeterminado >= 0 AND porcentaje_predeterminado <= 100),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 -- 7. TABLA DE PLUVIÓMETRO (REGISTRO DIARIO DE PRECIPITACIONES MM)

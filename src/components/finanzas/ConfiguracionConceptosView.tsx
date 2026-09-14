@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useConceptosFinancierosStore } from '../../stores/useConceptosFinancierosStore';
+import { useEstanciasStore } from '../../stores/useEstanciasStore';
 import { useToastStore } from '../../stores/useToastStore';
 import { conceptosService } from '../../services/api/conceptosService';
 import type { TipoTransaccion } from '../../types';
@@ -16,7 +17,12 @@ import {
   X,
   Search,
   Layers,
-  SlidersHorizontal
+  SlidersHorizontal,
+  PieChart,
+  Wand2,
+  Building2,
+  Percent,
+  MapPin
 } from 'lucide-react';
 
 export const ConfiguracionConceptosView: React.FC = () => {
@@ -28,10 +34,16 @@ export const ConfiguracionConceptosView: React.FC = () => {
     agregarConceptoPersonalizado
   } = useConceptosFinancierosStore();
 
+  const { estancias, reglasProrrateo, actualizarReglasProrrateo, calcularProrrateoPorHectareas } = useEstanciasStore();
   const { mostrarToast } = useToastStore();
+
+  const [seccionActiva, setSeccionActiva] = useState<'RUBROS' | 'PRORRATEO'>('RUBROS');
   const [tipoFiltro, setTipoFiltro] = useState<'TODOS' | TipoTransaccion>('TODOS');
   const [busqueda, setBusqueda] = useState('');
   const [guardando, setGuardando] = useState(false);
+
+  // Estado local editable para las reglas de prorrateo
+  const [localReglas, setLocalReglas] = useState<Record<string, number>>(reglasProrrateo);
 
   // Estado para el modal de Crear Rubro Personalizado
   const [modalNuevoAbierto, setModalNuevoAbierto] = useState(false);
@@ -100,37 +112,184 @@ export const ConfiguracionConceptosView: React.FC = () => {
   // Obtener lista de grupos únicos presentes en los conceptos filtrados
   const gruposRepresentados = Array.from(new Set(conceptosFiltrados.map((c) => c.grupo)));
 
+  const handleAutoCalcularHectareas = () => {
+    const porHectareas = calcularProrrateoPorHectareas();
+    setLocalReglas(porHectareas);
+    actualizarReglasProrrateo(porHectareas);
+    mostrarToast(
+      'Prorrateo Calculado',
+      'Porcentajes repartidos automáticamente según las Hectáreas Totales de cada campo.',
+      'EXITO'
+    );
+  };
+
+  const handleGuardarProrrateo = () => {
+    actualizarReglasProrrateo(localReglas);
+    mostrarToast(
+      'Prorrateo Guardado',
+      'Se han actualizado los porcentajes predeterminados de repartición corporativa.',
+      'EXITO'
+    );
+  };
+
+  const sumaPorcentajes = Object.values(localReglas).reduce((a, b) => a + b, 0);
+
   return (
     <div className="space-y-6">
       
-      {/* Banner Principal de Configuración de Rubros */}
-      <section aria-label="Encabezado del Configurado de Rubros" className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-          <div>
-            <h3 className="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2">
-              <Settings className="w-6 h-6 text-emerald-600 flex-shrink-0" />
-              <span>Configurador de Rubros Financieros</span>
-            </h3>
-            <p className="text-xs text-slate-500 font-medium mt-1">
-              Administra qué rubros (Plan Agropecuario o Personalizados) están activos y sus clasificaciones.
-            </p>
-          </div>
+      {/* Navegación por Pestañas Principales (Rubros vs Prorrateo) */}
+      <div className="flex space-x-2 border-b border-slate-200 pb-2">
+        <button
+          type="button"
+          onClick={() => setSeccionActiva('RUBROS')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center space-x-2 cursor-pointer ${
+            seccionActiva === 'RUBROS'
+              ? 'bg-slate-900 text-white shadow-md'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <Settings className="w-4 h-4 text-emerald-400" />
+          <span>Catálogo de Rubros Financieros</span>
+        </button>
 
-          <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
-            <span className="text-xs font-extrabold text-emerald-900 bg-emerald-100 px-3 py-2 rounded-xl border border-emerald-200">
-              {conceptosActivosIds.length} Rubros Habilitados
-            </span>
+        <button
+          type="button"
+          onClick={() => setSeccionActiva('PRORRATEO')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center space-x-2 cursor-pointer ${
+            seccionActiva === 'PRORRATEO'
+              ? 'bg-emerald-800 text-white shadow-md'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <PieChart className="w-4 h-4 text-emerald-300" />
+          <span>⚙️ Reglas de Prorrateo Corporativo ({estancias.length} Campos)</span>
+        </button>
+      </div>
+
+      {seccionActiva === 'PRORRATEO' ? (
+        <section aria-label="Reglas de Prorrateo Corporativo" className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-sm space-y-6 animate-fadeIn">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div>
+              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                <PieChart className="w-6 h-6 text-emerald-600 flex-shrink-0" />
+                <span>Prorrateo Predeterminado de Costos Generales</span>
+              </h3>
+              <p className="text-xs text-slate-500 font-medium mt-1">
+                Define cómo se reparten automáticamente los sueldos y costos fijos corporativos entre tus campos.
+              </p>
+            </div>
 
             <button
               type="button"
-              onClick={() => setModalNuevoAbierto(true)}
-              className="inline-flex items-center space-x-1.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-extrabold text-xs px-3.5 py-2.5 rounded-xl shadow-md cursor-pointer transition-all active:scale-95 min-h-[38px]"
+              onClick={handleAutoCalcularHectareas}
+              className="inline-flex items-center space-x-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-950 font-black text-xs px-4 py-2.5 rounded-xl border border-emerald-300 shadow-sm cursor-pointer transition-all active:scale-95 min-h-[42px]"
             >
-              <Plus className="w-4 h-4" />
-              <span>Crear Rubro Personalizado</span>
+              <Wand2 className="w-4 h-4 text-emerald-700" />
+              <span>🪄 Autocalcular por Hectáreas Totales</span>
             </button>
           </div>
-        </div>
+
+          {/* Grilla de Campos y Sliders */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {estancias.map((est) => {
+              const pctActual = localReglas[est.id] || 0;
+              return (
+                <div key={est.id} className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <MapPin className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs font-black text-slate-900">{est.nombre}</p>
+                        <p className="text-[10px] text-slate-500 font-bold">{est.hectareas_totales} Hectáreas Totales</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-1 bg-white px-3 py-1.5 rounded-xl border border-slate-300">
+                      <Percent className="w-3.5 h-3.5 text-slate-400" />
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={pctActual}
+                        onChange={(e) => {
+                          const val = Math.min(100, Math.max(0, parseInt(e.target.value, 10) || 0));
+                          setLocalReglas({ ...localReglas, [est.id]: val });
+                        }}
+                        className="w-12 text-center text-xs font-black text-slate-900 focus:outline-none"
+                      />
+                      <span className="text-xs font-extrabold text-slate-500">%</span>
+                    </div>
+                  </div>
+
+                  {/* Slider de Porcentaje Táctil */}
+                  <div className="space-y-1">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={pctActual}
+                      onChange={(e) => {
+                        setLocalReglas({ ...localReglas, [est.id]: parseInt(e.target.value, 10) });
+                      }}
+                      className="w-full accent-emerald-600 h-2 bg-slate-200 rounded-lg cursor-pointer"
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Suma Total y Guardado */}
+          <div className="p-4 bg-slate-900 text-white rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center space-x-3 text-xs">
+              <Building2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+              <div>
+                <p className="font-extrabold">Distribución Total Asignada: <span className={sumaPorcentajes === 100 ? 'text-emerald-400 font-black' : 'text-amber-400 font-black'}>{sumaPorcentajes}%</span></p>
+                <p className="text-[11px] text-slate-300">
+                  {sumaPorcentajes === 100 ? '✓ Suma 100% correcta entre los campos' : '⚠️ La suma de porcentajes debe dar 100%'}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGuardarProrrateo}
+              className="w-full sm:w-auto bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-extrabold text-xs px-6 py-3.5 rounded-xl shadow-lg cursor-pointer transition-all active:scale-95 flex items-center justify-center space-x-2 min-h-[44px]"
+            >
+              <Check className="w-4 h-4 text-white" />
+              <span>Guardar Reglas de Prorrateo</span>
+            </button>
+          </div>
+        </section>
+      ) : (
+        <>
+          {/* Banner Principal de Configuración de Rubros */}
+          <section aria-label="Encabezado del Configurado de Rubros" className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2">
+                  <Settings className="w-6 h-6 text-emerald-600 flex-shrink-0" />
+                  <span>Configurador de Rubros Financieros</span>
+                </h3>
+                <p className="text-xs text-slate-500 font-medium mt-1">
+                  Administra qué rubros (Plan Agropecuario o Personalizados) están activos y sus clasificaciones.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+                <span className="text-xs font-extrabold text-emerald-900 bg-emerald-100 px-3 py-2 rounded-xl border border-emerald-200">
+                  {conceptosActivosIds.length} Rubros Habilitados
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setModalNuevoAbierto(true)}
+                  className="inline-flex items-center space-x-1.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-extrabold text-xs px-3.5 py-2.5 rounded-xl shadow-md cursor-pointer transition-all active:scale-95 min-h-[38px]"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Crear Rubro Personalizado</span>
+                </button>
+              </div>
+            </div>
 
         {/* Filtros por Tipo y Barra de Búsqueda */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-3 pt-1">
@@ -331,6 +490,8 @@ export const ConfiguracionConceptosView: React.FC = () => {
           )}
         </button>
       </div>
+      </>
+      )}
 
       {/* Modal Dialog para Crear Rubro Personalizado */}
       {modalNuevoAbierto && (
