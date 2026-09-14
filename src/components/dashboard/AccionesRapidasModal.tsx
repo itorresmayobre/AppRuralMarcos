@@ -49,9 +49,7 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
   const currentRole = usuario?.rol || 'OPERARIO';
   const puedeVerFinanzas = currentRole === 'ADMIN' || currentRole === 'CONTADOR';
 
-  const [tabActiva, setTabActiva] = useState<'FINANZAS' | 'PLUVIOMETRO' | 'NOTA'>(
-    !puedeVerFinanzas && tabInicial === 'FINANZAS' ? 'PLUVIOMETRO' : tabInicial
-  );
+  const modoAccion = !puedeVerFinanzas && tabInicial === 'FINANZAS' ? 'PLUVIOMETRO' : tabInicial;
 
   const estanciaActual = obtenerEstanciaActual();
   const [estanciaFormId, setEstanciaFormId] = useState<string>(
@@ -146,16 +144,45 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-sm animate-fadeIn">
       <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh]">
 
-        {/* Cabecera del Modal */}
+        {/* Cabecera del Modal (Específica por tipo de acción) */}
         <header className="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between border-b border-slate-800 flex-shrink-0">
-          <div>
-            <h3 className="text-base font-extrabold flex items-center gap-2">
-              <span>Acción Rápida de Campo</span>
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Predio: <strong className="text-emerald-400">{estancias.find(e => e.id === estanciaFormId)?.nombre || 'General'}</strong>
-            </p>
+          <div className="flex items-center space-x-3">
+            <div className={`p-2.5 rounded-2xl flex-shrink-0 ${
+              tabInicial === 'FINANZAS'
+                ? tipoFinanciero === 'INGRESO' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
+                : tabInicial === 'PLUVIOMETRO'
+                ? 'bg-blue-600 text-white'
+                : 'bg-purple-600 text-white'
+            }`}>
+              {tabInicial === 'FINANZAS' ? (
+                <DollarSign className="w-5 h-5" />
+              ) : tabInicial === 'PLUVIOMETRO' ? (
+                <CloudDrizzle className="w-5 h-5" />
+              ) : (
+                <FileText className="w-5 h-5" />
+              )}
+            </div>
+
+            <div>
+              <h3 className="text-base font-extrabold flex items-center gap-2">
+                <span>
+                  {tabInicial === 'FINANZAS'
+                    ? 'Registrar Transacción Financiera'
+                    : tabInicial === 'PLUVIOMETRO'
+                    ? 'Registrar Lectura de Pluviómetro'
+                    : 'Nueva Nota de Campo / Alerta'}
+                </span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {tabInicial === 'FINANZAS'
+                  ? 'Ingreso o Egreso de caja del establecimiento'
+                  : tabInicial === 'PLUVIOMETRO'
+                  ? 'Medición diaria de precipitaciones (mm)'
+                  : 'Observación operativa para el capataz o equipo'}
+              </p>
+            </div>
           </div>
+
           <button
             onClick={onClose}
             className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all cursor-pointer min-h-[38px] min-w-[38px] flex items-center justify-center"
@@ -190,52 +217,11 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
           </div>
         </div>
 
-        {/* Pestañas de Navegación del Modal */}
-        <div className="flex border-b border-slate-200 bg-white flex-shrink-0">
-          {puedeVerFinanzas && (
-            <button
-              onClick={() => setTabActiva('FINANZAS')}
-              className={`flex-1 py-3 px-3 text-xs font-extrabold flex items-center justify-center space-x-1.5 border-b-2 transition-all cursor-pointer ${
-                tabActiva === 'FINANZAS'
-                  ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              <DollarSign className="w-4 h-4" />
-              <span>Transacción</span>
-            </button>
-          )}
-
-          <button
-            onClick={() => setTabActiva('PLUVIOMETRO')}
-            className={`flex-1 py-3 px-3 text-xs font-extrabold flex items-center justify-center space-x-1.5 border-b-2 transition-all cursor-pointer ${
-              tabActiva === 'PLUVIOMETRO'
-                ? 'border-blue-600 text-blue-700 bg-blue-50/50'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <CloudDrizzle className="w-4 h-4" />
-            <span>Pluviómetro</span>
-          </button>
-
-          <button
-            onClick={() => setTabActiva('NOTA')}
-            className={`flex-1 py-3 px-3 text-xs font-extrabold flex items-center justify-center space-x-1.5 border-b-2 transition-all cursor-pointer ${
-              tabActiva === 'NOTA'
-                ? 'border-purple-600 text-purple-700 bg-purple-50/50'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            <span>Nota / Alerta</span>
-          </button>
-        </div>
-
         {/* Cuerpo del Modal */}
         <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
 
-          {/* TAB 1: FINANZAS */}
-          {tabActiva === 'FINANZAS' && puedeVerFinanzas && (
+          {/* VISTA 1: TRANSACCIÓN FINANCIERA (INGRESO / EGRESO) */}
+          {modoAccion === 'FINANZAS' && puedeVerFinanzas && (
             <form onSubmit={handleSubmitFinanzas} className="space-y-4">
 
               {/* Tipo: Ingreso / Egreso */}
@@ -330,7 +316,9 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
                         onClick={() => setCategoria(catKey)}
                         className={`p-2 rounded-xl text-left text-[11px] font-bold border transition-all flex items-center space-x-1.5 cursor-pointer ${
                           esSeleccionada
-                            ? 'bg-emerald-800 text-white border-emerald-600 shadow-sm ring-1 ring-emerald-500/50'
+                            ? tipoFinanciero === 'INGRESO'
+                              ? 'bg-emerald-800 text-white border-emerald-600 shadow-sm ring-1 ring-emerald-500/50'
+                              : 'bg-rose-800 text-white border-rose-600 shadow-sm ring-1 ring-rose-500/50'
                             : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
                         }`}
                       >
@@ -347,7 +335,7 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
                 <label className="block text-xs font-bold text-slate-700 mb-1">Descripción / Detalle de la Operación</label>
                 <input
                   type="text"
-                  placeholder="ej: Venta novillos remate o compra ración destete"
+                  placeholder={tipoFinanciero === 'INGRESO' ? "ej: Venta novillos remate pantalla" : "ej: Compra ración destete y vacuna 1er dosis"}
                   value={descripcionFinanciera}
                   onChange={(e) => setDescripcionFinanciera(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl p-3 focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
@@ -356,17 +344,21 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
 
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-extrabold text-xs py-3.5 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 min-h-[44px] cursor-pointer"
+                className={`w-full text-white font-extrabold text-xs py-3.5 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 min-h-[44px] cursor-pointer ${
+                  tipoFinanciero === 'INGRESO'
+                    ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600'
+                    : 'bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600'
+                }`}
               >
                 <Check className="w-4 h-4" />
-                <span>Guardar Transacción Financiera</span>
+                <span>{tipoFinanciero === 'INGRESO' ? 'Guardar Ingreso Financiero' : 'Guardar Egreso Financiero'}</span>
               </button>
 
             </form>
           )}
 
-          {/* TAB 2: PLUVIÓMETRO */}
-          {tabActiva === 'PLUVIOMETRO' && (
+          {/* VISTA 2: PLUVIÓMETRO */}
+          {modoAccion === 'PLUVIOMETRO' && (
             <form onSubmit={handleSubmitPluviometro} className="space-y-4">
               <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-xs text-blue-900 flex items-center space-x-3">
                 <CloudDrizzle className="w-6 h-6 text-blue-600 flex-shrink-0" />
@@ -412,8 +404,8 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
             </form>
           )}
 
-          {/* TAB 3: NOTA DE CAMPO */}
-          {tabActiva === 'NOTA' && (
+          {/* VISTA 3: NOTA DE CAMPO */}
+          {modoAccion === 'NOTA' && (
             <form onSubmit={handleSubmitNota} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Título del Registro / Alerta</label>
