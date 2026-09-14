@@ -8,41 +8,34 @@ export const SqlView: React.FC = () => {
 
   const sqlExtracto = `-- ESQUEMA ACTUALIZADO EN SUPABASE (PostgreSQL)
 
--- 1. Tabla de Perfiles con usernames sin '@' (nombre.apellido)
-CREATE TABLE public.perfiles (
-  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-  username TEXT NOT NULL UNIQUE, -- ej: "marcos.propietario"
-  nombre TEXT NOT NULL,
-  apellido TEXT NOT NULL,
-  email TEXT NOT NULL UNIQUE,
-  rol rol_usuario NOT NULL DEFAULT 'OPERARIO'
+-- 1. Catálogo Completo Plan Agropecuario
+CREATE TABLE public.conceptos_financieros (
+  id TEXT PRIMARY KEY, -- ej: 'ing-vacunos', 'ing-lana', 'egr-sanidad'
+  tipo tipo_transaccion NOT NULL,
+  grupo TEXT NOT NULL, -- ej: 'Ventas de Hacienda', 'Ventas de Productos'
+  nombre TEXT NOT NULL, -- ej: 'Vacunos', 'Lana', 'Veterinaria'
+  icono TEXT DEFAULT '📋',
+  es_estandar BOOLEAN NOT NULL DEFAULT true
 );
 
--- 2. Tabla Intermedia: Empleados asignados a Múltiples Estancias
-CREATE TABLE public.establecimiento_usuarios (
-  establecimiento_id UUID REFERENCES public.establecimientos(id) ON DELETE CASCADE,
-  perfil_id UUID REFERENCES public.perfiles(id) ON DELETE CASCADE,
-  PRIMARY KEY (establecimiento_id, perfil_id)
+-- 2. Rubros Habilitados por el Admin para la Empresa
+CREATE TABLE public.conceptos_activos_empresa (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  concepto_id TEXT NOT NULL REFERENCES public.conceptos_financieros(id) ON DELETE CASCADE,
+  activo BOOLEAN NOT NULL DEFAULT true,
+  CONSTRAINT unq_concepto_empresa UNIQUE (concepto_id)
 );
 
--- 3. Tabla de Pluviómetro (Registro Diario de Precipitaciones mm)
-CREATE TABLE public.registros_pluviometro (
+-- 3. Transacciones Financieras Bimoneda
+CREATE TABLE public.transacciones_financieras (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   establecimiento_id UUID REFERENCES public.establecimientos(id) ON DELETE CASCADE NOT NULL,
-  fecha DATE NOT NULL DEFAULT CURRENT_DATE,
-  milimetros NUMERIC(5,1) NOT NULL CHECK (milimetros >= 0),
-  observacion TEXT,
-  registrado_por UUID REFERENCES public.perfiles(id)
-);
-
--- 4. Tabla de Notas de Campo y Alertas Operativas
-CREATE TABLE public.notas_campo (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  establecimiento_id UUID REFERENCES public.establecimientos(id) ON DELETE CASCADE NOT NULL,
-  fecha DATE NOT NULL DEFAULT CURRENT_DATE,
-  titulo TEXT NOT NULL,
+  tipo tipo_transaccion NOT NULL,
+  moneda tipo_moneda NOT NULL DEFAULT 'USD',
+  monto NUMERIC(12,2) NOT NULL CHECK (monto >= 0),
+  categoria TEXT NOT NULL,
   descripcion TEXT,
-  prioridad prioridad_nota NOT NULL DEFAULT 'MEDIA',
+  fecha DATE NOT NULL DEFAULT CURRENT_DATE,
   creado_por UUID REFERENCES public.perfiles(id)
 );`;
 

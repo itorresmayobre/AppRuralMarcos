@@ -7,6 +7,7 @@ import {
   LayoutDashboard, 
   Beef, 
   DollarSign, 
+  BarChart3,
   Users, 
   Database, 
   MapPin, 
@@ -56,6 +57,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { path: '/estancias', label: 'Establecimientos y Campos', icon: Building2, allowed: true },
     { path: '/ganado', label: 'Ganado y Stock', icon: Beef, allowed: true },
     { path: '/finanzas', label: 'Ingresos / Egresos', icon: DollarSign, allowed: canViewFinances },
+    { path: '/estadisticas', label: 'Estadísticas & Análisis', icon: BarChart3, allowed: canViewFinances },
     { path: '/usuarios', label: 'Roles y Permisos', icon: Users, allowed: currentRole === 'ADMIN' },
     { path: '/sql', label: 'Estado SQL (Supabase)', icon: Database, allowed: true },
   ];

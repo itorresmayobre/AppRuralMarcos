@@ -10,6 +10,7 @@ import { UsuariosPage } from './pages/UsuariosPage';
 import { DashboardView } from './components/dashboard/DashboardView';
 import { HaciendaView } from './components/hacienda/HaciendaView';
 import { FinanzasView } from './components/finanzas/FinanzasView';
+import { EstadisticasView } from './components/estadisticas/EstadisticasView';
 import { SqlView } from './components/sql/SqlView';
 
 function MainLayout() {
@@ -80,6 +81,15 @@ export function App() {
             element={
               <ProtectedRoute rolesPermitidos={['ADMIN', 'CONTADOR']}>
                 <FinanzasView />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/estadisticas"
+            element={
+              <ProtectedRoute rolesPermitidos={['ADMIN', 'CONTADOR']}>
+                <EstadisticasView />
               </ProtectedRoute>
             }
           />

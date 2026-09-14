@@ -4,6 +4,7 @@ import { useUsuariosStore } from '../stores/useUsuariosStore';
 import { useEstanciasStore } from '../stores/useEstanciasStore';
 import { useToastStore } from '../stores/useToastStore';
 import { usuariosService } from '../services/api/usuariosService';
+import { CustomSelect } from '../components/ui/CustomSelect';
 import type { UserRole, PermisoRol } from '../types';
 import { 
   Users, ShieldCheck, KeyRound, UserPlus, Lock, X, 
@@ -313,18 +314,18 @@ export const UsuariosPage: React.FC = () => {
                     </div>
 
                     {esAdmin && (
-                      <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">Cambiar Rol:</label>
-                        <select
+                      <div className="pt-3 border-t border-slate-100">
+                        <CustomSelect<UserRole>
+                          label="Cambiar Rol:"
                           value={u.rol}
-                          onChange={(e) => handleCambiarRol(u.id, e.target.value as UserRole)}
-                          className="bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs font-bold rounded-xl border border-slate-300 px-3 py-1.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer transition-colors"
-                        >
-                          <option value="ADMIN">ADMIN</option>
-                          <option value="CAPATAZ">CAPATAZ</option>
-                          <option value="CONTADOR">CONTADOR</option>
-                          <option value="OPERARIO">OPERARIO</option>
-                        </select>
+                          options={[
+                            { value: 'ADMIN', label: 'ADMIN (Propietario)' },
+                            { value: 'CAPATAZ', label: 'CAPATAZ (Campo)' },
+                            { value: 'CONTADOR', label: 'CONTADOR (Finanzas)' },
+                            { value: 'OPERARIO', label: 'OPERARIO (Básico)' },
+                          ]}
+                          onChange={(nuevoRol) => handleCambiarRol(u.id, nuevoRol)}
+                        />
                       </div>
                     )}
                   </article>

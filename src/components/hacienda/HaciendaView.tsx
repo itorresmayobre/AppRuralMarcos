@@ -1,30 +1,26 @@
 import React, { useState } from 'react';
-import type { StockGanadero } from '../../types';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { Plus, Beef, RefreshCw } from 'lucide-react';
-
-const mockStock: StockGanadero[] = [
-  { id: '1', estancia_id: 'est-1', especie: 'VACUNO', categoria: 'VACAS_DE_CRIA', cabezas: 320, kilos_promedio: 420, ultima_actualizacion: '2026-09-10' },
-  { id: '2', estancia_id: 'est-1', especie: 'VACUNO', categoria: 'NOVILLOS_MAS_2', cabezas: 210, kilos_promedio: 480, ultima_actualizacion: '2026-09-12' },
-  { id: '3', estancia_id: 'est-1', especie: 'VACUNO', categoria: 'TERNEROS', cabezas: 195, kilos_promedio: 180, ultima_actualizacion: '2026-09-08' },
-  { id: '4', estancia_id: 'est-1', especie: 'VACUNO', categoria: 'TOROS', cabezas: 14, kilos_promedio: 650, ultima_actualizacion: '2026-09-01' },
-  { id: '5', estancia_id: 'est-1', especie: 'OVINO', categoria: 'OVEJAS_CRIA', cabezas: 450, kilos_promedio: 55, ultima_actualizacion: '2026-09-11' },
-  { id: '6', estancia_id: 'est-1', especie: 'OVINO', categoria: 'CAPONES', cabezas: 180, kilos_promedio: 62, ultima_actualizacion: '2026-09-05' },
-];
+import { useEstanciasStore } from '../../stores/useEstanciasStore';
+import { useGanadoStore } from '../../stores/useGanadoStore';
+import { TrasladoGanadoModal } from '../modals/TrasladoGanadoModal';
+import { Plus, Beef, Truck } from 'lucide-react';
 
 export const HaciendaView: React.FC = () => {
   const { usuario } = useAuthStore();
+  const { estanciaSeleccionadaId, estancias } = useEstanciasStore();
+  const { movimientos, obtenerStockEstancia } = useGanadoStore();
+
   const currentRole = usuario?.rol || 'OPERARIO';
-
-  const [stockList] = useState<StockGanadero[]>(mockStock);
-  const [filtroEspecie, setFiltroEspecie] = useState<'TODOS' | 'VACUNO' | 'OVINO'>('TODOS');
-
   const canEdit = currentRole === 'ADMIN' || currentRole === 'CAPATAZ';
 
-  const stockFiltrado = stockList.filter(s => filtroEspecie === 'TODOS' || s.especie === filtroEspecie);
+  const [modalTrasladoAbierto, setModalTrasladoAbierto] = useState(false);
+  const [filtroEspecie, setFiltroEspecie] = useState<'TODOS' | 'VACUNO' | 'OVINO'>('TODOS');
 
-  const totalCabezasVacunos = stockList.filter(s => s.especie === 'VACUNO').reduce((acc, curr) => acc + curr.cabezas, 0);
-  const totalCabezasOvinos = stockList.filter(s => s.especie === 'OVINO').reduce((acc, curr) => acc + curr.cabezas, 0);
+  const stockActual = obtenerStockEstancia(estanciaSeleccionadaId);
+  const stockFiltrado = stockActual.filter((s) => filtroEspecie === 'TODOS' || s.especie === filtroEspecie);
+
+  const totalCabezasVacunos = stockActual.filter((s) => s.especie === 'VACUNO').reduce((acc, curr) => acc + curr.cabezas, 0);
+  const totalCabezasOvinos = stockActual.filter((s) => s.especie === 'OVINO').reduce((acc, curr) => acc + curr.cabezas, 0);
 
   return (
     <section aria-label="Existencias de Ganado y DICOSE" className="space-y-4 sm:space-y-6">
@@ -40,9 +36,13 @@ export const HaciendaView: React.FC = () => {
         </div>
 
         {canEdit && (
-          <button className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-extrabold text-xs px-4 py-3 rounded-xl shadow-md shadow-emerald-950/20 active:scale-95 transition-all min-h-[44px]">
+          <button 
+            type="button"
+            onClick={() => setModalTrasladoAbierto(true)}
+            className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-extrabold text-xs px-4 py-3 rounded-xl shadow-md shadow-emerald-950/20 active:scale-95 transition-all min-h-[44px] cursor-pointer"
+          >
             <Plus className="w-4 h-4" />
-            <span>Registrar Movimiento de Ganado</span>
+            <span>Registrar Traslado de Ganado</span>
           </button>
         )}
       </header>
@@ -63,41 +63,16 @@ export const HaciendaView: React.FC = () => {
         ))}
       </nav>
 
-      {/* Vista Móvil de Tarjetas */}
-      <div className="grid grid-cols-1 gap-3 sm:hidden">
-        {stockFiltrado.map((item) => (
-          <article key={item.id} className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm space-y-2">
-            <div className="flex items-center justify-between">
-              <span className={`px-2.5 py-0.5 rounded text-[10px] font-black uppercase ${
-                item.especie === 'VACUNO' ? 'bg-emerald-100 text-emerald-900' : 'bg-amber-100 text-amber-900'
-              }`}>
-                {item.especie}
-              </span>
-              <time className="text-[11px] text-slate-400 font-mono" dateTime={item.ultima_actualizacion}>
-                {item.ultima_actualizacion}
-              </time>
-            </div>
-            
-            <div className="flex items-baseline justify-between pt-1">
-              <h3 className="font-extrabold text-sm text-slate-800">{item.categoria.replace(/_/g, ' ')}</h3>
-              <span className="text-lg font-black text-emerald-700">{item.cabezas} <span className="text-xs font-semibold text-slate-500">cabezas</span></span>
-            </div>
+      {/* Vista de Tabla Escritorio Stock */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+            <Beef className="w-4 h-4 text-emerald-600" />
+            <span>Existencias Actuales de Ganado</span>
+          </h3>
+          <span className="text-xs text-slate-500 font-extrabold">{stockFiltrado.length} Categorías</span>
+        </div>
 
-            <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
-              <span>Peso Promedio: <strong>{item.kilos_promedio ? `${item.kilos_promedio} kg` : '-'}</strong></span>
-              {canEdit && (
-                <button className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs px-3 py-1.5 rounded-lg border border-emerald-200/80 inline-flex items-center space-x-1 transition-all">
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Ajustar</span>
-                </button>
-              )}
-            </div>
-          </article>
-        ))}
-      </div>
-
-      {/* Vista de Tabla Escritorio */}
-      <div className="hidden sm:block bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -107,7 +82,6 @@ export const HaciendaView: React.FC = () => {
                 <th className="py-3.5 px-4">Cabezas</th>
                 <th className="py-3.5 px-4">Peso Prom. (Kg)</th>
                 <th className="py-3.5 px-4">Última Actualización</th>
-                {canEdit && <th className="py-3.5 px-4 text-right">Acciones</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
@@ -124,7 +98,7 @@ export const HaciendaView: React.FC = () => {
                     {item.categoria.replace(/_/g, ' ')}
                   </td>
                   <td className="py-3.5 px-4 font-black text-slate-900 text-sm">
-                    {item.cabezas}
+                    {item.cabezas} cabezas
                   </td>
                   <td className="py-3.5 px-4 text-slate-600 font-medium">
                     {item.kilos_promedio ? `${item.kilos_promedio} kg` : '-'}
@@ -132,20 +106,91 @@ export const HaciendaView: React.FC = () => {
                   <td className="py-3.5 px-4 text-slate-400 font-mono">
                     <time dateTime={item.ultima_actualizacion}>{item.ultima_actualizacion}</time>
                   </td>
-                  {canEdit && (
-                    <td className="py-3.5 px-4 text-right">
-                      <button className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs px-3 py-1.5 rounded-lg border border-emerald-200/80 inline-flex items-center space-x-1 shadow-sm transition-all active:scale-95">
-                        <RefreshCw className="w-3.5 h-3.5" />
-                        <span>Ajustar</span>
-                      </button>
-                    </td>
-                  )}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Historial de Traslados de Hacienda e Imputaciones Económicas */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden space-y-3">
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+              <Truck className="w-4 h-4 text-emerald-600" />
+              <span>Historial de Traslados Inter-Establecimientos</span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">Movimientos físicos e imputación de valor para rentabilidad por campo</p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setModalTrasladoAbierto(true)}
+            className="inline-flex items-center space-x-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-extrabold text-xs px-3 py-1.5 rounded-xl border border-emerald-200 transition-all cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5 text-emerald-600" />
+            <span>+ Nuevo Traslado</span>
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider font-extrabold border-b border-slate-200">
+                <th className="py-3.5 px-4">Fecha</th>
+                <th className="py-3.5 px-4">Origen ➔ Destino</th>
+                <th className="py-3.5 px-4">Ganado / Cabezas</th>
+                <th className="py-3.5 px-4">Detalle / Guía</th>
+                <th className="py-3.5 px-4 text-right">Imputación Económica</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-xs">
+              {movimientos.length > 0 ? (
+                movimientos.map((m) => {
+                  const origenNom = estancias.find(e => e.id === m.estancia_origen_id)?.nombre || 'Origen';
+                  const destinoNom = estancias.find(e => e.id === m.estancia_destino_id)?.nombre || 'Destino';
+                  return (
+                    <tr key={m.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3.5 px-4 text-slate-500 font-mono">
+                        <time dateTime={m.fecha}>{m.fecha}</time>
+                      </td>
+                      <td className="py-3.5 px-4 font-extrabold text-slate-800">
+                        <span className="text-rose-700">{origenNom}</span> ➔ <span className="text-emerald-700">{destinoNom}</span>
+                      </td>
+                      <td className="py-3.5 px-4 font-bold text-slate-900">
+                        {m.cabezas} {m.categoria.replace(/_/g, ' ')} ({m.especie})
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-600 font-medium">{m.observaciones}</td>
+                      <td className="py-3.5 px-4 text-right">
+                        {m.valorizar_transferencia ? (
+                          <span className="inline-block text-xs font-black bg-emerald-100 text-emerald-950 px-2.5 py-1 rounded-xl border border-emerald-300">
+                            USD {m.monto_total_imputado.toLocaleString('es-UY')}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 font-bold">Sin valorización</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={5} className="py-6 text-center text-slate-500">
+                    No hay traslados de ganado registrados entre campos.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <TrasladoGanadoModal
+        isOpen={modalTrasladoAbierto}
+        onClose={() => setModalTrasladoAbierto(false)}
+      />
+
     </section>
   );
 };

@@ -4,6 +4,7 @@ import { useEstanciasStore } from '../../stores/useEstanciasStore';
 import { StatCard } from './StatCard';
 import { AccionesRapidasBar } from './AccionesRapidasBar';
 import { FiltroEstablecimientosRapido } from './FiltroEstablecimientosRapido';
+import { MetricasEjercicioCard } from './MetricasEjercicioCard';
 import { Beef, DollarSign, TrendingUp, ShieldAlert, Award, MapPin } from 'lucide-react';
 
 export const DashboardView: React.FC = () => {
@@ -52,6 +53,9 @@ export const DashboardView: React.FC = () => {
 
       {/* Panel de Acciones Rápidas Operativas & Bitácora del Campo */}
       <AccionesRapidasBar />
+
+      {/* Módulo de Métricas Financieras del Ejercicio en Curso */}
+      {canSeeMoney && <MetricasEjercicioCard />}
 
       {/* Tarjetas KPIs */}
       <section aria-label="Indicadores Clave de Desempeño (KPIs)" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

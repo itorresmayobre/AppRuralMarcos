@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useEstanciasStore } from '../stores/useEstanciasStore';
 import { useAuthStore } from '../stores/useAuthStore';
+import { CustomSelect } from '../components/ui/CustomSelect';
 import type { TipoTenencia } from '../types';
 import { MapPin, Plus, CheckCircle2, Building2, X } from 'lucide-react';
 
@@ -187,17 +188,16 @@ export const EstanciasPage: React.FC = () => {
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-700">Departamento</label>
-                  <select
+                <div>
+                  <CustomSelect
+                    label="Departamento"
                     value={departamento}
-                    onChange={(e) => setDepartamento(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer"
-                  >
-                    {['Salto', 'Tacuarembó', 'Paysandú', 'Artigas', 'Durazno', 'Florida', 'Río Negro', 'Cerro Largo', 'Soriano', 'Rocha'].map((d) => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
+                    options={['Salto', 'Tacuarembó', 'Paysandú', 'Artigas', 'Durazno', 'Florida', 'Río Negro', 'Cerro Largo', 'Soriano', 'Rocha'].map((d) => ({
+                      value: d,
+                      label: d,
+                    }))}
+                    onChange={(val) => setDepartamento(val)}
+                  />
                 </div>
               </div>
 
@@ -227,17 +227,17 @@ export const EstanciasPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="font-bold text-slate-700">Tipo de Tenencia</label>
-                <select
+              <div>
+                <CustomSelect<TipoTenencia>
+                  label="Tipo de Tenencia"
                   value={tipoTenencia}
-                  onChange={(e) => setTipoTenencia(e.target.value as TipoTenencia)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer"
-                >
-                  <option value="PROPIO">Propiedad (Campo Propio)</option>
-                  <option value="ARRENDADO">Arrendamiento</option>
-                  <option value="PASTOREO">Contrato de Pastoreo</option>
-                </select>
+                  options={[
+                    { value: 'PROPIO', label: 'Propiedad (Campo Propio)' },
+                    { value: 'ARRENDADO', label: 'Arrendamiento' },
+                    { value: 'PASTOREO', label: 'Contrato de Pastoreo' },
+                  ]}
+                  onChange={(val) => setTipoTenencia(val)}
+                />
               </div>
 
               <button

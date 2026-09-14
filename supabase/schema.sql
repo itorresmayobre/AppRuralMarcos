@@ -63,9 +63,12 @@ CREATE TABLE public.transacciones_financieras (
   tipo tipo_transaccion NOT NULL,
   moneda tipo_moneda NOT NULL DEFAULT 'USD',
   monto NUMERIC(12,2) NOT NULL CHECK (monto >= 0),
-  categoria TEXT NOT NULL, -- ej: VENTA_HACIENDA, INSUMOS_VETERINARIOS, COMBUSTIBLE
+  categoria TEXT NOT NULL, -- ej: Venta vacunos, Sueldos y jornales, Rentas
   descripcion TEXT,
   fecha DATE NOT NULL DEFAULT CURRENT_DATE,
+  ejercicio_agricola VARCHAR(10), -- ej: '2025/2026' (Julio a Junio)
+  periodo_mes VARCHAR(15), -- ej: 'Setiembre', 'Julio', etc.
+  naturaleza_costo TEXT CHECK (naturaleza_costo IN ('FIJO', 'VARIABLE')),
   creado_por UUID REFERENCES public.perfiles(id) ON DELETE SET NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -93,6 +96,27 @@ CREATE TABLE public.notas_campo (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- 9. TABLAS DE CATÁLOGO Y CONFIGURACIÓN DE RUBROS (PLAN AGROPECUARIO)
+CREATE TABLE public.conceptos_financieros (
+  id TEXT PRIMARY KEY, -- ej: 'ing-vacunos', 'egr-sueldos-jornales'
+  tipo tipo_transaccion NOT NULL,
+  grupo TEXT NOT NULL, -- ej: 'Ventas de Hacienda', 'Mano de Obra', 'Impuestos'
+  nombre TEXT NOT NULL, -- ej: 'Vacunos', 'Sueldos y jornales'
+  icono TEXT DEFAULT '📋',
+  es_estandar BOOLEAN NOT NULL DEFAULT true,
+  naturaleza_costo TEXT CHECK (naturaleza_costo IN ('FIJO', 'VARIABLE')),
+  es_recurrente_mensual BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE public.conceptos_activos_empresa (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  concepto_id TEXT NOT NULL REFERENCES public.conceptos_financieros(id) ON DELETE CASCADE,
+  activo BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  CONSTRAINT unq_concepto_empresa UNIQUE (concepto_id)
+);
+
 -- ==============================================================================
 -- SEGURIDAD: ROW LEVEL SECURITY (RLS) Y POLÍTICAS DE ACCESO POR ROL
 -- ==============================================================================
@@ -104,6 +128,8 @@ ALTER TABLE public.stock_ganadero ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transacciones_financieras ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.registros_pluviometro ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notas_campo ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.conceptos_financieros ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.conceptos_activos_empresa ENABLE ROW LEVEL SECURITY;
 
 -- POLÍTICAS GENERALES DE LECTURA (Todos los usuarios autenticados)
 CREATE POLICY "Lectura de establecimientos por autenticados" 
@@ -120,6 +146,23 @@ CREATE POLICY "Lectura de pluviometro por autenticados"
 
 CREATE POLICY "Lectura de notas de campo por autenticados" 
   ON public.notas_campo FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Lectura de catálogo de conceptos por autenticados" 
+  ON public.conceptos_financieros FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Lectura de conceptos activos por autenticados" 
+  ON public.conceptos_activos_empresa FOR SELECT TO authenticated USING (true);
+
+-- POLÍTICA DE GESTIÓN DE RUBROS: Solo ADMIN puede modificar rubros activos
+CREATE POLICY "Escritura de conceptos activos por ADMIN" 
+  ON public.conceptos_activos_empresa FOR ALL TO authenticated 
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.perfiles 
+      WHERE perfiles.id = auth.uid() 
+      AND perfiles.rol = 'ADMIN'
+    )
+  );
 
 -- POLÍTICA DE FINANZAS: Solo ADMIN y CONTADOR pueden ver dinero
 CREATE POLICY "Lectura de finanzas restringida por rol" 
@@ -149,3 +192,32 @@ CREATE POLICY "Insercion de pluviometro por usuarios"
 
 CREATE POLICY "Insercion de notas de campo por usuarios" 
   ON public.notas_campo FOR INSERT TO authenticated WITH CHECK (true);
+
+-- 10. TABLA DE TRASLADOS INTERNOS DE GANADO E IMPUTACIÓN ECONÓMICA
+CREATE TABLE public.movimientos_ganado (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  estancia_origen_id UUID REFERENCES public.establecimientos(id) ON DELETE RESTRICT NOT NULL,
+  estancia_destino_id UUID REFERENCES public.establecimientos(id) ON DELETE RESTRICT NOT NULL,
+  especie TEXT NOT NULL CHECK (especie IN ('VACUNO', 'OVINO')),
+  categoria TEXT NOT NULL,
+  cabezas INT NOT NULL CHECK (cabezas > 0),
+  kilos_totales NUMERIC(10,2),
+  kilos_promedio NUMERIC(6,2),
+  fecha DATE NOT NULL DEFAULT CURRENT_DATE,
+  observaciones TEXT,
+  valorizar_transferencia BOOLEAN NOT NULL DEFAULT true,
+  precio_por_cabeza NUMERIC(10,2),
+  precio_por_kilo NUMERIC(6,2),
+  monto_total_imputado NUMERIC(12,2) DEFAULT 0,
+  creado_por UUID REFERENCES public.perfiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.movimientos_ganado ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Lectura de movimientos de ganado por autenticados" 
+  ON public.movimientos_ganado FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Escritura de movimientos de ganado por capataz o admin" 
+  ON public.movimientos_ganado FOR INSERT TO authenticated WITH CHECK (true);
+
