@@ -12,79 +12,8 @@ interface FinanzasState {
   obtenerTransaccionesEstancia: (estanciaId: string) => TransaccionFinanciera[];
 }
 
-const mockTransaccionesIniciales: TransaccionFinanciera[] = [
-  { 
-    id: 't-prorrateo-1', 
-    estancia_id: 'TODAS', 
-    tipo: 'EGRESO', 
-    moneda: 'UYU', 
-    monto: 120000, 
-    categoria: 'Sueldos y jornales', 
-    descripcion: 'Sueldo mensual Administración General Empresa', 
-    fecha: '2026-09-12', 
-    creado_por_usuario: 'marcos.propietario',
-    naturaleza_costo: 'FIJO',
-    es_prorrateado: true,
-    distribucion_prorrateo: [
-      { estancia_id: 'est-1', porcentaje: 35, monto: 42000 },
-      { estancia_id: 'est-2', porcentaje: 24, monto: 28800 },
-      { estancia_id: 'est-3', porcentaje: 41, monto: 49200 }
-    ],
-    moneda_original: 'UYU',
-    monto_original: 120000,
-    tipo_cambio: 40.50,
-    monto_usd: 2962.96,
-    monto_uyu: 120000
-  },
-  { 
-    id: 't-prorrateo-2', 
-    estancia_id: 'TODAS', 
-    tipo: 'EGRESO', 
-    moneda: 'UYU', 
-    monto: 45000, 
-    categoria: 'Pago de Honorarios', 
-    descripcion: 'Honorarios Contables y Asesoría Fiscal', 
-    fecha: '2026-09-11', 
-    creado_por_usuario: 'marcos.propietario',
-    naturaleza_costo: 'FIJO',
-    es_prorrateado: true,
-    distribucion_prorrateo: [
-      { estancia_id: 'est-1', porcentaje: 35, monto: 15750 },
-      { estancia_id: 'est-2', porcentaje: 24, monto: 10800 },
-      { estancia_id: 'est-3', porcentaje: 41, monto: 18450 }
-    ],
-    moneda_original: 'UYU',
-    monto_original: 45000,
-    tipo_cambio: 40.50,
-    monto_usd: 1111.11,
-    monto_uyu: 45000
-  },
-  { 
-    id: 't1', 
-    estancia_id: 'est-1', 
-    tipo: 'INGRESO', 
-    moneda: 'USD', 
-    monto: 48500, 
-    categoria: 'Vacunos', 
-    descripcion: 'Venta 95 Novillos 2-3 años remate Lote 21', 
-    fecha: '2026-09-08', 
-    creado_por_usuario: 'marcos.propietario' 
-  },
-  { 
-    id: 't2', 
-    estancia_id: 'est-1', 
-    tipo: 'EGRESO', 
-    moneda: 'USD', 
-    monto: 12300, 
-    categoria: 'Vacunos', 
-    descripcion: 'Vacunación Aftosa y dosificación otoñal', 
-    fecha: '2026-09-05', 
-    creado_por_usuario: 'marcos.propietario' 
-  }
-];
-
 export const useFinanzasStore = create<FinanzasState>((set, get) => ({
-  transacciones: mockTransaccionesIniciales,
+  transacciones: [],
   cargando: false,
 
   cargarTransaccionesDesdeSupabase: async () => {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
@@ -16,8 +16,21 @@ import { SqlView } from './components/sql/SqlView';
 import { RegistroEmpresaView } from './components/registro/RegistroEmpresaView';
 import { DevConsoleView } from './components/dev/DevConsoleView';
 
+import { useEstanciasStore } from './stores/useEstanciasStore';
+import { useGanadoStore } from './stores/useGanadoStore';
+import { useFinanzasStore } from './stores/useFinanzasStore';
+import { useRecibosSueldoStore } from './stores/useRecibosSueldoStore';
+
 function MainLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    // Carga inicial automatica de datos desde Supabase PostgreSQL
+    useEstanciasStore.getState().cargarEstanciasDesdeSupabase();
+    useGanadoStore.getState().cargarGanadoDesdeSupabase();
+    useFinanzasStore.getState().cargarTransaccionesDesdeSupabase();
+    useRecibosSueldoStore.getState().cargarRecibosDesdeSupabase();
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 w-full overflow-x-hidden">

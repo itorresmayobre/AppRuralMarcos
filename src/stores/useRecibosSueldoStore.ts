@@ -12,39 +12,8 @@ interface RecibosSueldoState {
   obtenerRecibosPorEmpresa: (empresaId: string) => ReciboSueldo[];
 }
 
-const mockRecibosIniciales: ReciboSueldo[] = [
-  {
-    id: 'rec-1',
-    empresa_id: 'emp-1',
-    usuario_id: 'user-2',
-    usuario_nombre: 'Juan Pérez (Capataz)',
-    periodo_mes: 'Agosto 2026',
-    ejercicio_agricola: '2026/2027',
-    monto_liquido: 42500,
-    moneda: 'UYU',
-    fecha_pago: '2026-09-02',
-    recibo_url: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&q=80',
-    estado_firma: 'FIRMADO',
-    observaciones: 'Pago de haberes correspondiente a Agosto 2026',
-  },
-  {
-    id: 'rec-2',
-    empresa_id: 'emp-1',
-    usuario_id: 'user-4',
-    usuario_nombre: 'Roberto González (Operario)',
-    periodo_mes: 'Agosto 2026',
-    ejercicio_agricola: '2026/2027',
-    monto_liquido: 34000,
-    moneda: 'UYU',
-    fecha_pago: '2026-09-02',
-    recibo_url: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&q=80',
-    estado_firma: 'PENDIENTE',
-    observaciones: 'Pendiente de firma del empleado',
-  },
-];
-
 export const useRecibosSueldoStore = create<RecibosSueldoState>((set, get) => ({
-  recibos: mockRecibosIniciales,
+  recibos: [],
   cargando: false,
 
   cargarRecibosDesdeSupabase: async () => {
