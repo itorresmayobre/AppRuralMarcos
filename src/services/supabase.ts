@@ -4,6 +4,7 @@ import type {
   StockGanadero, 
   TransaccionFinanciera, 
   ReciboSueldo, 
+  ConceptoFinanciero,
   UserProfile
 } from '../types';
 
@@ -92,7 +93,7 @@ export async function obtenerPerfilUsuarioBD(userId: string): Promise<UserProfil
 export async function obtenerEstablecimientosBD(): Promise<Estancia[]> {
   const { data, error } = await supabase.from('establecimientos').select('*');
   if (error) {
-    console.warn('No se pudieron obtener establecimientos de Supabase (modo fallback local activo).', error.message);
+    console.warn('No se pudieron obtener establecimientos de Supabase.', error.message);
     return [];
   }
   return data as Estancia[];
@@ -215,4 +216,16 @@ export async function obtenerRecibosSueldoBD(): Promise<ReciboSueldo[]> {
     estado_firma: item.estado_firma,
     observaciones: item.observaciones,
   }));
+}
+
+/**
+ * Obtener catálogo de rubros / conceptos financieros desde Supabase
+ */
+export async function obtenerConceptosFinancierosBD(): Promise<ConceptoFinanciero[]> {
+  const { data, error } = await supabase.from('conceptos_financieros').select('*');
+  if (error) {
+    console.warn('No se pudieron obtener conceptos financieros de Supabase.', error.message);
+    return [];
+  }
+  return data as ConceptoFinanciero[];
 }

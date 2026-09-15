@@ -20,6 +20,7 @@ import { useEstanciasStore } from './stores/useEstanciasStore';
 import { useGanadoStore } from './stores/useGanadoStore';
 import { useFinanzasStore } from './stores/useFinanzasStore';
 import { useRecibosSueldoStore } from './stores/useRecibosSueldoStore';
+import { useConceptosFinancierosStore } from './stores/useConceptosFinancierosStore';
 
 function MainLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -30,6 +31,7 @@ function MainLayout() {
     useGanadoStore.getState().cargarGanadoDesdeSupabase();
     useFinanzasStore.getState().cargarTransaccionesDesdeSupabase();
     useRecibosSueldoStore.getState().cargarRecibosDesdeSupabase();
+    useConceptosFinancierosStore.getState().cargarConceptosDesdeSupabase();
   }, []);
 
   return (

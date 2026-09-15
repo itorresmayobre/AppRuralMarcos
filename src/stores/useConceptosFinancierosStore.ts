@@ -132,9 +132,13 @@ const IDs_INICIALES_ACTIVOS: string[] = [
   'egr-est-ute',
 ];
 
+import { obtenerConceptosFinancierosBD, supabase } from '../services/supabase';
+
 interface ConceptosStoreState {
   catalog: ConceptoFinanciero[];
   conceptosActivosIds: string[];
+  cargando: boolean;
+  cargarConceptosDesdeSupabase: () => Promise<void>;
   toggleConcepto: (conceptoId: string) => void;
   activarTodosGrupo: (grupo: string, activar: boolean) => void;
   obtenerConceptosPorTipo: (tipo: TipoTransaccion) => ConceptoFinanciero[];
@@ -149,6 +153,21 @@ export const useConceptosFinancierosStore = create<ConceptosStoreState>()(
     (set, get) => ({
       catalog: CATALOGO_PLAN_AGROPECUARIO,
       conceptosActivosIds: IDs_INICIALES_ACTIVOS,
+      cargando: false,
+
+      cargarConceptosDesdeSupabase: async () => {
+        set({ cargando: true });
+        const datosBD = await obtenerConceptosFinancierosBD();
+        if (datosBD && datosBD.length > 0) {
+          set({
+            catalog: datosBD,
+            conceptosActivosIds: datosBD.map((c) => c.id),
+            cargando: false,
+          });
+        } else {
+          set({ cargando: false });
+        }
+      },
 
       toggleConcepto: (conceptoId) => {
         set((state) => {
