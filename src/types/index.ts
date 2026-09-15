@@ -195,3 +195,21 @@ export interface MovimientoGanado {
   monto_total_imputado: number;
   creado_por_usuario: string;
 }
+
+export type EstadoFirmaRecibo = 'PENDIENTE' | 'FIRMADO' | 'CONFORME';
+
+export interface ReciboSueldo {
+  id: string;
+  empresa_id: string;
+  usuario_id: string; // Empleado que cobra
+  usuario_nombre?: string;
+  transaccion_id?: string;
+  periodo_mes: string; // ej: "Setiembre 2026"
+  ejercicio_agricola: string;
+  monto_liquido: number;
+  moneda: Moneda;
+  fecha_pago: string;
+  recibo_url: string; // PDF o foto del recibo en Storage
+  estado_firma: EstadoFirmaRecibo;
+  observaciones?: string;
+}

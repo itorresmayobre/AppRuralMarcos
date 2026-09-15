@@ -372,4 +372,3 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO public.conceptos_activos_empresa (concepto_id, activo)
 SELECT id, true FROM public.conceptos_financieros
 ON CONFLICT (concepto_id) DO NOTHING;
-

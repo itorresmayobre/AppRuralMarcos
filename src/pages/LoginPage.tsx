@@ -20,17 +20,14 @@ export const LoginPage: React.FC = () => {
     }
   }, [estaAutenticado, navigate, from]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setCargando(true);
-
-    setTimeout(() => {
-      const exito = iniciarSesion(credencial, password);
-      setCargando(false);
-      if (exito) {
-        navigate(from, { replace: true });
-      }
-    }, 400);
+    const exito = await iniciarSesion(credencial, password);
+    setCargando(false);
+    if (exito) {
+      navigate(from, { replace: true });
+    }
   };
 
   const handleUsarCredenciales = (demoCredencial: string, demoPass: string) => {

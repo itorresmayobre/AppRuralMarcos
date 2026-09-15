@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import { useAuthStore } from '../stores/useAuthStore';
 import { useEstanciasStore } from '../stores/useEstanciasStore';
+import { useRecibosSueldoStore } from '../stores/useRecibosSueldoStore';
 import { useUsuariosLista } from '../hooks/usuarios/useUsuariosLista';
 import { useCrearEmpleadoForm } from '../hooks/usuarios/useCrearEmpleadoForm';
 import { useCambiarPasswordForm } from '../hooks/usuarios/useCambiarPasswordForm';
@@ -8,11 +10,13 @@ import type { UserRole } from '../types';
 import { 
   Users, ShieldCheck, KeyRound, UserPlus, Lock, X, 
   Sparkles, Loader2, RefreshCw, AlertTriangle, User, MapPin, Check, 
-  Building2, Crown, ShieldAlert, ToggleLeft, ToggleRight
+  Building2, Crown, ShieldAlert, ToggleLeft, ToggleRight, FileText, ExternalLink
 } from 'lucide-react';
 
 export const UsuariosPage: React.FC = () => {
+  const { usuario } = useAuthStore();
   const { estancias } = useEstanciasStore();
+  const { recibos } = useRecibosSueldoStore();
 
   // 1. Hook para lista de empleados y matriz de permisos
   const lista = useUsuariosLista();
@@ -24,7 +28,12 @@ export const UsuariosPage: React.FC = () => {
   const pass = useCambiarPasswordForm();
 
   // Estado local para pestaña activa
-  const [pestanaActiva, setPestanaActiva] = useState<'MI_CUENTA' | 'EMPLEADOS' | 'PERMISOS_MATRIZ'>('EMPLEADOS');
+  const [pestanaActiva, setPestanaActiva] = useState<'MI_CUENTA' | 'EMPLEADOS' | 'PERMISOS_MATRIZ' | 'RECIBOS'>('EMPLEADOS');
+
+  // Filtrar recibos según el rol del usuario conectado
+  const misRecibos = lista.esAdmin
+    ? recibos
+    : recibos.filter((r) => r.usuario_id === usuario?.id || r.usuario_nombre?.includes(usuario?.nombre || ''));
 
   return (
     <section aria-label="Administración de Usuarios y Permisos" className="space-y-6">
@@ -37,7 +46,7 @@ export const UsuariosPage: React.FC = () => {
             <span>Usuarios, Seguridad & Roles</span>
           </h2>
           <p className="text-xs text-slate-500 font-medium mt-1">
-            Gestión de empleados de la empresa, asignación a múltiples campos y matriz de accesos.
+            Gestión de empleados de la empresa, recibos de sueldo y matriz de accesos.
           </p>
         </div>
 
@@ -65,6 +74,17 @@ export const UsuariosPage: React.FC = () => {
           👥 Lista de Empleados ({lista.usuarios.length})
         </button>
 
+        <button
+          onClick={() => setPestanaActiva('RECIBOS')}
+          className={`whitespace-nowrap px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all duration-200 min-h-[40px] cursor-pointer hover:shadow-sm ${
+            pestanaActiva === 'RECIBOS'
+              ? 'bg-emerald-700 text-white shadow-md shadow-emerald-950/20'
+              : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
+          }`}
+        >
+          📄 Recibos de Sueldo ({misRecibos.length})
+        </button>
+
         {lista.esAdmin && (
           <button
             onClick={() => setPestanaActiva('PERMISOS_MATRIZ')}
@@ -72,10 +92,10 @@ export const UsuariosPage: React.FC = () => {
               pestanaActiva === 'PERMISOS_MATRIZ'
                 ? 'bg-emerald-700 text-white shadow-md shadow-emerald-950/20'
                 : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
-            }`}
-          >
-            🛡️ Matriz de Permisos por Rol
-          </button>
+          }`}
+        >
+          🛡️ Matriz de Permisos por Rol
+        </button>
         )}
 
         <button
@@ -243,7 +263,72 @@ export const UsuariosPage: React.FC = () => {
         </section>
       )}
 
-      {/* TAB 2: MATRIZ CONFIGURABLE DE PERMISOS POR ROL */}
+      {/* TAB 2: RECIBOS DE SUELDO DEL PERSONAL */}
+      {pestanaActiva === 'RECIBOS' && (
+        <section aria-label="Recibos de Sueldo del Personal" className="space-y-4">
+          <header className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-emerald-600" />
+                <span>Mis Recibos de Sueldo y Liquidaciones de Haberes</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Comprobantes oficiales de sueldo abonados por la empresa
+              </p>
+            </div>
+          </header>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {misRecibos.length > 0 ? (
+              misRecibos.map((r) => (
+                <article key={r.id} className="bg-white rounded-2xl border border-slate-200/80 p-5 space-y-3 shadow-sm hover:shadow-md transition-shadow">
+                  <header className="flex items-start justify-between border-b border-slate-100 pb-2.5">
+                    <div>
+                      <h4 className="font-extrabold text-sm text-slate-900">{r.periodo_mes}</h4>
+                      <p className="text-xs font-bold text-emerald-700 mt-0.5">{r.usuario_nombre || 'Empleado'}</p>
+                    </div>
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase ${
+                      r.estado_firma === 'FIRMADO'
+                        ? 'bg-emerald-100 text-emerald-900 border border-emerald-200'
+                        : 'bg-amber-100 text-amber-900 border border-amber-200'
+                    }`}>
+                      {r.estado_firma}
+                    </span>
+                  </header>
+
+                  <div className="space-y-1 text-xs">
+                    <p className="text-slate-600">
+                      Monto Líquido: <strong className="text-slate-900 font-black">{r.moneda} {r.monto_liquido.toLocaleString('es-UY')}</strong>
+                    </p>
+                    <p className="text-slate-500 text-[11px]">Fecha de Pago: {r.fecha_pago}</p>
+                    {r.observaciones && (
+                      <p className="text-slate-500 text-[11px] italic mt-1 bg-slate-50 p-2 rounded-lg border border-slate-200">{r.observaciones}</p>
+                    )}
+                  </div>
+
+                  <footer className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                    <a
+                      href={r.recibo_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-extrabold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-xl transition-all"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Ver Recibo en Storage</span>
+                    </a>
+                  </footer>
+                </article>
+              ))
+            ) : (
+              <div className="col-span-full bg-white p-8 rounded-2xl border border-slate-200/80 text-center text-slate-500 text-xs font-medium">
+                No tienes recibos de sueldo registrados hasta el momento.
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* TAB 3: MATRIZ CONFIGURABLE DE PERMISOS POR ROL */}
       {pestanaActiva === 'PERMISOS_MATRIZ' && lista.esAdmin && (
         <article className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-sm space-y-4">
           <header className="border-b border-slate-100 pb-3 flex items-center justify-between">
@@ -305,7 +390,7 @@ export const UsuariosPage: React.FC = () => {
         </article>
       )}
 
-      {/* TAB 3: MI CUENTA Y CAMBIO DE CONTRASEÑA */}
+      {/* TAB 4: MI CUENTA Y CAMBIO DE CONTRASEÑA */}
       {pestanaActiva === 'MI_CUENTA' && (
         <article className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 max-w-lg shadow-sm space-y-6">
           <header className="border-b border-slate-100 pb-3">

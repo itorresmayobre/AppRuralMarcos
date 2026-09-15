@@ -1,9 +1,14 @@
 import { create } from 'zustand';
 import type { TransaccionFinanciera } from '../types';
+import { obtenerTransaccionesBD, guardarTransaccionBD, supabase } from '../services/supabase';
 
 interface FinanzasState {
   transacciones: TransaccionFinanciera[];
-  agregarTransaccion: (nueva: Omit<TransaccionFinanciera, 'id' | 'creado_por_usuario'>) => void;
+  cargando: boolean;
+  cargarTransaccionesDesdeSupabase: () => Promise<void>;
+  agregarTransaccion: (nueva: Omit<TransaccionFinanciera, 'id' | 'creado_por_usuario'>) => Promise<void>;
+  actualizarTransaccion: (id: string, datos: Partial<TransaccionFinanciera>) => Promise<void>;
+  eliminarTransaccion: (id: string) => Promise<void>;
   obtenerTransaccionesEstancia: (estanciaId: string) => TransaccionFinanciera[];
 }
 
@@ -14,7 +19,7 @@ const mockTransaccionesIniciales: TransaccionFinanciera[] = [
     tipo: 'EGRESO', 
     moneda: 'UYU', 
     monto: 120000, 
-    categoria: 'Sueldo administrador', 
+    categoria: 'Sueldos y jornales', 
     descripcion: 'Sueldo mensual Administración General Empresa', 
     fecha: '2026-09-12', 
     creado_por_usuario: 'marcos.propietario',
@@ -60,7 +65,7 @@ const mockTransaccionesIniciales: TransaccionFinanciera[] = [
     tipo: 'INGRESO', 
     moneda: 'USD', 
     monto: 48500, 
-    categoria: 'VENTA_HACIENDA', 
+    categoria: 'Vacunos', 
     descripcion: 'Venta 95 Novillos 2-3 años remate Lote 21', 
     fecha: '2026-09-08', 
     creado_por_usuario: 'marcos.propietario' 
@@ -71,48 +76,62 @@ const mockTransaccionesIniciales: TransaccionFinanciera[] = [
     tipo: 'EGRESO', 
     moneda: 'USD', 
     monto: 12300, 
-    categoria: 'INSUMOS_VETERINARIOS', 
+    categoria: 'Vacunos', 
     descripcion: 'Vacunación Aftosa y dosificación otoñal', 
     fecha: '2026-09-05', 
     creado_por_usuario: 'marcos.propietario' 
-  },
-  { 
-    id: 't3', 
-    estancia_id: 'est-1', 
-    tipo: 'EGRESO', 
-    moneda: 'UYU', 
-    monto: 185000, 
-    categoria: 'COMBUSTIBLE', 
-    descripcion: 'Gasoil 3.500 Litros para tractores', 
-    fecha: '2026-09-02', 
-    creado_por_usuario: 'marcos.propietario' 
-  },
-  { 
-    id: 't4', 
-    estancia_id: 'est-2', 
-    tipo: 'INGRESO', 
-    moneda: 'USD', 
-    monto: 29000, 
-    categoria: 'VENTA_HACIENDA', 
-    descripcion: 'Venta Terneros destete', 
-    fecha: '2026-09-10', 
-    creado_por_usuario: 'juan.perez' 
-  },
+  }
 ];
 
 export const useFinanzasStore = create<FinanzasState>((set, get) => ({
   transacciones: mockTransaccionesIniciales,
+  cargando: false,
 
-  agregarTransaccion: (nuevaData) => {
+  cargarTransaccionesDesdeSupabase: async () => {
+    set({ cargando: true });
+    const datosBD = await obtenerTransaccionesBD();
+    if (datosBD && datosBD.length > 0) {
+      set({ transacciones: datosBD, cargando: false });
+    } else {
+      set({ cargando: false });
+    }
+  },
+
+  agregarTransaccion: async (nuevaData) => {
+    const idBD = await guardarTransaccionBD(nuevaData);
     const nueva: TransaccionFinanciera = {
       ...nuevaData,
-      id: `t-${Date.now()}`,
+      id: idBD || `t-${Date.now()}`,
       creado_por_usuario: 'usuario.actual',
     };
 
     set((state) => ({
       transacciones: [nueva, ...state.transacciones],
     }));
+  },
+
+  actualizarTransaccion: async (id, datos) => {
+    set((state) => ({
+      transacciones: state.transacciones.map((t) => (t.id === id ? { ...t, ...datos } : t)),
+    }));
+
+    try {
+      await supabase.from('transacciones_financieras').update(datos).eq('id', id);
+    } catch (e) {
+      console.warn('Error actualizando en Supabase:', e);
+    }
+  },
+
+  eliminarTransaccion: async (id) => {
+    set((state) => ({
+      transacciones: state.transacciones.filter((t) => t.id !== id),
+    }));
+
+    try {
+      await supabase.from('transacciones_financieras').delete().eq('id', id);
+    } catch (e) {
+      console.warn('Error eliminando en Supabase:', e);
+    }
   },
 
   obtenerTransaccionesEstancia: (estanciaId: string) => {
