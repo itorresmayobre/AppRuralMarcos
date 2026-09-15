@@ -27,19 +27,29 @@ export const useAuthStore = create<AuthState>()(
 
         set({ cargando: true, errorAutenticacion: null });
 
-        // 1. Intentar inicio de sesión real en Supabase Auth
-        try {
-          const emailParaLogin = credencialLimpia.includes('@')
-            ? credencialLimpia
-            : `${credencialLimpia}@agrouy.com`; // Fallback de username a email
+        // 1. Intentar buscar email asociado al username en public.perfiles
+        let emailParaLogin = credencialLimpia;
 
+        try {
+          if (!credencialLimpia.includes('@')) {
+            const { data: perfilBusqueda } = await supabase
+              .from('perfiles')
+              .select('email')
+              .eq('username', credencialLimpia)
+              .maybeSingle();
+
+            if (perfilBusqueda?.email) {
+              emailParaLogin = perfilBusqueda.email;
+            }
+          }
+
+          // Intentar autenticación real en Supabase Auth
           const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
             email: emailParaLogin,
             password: passLimpia,
           });
 
           if (!authError && authData.user) {
-            // Verificar perfil en public.perfiles
             const perfilBD = await obtenerPerfilUsuarioBD(authData.user.id);
             if (perfilBD) {
               set({
@@ -52,11 +62,14 @@ export const useAuthStore = create<AuthState>()(
             }
           }
         } catch (err) {
-          console.warn('Supabase auth no disponible, usando autenticación demo local:', err);
+          console.warn('Supabase auth no disponible o usuario no existe en Supabase Auth:', err);
         }
 
-        // 2. Fallback Demo para pruebas locales
-        if ((credencialLimpia === 'admin@admin.com' || credencialLimpia === 'admin' || credencialLimpia === 'marcos.propietario') && passLimpia === 'admin') {
+        // 2. Fallback Demo local (permite ingresar sin errores cuando el usuario no se ha creado aún en Supabase Auth)
+        if (
+          (credencialLimpia === 'admin@admin.com' || credencialLimpia === 'admin' || credencialLimpia === 'marcos.propietario') && 
+          passLimpia === 'admin'
+        ) {
           set({
             usuario: {
               id: 'user-admin-1',
@@ -74,7 +87,10 @@ export const useAuthStore = create<AuthState>()(
           return true;
         }
 
-        if ((credencialLimpia === 'capataz@campo.com' || credencialLimpia === 'juan.perez' || credencialLimpia === 'capataz') && passLimpia === 'capataz') {
+        if (
+          (credencialLimpia === 'capataz@campo.com' || credencialLimpia === 'juan.perez' || credencialLimpia === 'capataz') && 
+          passLimpia === 'capataz'
+        ) {
           set({
             usuario: {
               id: 'user-capataz-2',
@@ -92,7 +108,10 @@ export const useAuthStore = create<AuthState>()(
           return true;
         }
 
-        if ((credencialLimpia === 'contador@empresa.com' || credencialLimpia === 'carlos.silva' || credencialLimpia === 'contador') && passLimpia === 'contador') {
+        if (
+          (credencialLimpia === 'contador@empresa.com' || credencialLimpia === 'carlos.silva' || credencialLimpia === 'contador') && 
+          passLimpia === 'contador'
+        ) {
           set({
             usuario: {
               id: 'user-contador-3',
@@ -111,7 +130,7 @@ export const useAuthStore = create<AuthState>()(
         }
 
         set({
-          errorAutenticacion: 'Usuario, correo o contraseña incorrectos en Supabase / Local.',
+          errorAutenticacion: 'Usuario o contraseña incorrectos.',
           cargando: false,
         });
         return false;
