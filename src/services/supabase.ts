@@ -229,3 +229,190 @@ export async function obtenerConceptosFinancierosBD(): Promise<ConceptoFinancier
   }
   return data as ConceptoFinanciero[];
 }
+
+/**
+ * Obtener empresas desde Supabase
+ */
+export async function obtenerEmpresasBD(): Promise<any[]> {
+  const { data, error } = await supabase.from('empresas').select('*');
+  if (error) {
+    console.warn('No se pudieron obtener empresas de Supabase.', error.message);
+    return [];
+  }
+  return data.map((item) => ({
+    id: item.id,
+    propietario_usuario_id: item.propietario_usuario_id,
+    razon_social: item.razon_social,
+    nombre_fantasia: item.nombre_fantasia || item.razon_social,
+    rut: item.rut,
+    email_contacto: item.email_contacto,
+    telefono_contacto: item.telefono || '',
+    departamento_sede: item.departamento_sede,
+    hectareas_totales_grupo: Number(item.hectareas_totales_grupo || 0),
+    plan: item.plan || 'PRO',
+    activa: item.activa ?? true,
+    fecha_registro: item.created_at,
+  }));
+}
+
+/**
+ * Obtener solicitudes de registro en línea desde Supabase
+ */
+export async function obtenerSolicitudesRegistroBD(): Promise<any[]> {
+  const { data, error } = await supabase.from('solicitudes_registro').select('*');
+  if (error) {
+    console.warn('No se pudieron obtener solicitudes de registro de Supabase.', error.message);
+    return [];
+  }
+  return data.map((item) => ({
+    id: item.id,
+    nombre_empresa: item.nombre_empresa,
+    rut: item.rut,
+    solicitante_nombre: item.nombre_solicitante,
+    solicitante_email: item.email,
+    solicitante_telefono: item.telefono,
+    departamento: item.departamento,
+    hectareas_estimadas: Number(item.hectareas_estimadas || 0),
+    estancias_estimadas: 1,
+    estado: item.estado,
+    fecha_solicitud: item.fecha_solicitud,
+    observaciones: '',
+  }));
+}
+
+/**
+ * Obtener registros de pluviómetro desde Supabase
+ */
+export async function obtenerPluviometroBD(): Promise<any[]> {
+  const { data, error } = await supabase.from('registros_pluviometro').select('*').order('fecha', { ascending: false });
+  if (error) {
+    console.warn('No se pudieron obtener registros de pluviómetro de Supabase.', error.message);
+    return [];
+  }
+  return data.map((item) => ({
+    id: item.id,
+    estancia_id: item.establecimiento_id,
+    fecha: item.fecha,
+    milimetros: Number(item.milimetros),
+    observacion: item.observacion || '',
+    registrado_por: item.registrado_por || 'Sistema',
+  }));
+}
+
+/**
+ * Obtener notas de campo desde Supabase
+ */
+export async function obtenerNotasCampoBD(): Promise<any[]> {
+  const { data, error } = await supabase.from('notas_campo').select('*').order('fecha', { ascending: false });
+  if (error) {
+    console.warn('No se pudieron obtener notas de campo de Supabase.', error.message);
+    return [];
+  }
+  return data.map((item) => ({
+    id: item.id,
+    estancia_id: item.establecimiento_id,
+    fecha: item.fecha,
+    titulo: item.titulo,
+    descripcion: item.descripcion || '',
+    prioridad: item.prioridad || 'MEDIA',
+    creado_por: item.creado_por || 'Sistema',
+  }));
+}
+
+/**
+ * Flujo Autónomo de Alta de Cliente Completa en Supabase (Empresa + Campo + Auth + Perfil PROPIETARIO)
+ */
+export async function registrarClienteAutonomoSupabase(params: {
+  nombreEmpresa: string;
+  rut: string;
+  nombreContacto: string;
+  apellidoContacto: string;
+  email: string;
+  password: string;
+  departamento: string;
+  nombreCampoInicial: string;
+  hectareas: number;
+}): Promise<{ exito: boolean; error?: string }> {
+  try {
+    // 1. Crear Empresa
+    const { data: empresaRes, error: errEmpresa } = await supabase
+      .from('empresas')
+      .insert([{
+        razon_social: params.nombreEmpresa,
+        nombre_fantasia: params.nombreEmpresa,
+        rut: params.rut,
+        email_contacto: params.email,
+        departamento_sede: params.departamento,
+        hectareas_totales_grupo: params.hectareas,
+        plan: 'PRO',
+        activa: true,
+      }])
+      .select('id')
+      .single();
+
+    if (errEmpresa || !empresaRes) {
+      return { exito: false, error: errEmpresa?.message || 'Error creando la empresa' };
+    }
+
+    const empresaId = empresaRes.id;
+
+    // 2. Crear Campo / Establecimiento Inicial
+    const { error: errCampo } = await supabase
+      .from('establecimientos')
+      .insert([{
+        empresa_id: empresaId,
+        nombre: params.nombreCampoInicial,
+        dicose: `${params.departamento.substring(0, 2).toUpperCase()}-${Math.floor(100000 + Math.random() * 900000)}-1`,
+        hectareas_totales: params.hectareas,
+        hectareas_pastoreables: Math.round(params.hectareas * 0.9),
+        departamento: params.departamento,
+        tipo_tenencia: 'PROPIO',
+        activa: true,
+      }]);
+
+    if (errCampo) {
+      console.warn('Aviso: No se pudo crear el campo inicial automáticamente:', errCampo.message);
+    }
+
+    // 3. Crear Usuario en Supabase Auth
+    const { data: authData, error: errAuth } = await supabase.auth.signUp({
+      email: params.email,
+      password: params.password,
+    });
+
+    if (errAuth || !authData.user) {
+      return { exito: false, error: errAuth?.message || 'Error registrando usuario en Auth' };
+    }
+
+    const userId = authData.user.id;
+    const username = `${params.nombreContacto.toLowerCase()}.${params.apellidoContacto.toLowerCase()}`;
+
+    // 4. Crear Perfil en public.perfiles con rol PROPIETARIO
+    const { error: errPerfil } = await supabase
+      .from('perfiles')
+      .insert([{
+        id: userId,
+        empresa_id: empresaId,
+        username: username,
+        nombre: params.nombreContacto,
+        apellido: params.apellidoContacto,
+        email: params.email,
+        rol: 'PROPIETARIO',
+        activo: true,
+      }]);
+
+    if (errPerfil) {
+      console.warn('Aviso al crear perfil:', errPerfil.message);
+    }
+
+    // 5. Vincular Propietario a la Empresa
+    await supabase
+      .from('empresas')
+      .update({ propietario_usuario_id: userId })
+      .eq('id', empresaId);
+
+    return { exito: true };
+  } catch (err: any) {
+    return { exito: false, error: err?.message || 'Excepción en el alta autónoma' };
+  }
+}

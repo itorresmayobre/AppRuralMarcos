@@ -74,14 +74,14 @@ export const ConfiguracionConceptosView: React.FC = () => {
     }
   };
 
-  const handleCrearRubroPersonalizado = (e: React.FormEvent) => {
+  const handleCrearRubroPersonalizado = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nuevoNombre.trim()) {
       mostrarToast('Error', 'Por favor ingresa un nombre para el rubro', 'ERROR');
       return;
     }
 
-    const nuevoConcepto = agregarConceptoPersonalizado({
+    const nuevoConcepto = await agregarConceptoPersonalizado({
       nombre: nuevoNombre.trim(),
       tipo: nuevoTipo,
       grupo: nuevoGrupo.trim() || 'Otros Gastos',

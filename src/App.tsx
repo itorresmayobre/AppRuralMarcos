@@ -21,17 +21,21 @@ import { useGanadoStore } from './stores/useGanadoStore';
 import { useFinanzasStore } from './stores/useFinanzasStore';
 import { useRecibosSueldoStore } from './stores/useRecibosSueldoStore';
 import { useConceptosFinancierosStore } from './stores/useConceptosFinancierosStore';
+import { useEmpresasStore } from './stores/useEmpresasStore';
+import { useCampoNotasStore } from './stores/useCampoNotasStore';
 
 function MainLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     // Carga inicial automatica de datos desde Supabase PostgreSQL
+    useEmpresasStore.getState().cargarEmpresasDesdeSupabase();
     useEstanciasStore.getState().cargarEstanciasDesdeSupabase();
     useGanadoStore.getState().cargarGanadoDesdeSupabase();
     useFinanzasStore.getState().cargarTransaccionesDesdeSupabase();
     useRecibosSueldoStore.getState().cargarRecibosDesdeSupabase();
     useConceptosFinancierosStore.getState().cargarConceptosDesdeSupabase();
+    useCampoNotasStore.getState().cargarNotasYPluviometroDesdeSupabase();
   }, []);
 
   return (

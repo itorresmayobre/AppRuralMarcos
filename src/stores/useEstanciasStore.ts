@@ -10,6 +10,7 @@ interface EstanciasState {
   cargarEstanciasDesdeSupabase: () => Promise<void>;
   seleccionarEstancia: (id: string) => void;
   agregarEstancia: (nueva: Omit<Estancia, 'id' | 'activa'>) => Promise<void>;
+  editarEstancia: (id: string, cambios: Partial<Estancia>) => Promise<void>;
   obtenerEstanciaActual: () => Estancia | null;
   actualizarReglasProrrateo: (reglas: Record<string, number>) => void;
   calcularProrrateoPorHectareas: () => Record<string, number>;
@@ -88,6 +89,34 @@ export const useEstanciasStore = create<EstanciasState>((set, get) => ({
       return {
         estancias: nuevasEstancias,
         estanciaSeleccionadaId: nuevaEstancia.id,
+        reglasProrrateo: calcularInicialProrrateo(nuevasEstancias),
+      };
+    });
+  },
+
+  editarEstancia: async (id: string, cambios: Partial<Estancia>) => {
+    try {
+      await supabase
+        .from('establecimientos')
+        .update({
+          ...(cambios.nombre && { nombre: cambios.nombre }),
+          ...(cambios.dicose && { dicose: cambios.dicose }),
+          ...(cambios.hectareas_totales !== undefined && { hectareas_totales: cambios.hectareas_totales }),
+          ...(cambios.hectareas_pastoreables !== undefined && { hectareas_pastoreables: cambios.hectareas_pastoreables }),
+          ...(cambios.departamento && { departamento: cambios.departamento }),
+          ...(cambios.ubicacion_localidad && { ubicacion_localidad: cambios.ubicacion_localidad }),
+          ...(cambios.tipo_tenencia && { tipo_tenencia: cambios.tipo_tenencia }),
+          ...(cambios.activa !== undefined && { activa: cambios.activa }),
+        })
+        .eq('id', id);
+    } catch (e) {
+      console.warn('Error editando estancia en Supabase:', e);
+    }
+
+    set((state) => {
+      const nuevasEstancias = state.estancias.map((e) => (e.id === id ? { ...e, ...cambios } : e));
+      return {
+        estancias: nuevasEstancias,
         reglasProrrateo: calcularInicialProrrateo(nuevasEstancias),
       };
     });

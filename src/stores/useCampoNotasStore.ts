@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { obtenerPluviometroBD, obtenerNotasCampoBD, supabase } from '../services/supabase';
 
 export interface RegistroPluviometro {
   id: string;
@@ -22,40 +23,94 @@ export interface NotaCampo {
 interface CampoNotasState {
   registrosPluviometro: RegistroPluviometro[];
   notasCampo: NotaCampo[];
-  agregarPluviometro: (registro: Omit<RegistroPluviometro, 'id'>) => void;
-  agregarNotaCampo: (nota: Omit<NotaCampo, 'id'>) => void;
+  cargando: boolean;
+  cargarNotasYPluviometroDesdeSupabase: () => Promise<void>;
+  agregarPluviometro: (registro: Omit<RegistroPluviometro, 'id'>) => Promise<void>;
+  agregarNotaCampo: (nota: Omit<NotaCampo, 'id'>) => Promise<void>;
   obtenerPluviometroEstancia: (estanciaId: string) => RegistroPluviometro[];
   obtenerNotasEstancia: (estanciaId: string) => NotaCampo[];
 }
 
-const mockPluviolmetrosIniciales: RegistroPluviometro[] = [
-  { id: 'p1', estancia_id: 'est-1', fecha: '2026-09-12', milimetros: 35, observacion: 'Lluvia pareja en todo el campo, beneficio enorme para verdes de verdeo', registrado_por: 'juan.perez' },
-  { id: 'p2', estancia_id: 'est-2', fecha: '2026-09-10', milimetros: 18, observacion: 'Chubascos de tarde', registrado_por: 'marcos.propietario' },
-];
-
-const mockNotasIniciales: NotaCampo[] = [
-  { id: 'n1', estancia_id: 'est-1', fecha: '2026-09-11', titulo: 'Reparar Alambre Portería Norte', descripcion: 'Poste caído por tormenta en el potrero 4. Ganado contenido por electrificador.', prioridad: 'ALTA', creado_por: 'juan.perez' },
-  { id: 'n2', estancia_id: 'est-2', fecha: '2026-09-09', titulo: 'Suplementación con Ración', descripcion: 'Comenzar a dar 1.5kg por vaca de cría en el potrero de las achiras.', prioridad: 'MEDIA', creado_por: 'carlos.silva' },
-];
-
 export const useCampoNotasStore = create<CampoNotasState>((set, get) => ({
-  registrosPluviometro: mockPluviolmetrosIniciales,
-  notasCampo: mockNotasIniciales,
+  registrosPluviometro: [],
+  notasCampo: [],
+  cargando: false,
 
-  agregarPluviometro: (registro) => {
+  cargarNotasYPluviometroDesdeSupabase: async () => {
+    set({ cargando: true });
+    const [pluviometroBD, notasBD] = await Promise.all([
+      obtenerPluviometroBD(),
+      obtenerNotasCampoBD()
+    ]);
+
+    set({
+      registrosPluviometro: pluviometroBD,
+      notasCampo: notasBD,
+      cargando: false,
+    });
+  },
+
+  agregarPluviometro: async (registro) => {
+    let newId = `p-${Date.now()}`;
+
+    try {
+      const payload = {
+        establecimiento_id: registro.estancia_id,
+        fecha: registro.fecha,
+        milimetros: registro.milimetros,
+        observacion: registro.observacion || null,
+      };
+
+      const { data, error } = await supabase
+        .from('registros_pluviometro')
+        .insert([payload])
+        .select('id')
+        .single();
+
+      if (!error && data) {
+        newId = data.id;
+      }
+    } catch (e) {
+      console.warn('Error insertando pluviómetro en Supabase:', e);
+    }
+
     const nuevo: RegistroPluviometro = {
       ...registro,
-      id: `p-${Date.now()}`,
+      id: newId,
     };
     set((state) => ({
       registrosPluviometro: [nuevo, ...state.registrosPluviometro],
     }));
   },
 
-  agregarNotaCampo: (nota) => {
+  agregarNotaCampo: async (nota) => {
+    let newId = `n-${Date.now()}`;
+
+    try {
+      const payload = {
+        establecimiento_id: nota.estancia_id,
+        fecha: nota.fecha,
+        titulo: nota.titulo,
+        descripcion: nota.descripcion,
+        prioridad: nota.prioridad,
+      };
+
+      const { data, error } = await supabase
+        .from('notas_campo')
+        .insert([payload])
+        .select('id')
+        .single();
+
+      if (!error && data) {
+        newId = data.id;
+      }
+    } catch (e) {
+      console.warn('Error insertando nota de campo en Supabase:', e);
+    }
+
     const nueva: NotaCampo = {
       ...nota,
-      id: `n-${Date.now()}`,
+      id: newId,
     };
     set((state) => ({
       notasCampo: [nueva, ...state.notasCampo],

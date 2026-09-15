@@ -1,86 +1,45 @@
 import { create } from 'zustand';
 import type { Empresa, SolicitudRegistro, PlanSaaS } from '../types';
 import { hoyISO, formatearFechaUY } from '../utils/fechas';
+import { obtenerEmpresasBD, obtenerSolicitudesRegistroBD, supabase } from '../services/supabase';
 
 interface EmpresasState {
   empresas: Empresa[];
   solicitudesRegistro: SolicitudRegistro[];
   empresaSeleccionadaId: string;
+  cargando: boolean;
   
   // Acciones
+  cargarEmpresasDesdeSupabase: () => Promise<void>;
   seleccionarEmpresa: (id: string) => void;
   obtenerEmpresaActual: () => Empresa | undefined;
-  solicitarRegistroEmpresa: (data: Omit<SolicitudRegistro, 'id' | 'estado' | 'fecha_solicitud'>) => void;
-  aprobarSolicitud: (solicitudId: string) => string | undefined;
+  solicitarRegistroEmpresa: (data: Omit<SolicitudRegistro, 'id' | 'estado' | 'fecha_solicitud'>) => Promise<void>;
+  aprobarSolicitud: (solicitudId: string) => Promise<string | undefined>;
   rechazarSolicitud: (solicitudId: string, motivo?: string) => void;
   toggleEstadoEmpresa: (empresaId: string) => void;
   cambiarPlanEmpresa: (empresaId: string, plan: PlanSaaS) => void;
 }
 
-const empresasIniciales: Empresa[] = [
-  {
-    id: 'emp-1',
-    razon_social: 'Agropecuaria Marcos S.A.',
-    nombre_fantasia: 'Campos Marcos & Asoc.',
-    rut: '218765430012',
-    email_contacto: 'contacto@marcosagro.com.uy',
-    telefono_contacto: '+598 99 123 456',
-    departamento_sede: 'Soriano',
-    hectareas_totales_grupo: 1250,
-    plan: 'PRO',
-    activa: true,
-    fecha_registro: '10/01/2026',
-  },
-  {
-    id: 'emp-2',
-    razon_social: 'Ganadera Don Pedro SpA',
-    nombre_fantasia: 'Estancias Don Pedro',
-    rut: '123456780019',
-    email_contacto: 'administracion@donpedro.uy',
-    telefono_contacto: '+598 91 887 665',
-    departamento_sede: 'Tacuarembó',
-    hectareas_totales_grupo: 2800,
-    plan: 'ENTERPRISE',
-    activa: true,
-    fecha_registro: '15/02/2026',
-  },
-];
-
-const solicitudesIniciales: SolicitudRegistro[] = [
-  {
-    id: 'sol-1',
-    nombre_empresa: 'Establecimiento La Querencia',
-    rut: '049876540015',
-    solicitante_nombre: 'Gonzalo Rodríguez',
-    solicitante_email: 'gonzalo@laquerencia.uy',
-    solicitante_telefono: '+598 99 456 789',
-    departamento: 'Durazno',
-    hectareas_estimadas: 1600,
-    estancias_estimadas: 2,
-    estado: 'PENDIENTE',
-    fecha_solicitud: '14/09/2026',
-    observaciones: 'Campo ganadero de cría e invernada. Requiero 3 usuarios para capataz y contador.',
-  },
-  {
-    id: 'sol-2',
-    nombre_empresa: 'Agropecuaria San José S.R.L.',
-    rut: '185544330011',
-    solicitante_nombre: 'Mariana Fernández',
-    solicitante_email: 'm.fernandez@sanjoseagro.com.uy',
-    solicitante_telefono: '+598 98 776 554',
-    departamento: 'San José',
-    hectareas_estimadas: 850,
-    estancias_estimadas: 1,
-    estado: 'PENDIENTE',
-    fecha_solicitud: '15/09/2026',
-    observaciones: 'Predio agrícola-ganadero. Me interesa el control bimoneda USD/UYU.',
-  },
-];
-
 export const useEmpresasStore = create<EmpresasState>((set, get) => ({
-  empresas: empresasIniciales,
-  solicitudesRegistro: solicitudesIniciales,
-  empresaSeleccionadaId: 'emp-1',
+  empresas: [],
+  solicitudesRegistro: [],
+  empresaSeleccionadaId: '',
+  cargando: false,
+
+  cargarEmpresasDesdeSupabase: async () => {
+    set({ cargando: true });
+    const [empresasBD, solicitudesBD] = await Promise.all([
+      obtenerEmpresasBD(),
+      obtenerSolicitudesRegistroBD()
+    ]);
+
+    set({
+      empresas: empresasBD,
+      solicitudesRegistro: solicitudesBD,
+      empresaSeleccionadaId: empresasBD.length > 0 ? empresasBD[0].id : '',
+      cargando: false,
+    });
+  },
 
   seleccionarEmpresa: (id: string) => {
     set({ empresaSeleccionadaId: id });
@@ -91,10 +50,37 @@ export const useEmpresasStore = create<EmpresasState>((set, get) => ({
     return empresas.find((e) => e.id === empresaSeleccionadaId) || empresas[0];
   },
 
-  solicitarRegistroEmpresa: (data) => {
+  solicitarRegistroEmpresa: async (data) => {
+    let newId = `sol-${Date.now()}`;
+
+    try {
+      const payload = {
+        nombre_solicitante: data.solicitante_nombre,
+        email: data.solicitante_email,
+        telefono: data.solicitante_telefono,
+        nombre_empresa: data.nombre_empresa,
+        rut: data.rut,
+        departamento: data.departamento,
+        hectareas_estimadas: data.hectareas_estimadas,
+        estado: 'PENDIENTE',
+      };
+
+      const { data: res, error } = await supabase
+        .from('solicitudes_registro')
+        .insert([payload])
+        .select('id')
+        .single();
+
+      if (!error && res) {
+        newId = res.id;
+      }
+    } catch (e) {
+      console.warn('Error enviando solicitud en Supabase:', e);
+    }
+
     const nuevaSolicitud: SolicitudRegistro = {
       ...data,
-      id: `sol-${Date.now()}`,
+      id: newId,
       estado: 'PENDIENTE',
       fecha_solicitud: formatearFechaUY(hoyISO()),
     };
@@ -104,14 +90,46 @@ export const useEmpresasStore = create<EmpresasState>((set, get) => ({
     }));
   },
 
-  aprobarSolicitud: (solicitudId: string) => {
+  aprobarSolicitud: async (solicitudId: string) => {
     const state = get();
     const solicitud = state.solicitudesRegistro.find((s) => s.id === solicitudId);
     if (!solicitud) return undefined;
 
-    // Crear nueva empresa automáticamente
+    let newEmpresaId = `emp-${Date.now()}`;
+
+    try {
+      const payload = {
+        razon_social: solicitud.nombre_empresa,
+        nombre_fantasia: solicitud.nombre_empresa,
+        rut: solicitud.rut,
+        email_contacto: solicitud.solicitante_email,
+        telefono: solicitud.solicitante_telefono,
+        departamento_sede: solicitud.departamento,
+        hectareas_totales_grupo: solicitud.hectareas_estimadas,
+        plan: 'PRO',
+        activa: true,
+      };
+
+      const { data: res, error } = await supabase
+        .from('empresas')
+        .insert([payload])
+        .select('id')
+        .single();
+
+      if (!error && res) {
+        newEmpresaId = res.id;
+      }
+
+      await supabase
+        .from('solicitudes_registro')
+        .update({ estado: 'APROBADA' })
+        .eq('id', solicitudId);
+    } catch (e) {
+      console.warn('Error aprobando solicitud en Supabase:', e);
+    }
+
     const nuevaEmpresa: Empresa = {
-      id: `emp-${Date.now()}`,
+      id: newEmpresaId,
       razon_social: solicitud.nombre_empresa,
       nombre_fantasia: solicitud.nombre_empresa,
       rut: solicitud.rut,

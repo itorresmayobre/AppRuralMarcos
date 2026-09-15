@@ -70,8 +70,8 @@ export const DevConsoleView: React.FC = () => {
     .filter((t) => t.moneda === 'USD')
     .reduce((a, b) => a + b.monto, 0);
 
-  const handleAprobar = (id: string, nombre: string, email: string, solicitanteNombre: string) => {
-    const nuevaEmpresaId = aprobarSolicitud(id);
+  const handleAprobar = async (id: string, nombre: string, email: string, solicitanteNombre: string) => {
+    const nuevaEmpresaId = await aprobarSolicitud(id);
     if (nuevaEmpresaId) {
       vincularEmpresaAUsuario(email, nuevaEmpresaId, solicitanteNombre);
     }

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useEmpresasStore } from '../../stores/useEmpresasStore';
 import { useToastStore } from '../../stores/useToastStore';
 import { CustomSelect, type SelectOption } from '../ui/CustomSelect';
 import {
@@ -13,7 +12,9 @@ import {
   Wheat,
   Phone,
   Mail,
-  User
+  User,
+  Lock,
+  Loader2
 } from 'lucide-react';
 
 const DEPARTAMENTOS_URUGUAY: SelectOption[] = [
@@ -44,51 +45,65 @@ interface RegistroEmpresaViewProps {
 
 export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolverALogin }) => {
   const navigate = useNavigate();
-  const { solicitarRegistroEmpresa } = useEmpresasStore();
   const { mostrarToast } = useToastStore();
 
   const [nombreEmpresa, setNombreEmpresa] = useState('');
   const [rut, setRut] = useState('');
   const [solicitanteNombre, setSolicitanteNombre] = useState('');
+  const [solicitanteApellido, setSolicitanteApellido] = useState('');
   const [solicitanteEmail, setSolicitanteEmail] = useState('');
+  const [solicitantePassword, setSolicitantePassword] = useState('');
   const [solicitanteTelefono, setSolicitanteTelefono] = useState('');
   const [departamento, setDepartamento] = useState('Soriano');
+  const [nombreCampoInicial, setNombreCampoInicial] = useState('Estancia El Ombú');
   const [hectareasEstimadas, setHectareasEstimadas] = useState('1200');
-  const [estanciasEstimadas, setEstanciasEstimadas] = useState('2');
+  const [estanciasEstimadas, setEstanciasEstimadas] = useState('1');
   const [observaciones, setObservaciones] = useState('');
+  const [cargandoEnvio, setCargandoEnvio] = useState(false);
 
   const [enviadoExitoso, setEnviadoExitoso] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!nombreEmpresa.trim() || !solicitanteNombre.trim() || !solicitanteEmail.trim()) {
-      mostrarToast('Campos Incompletos', 'Por favor completa todos los campos requeridos (*)', 'ERROR');
+    if (!nombreEmpresa.trim() || !solicitanteNombre.trim() || !solicitanteEmail.trim() || !solicitantePassword.trim()) {
+      mostrarToast('Campos Incompletos', 'Por favor completa todos los campos requeridos (*), incluyendo correo y contraseña', 'ERROR');
       return;
     }
 
+    setCargandoEnvio(true);
     const ha = parseFloat(hectareasEstimadas);
-    const est = parseInt(estanciasEstimadas, 10);
 
-    solicitarRegistroEmpresa({
-      nombre_empresa: nombreEmpresa.trim(),
+    // Intentar alta directa autónoma en Supabase (Empresa + Campo + User Auth + Perfil PROPIETARIO)
+    const { registrarClienteAutonomoSupabase } = await import('../../services/supabase');
+    const res = await registrarClienteAutonomoSupabase({
+      nombreEmpresa: nombreEmpresa.trim(),
       rut: rut.trim() || '210000000000',
-      solicitante_nombre: solicitanteNombre.trim(),
-      solicitante_email: solicitanteEmail.trim(),
-      solicitante_telefono: solicitanteTelefono.trim() || '+598 99 000 000',
+      nombreContacto: solicitanteNombre.trim(),
+      apellidoContacto: solicitanteApellido.trim() || 'Propietario',
+      email: solicitanteEmail.trim(),
+      password: solicitantePassword.trim(),
       departamento,
-      hectareas_estimadas: isNaN(ha) ? 500 : ha,
-      estancias_estimadas: isNaN(est) ? 1 : est,
-      observaciones: observaciones.trim(),
+      nombreCampoInicial: nombreCampoInicial.trim() || 'Estancia El Ombú',
+      hectareas: isNaN(ha) ? 500 : ha,
     });
 
-    mostrarToast(
-      'Solicitud Enviada',
-      '¡Tu solicitud de alta ha sido registrada! Nuestro equipo se contactará a la brevedad.',
-      'EXITO'
-    );
+    setCargandoEnvio(false);
 
-    setEnviadoExitoso(true);
+    if (res.exito) {
+      mostrarToast(
+        '¡Registro Completado!',
+        'Tu Empresa y tu Cuenta de Propietario han sido creadas exitosamente. Ya puedes ingresar.',
+        'EXITO'
+      );
+      setEnviadoExitoso(true);
+    } else {
+      mostrarToast(
+        'Error en el Registro',
+        res.error || 'Ocurrió un error al dar de alta la empresa en la base de datos.',
+        'ERROR'
+      );
+    }
   };
 
   const handleVolver = () => {
@@ -108,21 +123,22 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
           </div>
 
           <div className="space-y-2">
-            <h2 className="text-xl sm:text-2xl font-black text-slate-900">¡Solicitud Registrada con Éxito!</h2>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900">¡Empresa y Cuenta Creadas con Éxito!</h2>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
-              Recibimos la solicitud para dar de alta la empresa <strong>"{nombreEmpresa}"</strong> en la plataforma AppRural Uruguay.
+              Se ha completado el alta autónoma para <strong>"{nombreEmpresa}"</strong> en la plataforma AppRural Uruguay.
             </p>
           </div>
 
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 text-left text-xs space-y-1.5 font-medium text-slate-700">
-            <p><strong className="text-slate-900">Solicitante:</strong> {solicitanteNombre}</p>
-            <p><strong className="text-slate-900">Email de Contacto:</strong> {solicitanteEmail}</p>
-            <p><strong className="text-slate-900">Departamento Sede:</strong> {departamento}</p>
-            <p><strong className="text-slate-900">Hectáreas Estimadas:</strong> {parseFloat(hectareasEstimadas).toLocaleString('es-UY')} Ha</p>
+            <p><strong className="text-slate-900">Titular Propietario:</strong> {solicitanteNombre} {solicitanteApellido}</p>
+            <p><strong className="text-slate-900">Email de Ingreso:</strong> {solicitanteEmail}</p>
+            <p><strong className="text-slate-900">Establecimiento Inicial:</strong> {nombreCampoInicial}</p>
+            <p><strong className="text-slate-900">Departamento:</strong> {departamento}</p>
+            <p><strong className="text-slate-900">Hectáreas Totales:</strong> {parseFloat(hectareasEstimadas).toLocaleString('es-UY')} Ha</p>
           </div>
 
-          <p className="text-[11px] text-slate-400 font-medium">
-            Nuestro equipo revisará la información y te enviará un correo con las credenciales de acceso.
+          <p className="text-[11px] text-slate-500 font-medium">
+            Tu cuenta tiene rol <strong>PROPIETARIO</strong> activo y tu empresa está vinculada automáticamente en Supabase.
           </p>
 
           <button
@@ -130,7 +146,7 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
             onClick={handleVolver}
             className="w-full bg-slate-900 hover:bg-slate-800 text-white font-black text-xs py-3.5 rounded-xl transition-all shadow-md cursor-pointer active:scale-95"
           >
-            ← Volver a Iniciar Sesión
+            ← Ir a Iniciar Sesión
           </button>
         </div>
       </main>
@@ -149,10 +165,10 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
             <Wheat className="w-8 h-8" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            Solicitar Alta de Empresa en AppRural
+            Registro Autónomo de Empresa en AppRural
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto">
-            Plataforma de Gestión Agrónoma, Control Ganadero DICOSE y Análisis Financiero Bimoneda en Uruguay.
+            Alta 1-Click de Empresa Agropecuaria, Campo Inicial y Usuario Propietario en Uruguay.
           </p>
         </header>
 
@@ -171,7 +187,7 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
 
             <span className="text-[11px] font-extrabold text-emerald-900 bg-emerald-100 px-3 py-1 rounded-xl border border-emerald-200 flex items-center gap-1">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
-              <span>Formulario Oficial SaaS</span>
+              <span>Alta Autónomo Productor</span>
             </span>
           </div>
 
@@ -181,7 +197,7 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
             <div className="space-y-3">
               <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
                 <Building2 className="w-4 h-4 text-emerald-600" />
-                <span>1. Datos de la Empresa / Grupo Agrícola</span>
+                <span>1. Datos de la Empresa y Campo Inicial</span>
               </h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -211,8 +227,36 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
                 </div>
               </div>
 
+              {/* Nombre de Campo Inicial */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-extrabold text-slate-700">Nombre de la Estancia / Campo Principal *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="ej: Estancia El Ombú"
+                    value={nombreCampoInicial}
+                    onChange={(e) => setNombreCampoInicial(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700">Hectáreas Totales *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    placeholder="ej: 1200"
+                    value={hectareasEstimadas}
+                    onChange={(e) => setHectareasEstimadas(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-black text-slate-900 focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
+                  />
+                </div>
+              </div>
+
               {/* Departamento y Dimensiones */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <CustomSelect
                     label="Departamento Sede:"
@@ -224,23 +268,11 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-bold text-slate-700">Hectáreas Totales</label>
+                  <label className="font-bold text-slate-700">Cantidad Estancias Iniciales</label>
                   <input
                     type="number"
                     min="1"
-                    placeholder="ej: 1200"
-                    value={hectareasEstimadas}
-                    onChange={(e) => setHectareasEstimadas(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-black text-slate-900 focus:ring-2 focus:ring-emerald-500 min-h-[42px]"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-700">Cantidad Estancias</label>
-                  <input
-                    type="number"
-                    min="1"
-                    placeholder="ej: 2"
+                    placeholder="ej: 1"
                     value={estanciasEstimadas}
                     onChange={(e) => setEstanciasEstimadas(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-black text-slate-900 focus:ring-2 focus:ring-emerald-500 min-h-[42px]"
@@ -253,17 +285,17 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
             <div className="space-y-3 pt-2">
               <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
                 <User className="w-4 h-4 text-emerald-600" />
-                <span>2. Contacto del Solicitante / Propietario</span>
+                <span>2. Datos de Acceso del Propietario</span>
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="font-extrabold text-slate-700">Nombre Completo *</label>
+                  <label className="font-extrabold text-slate-700">Nombre *</label>
                   <div className="relative">
                     <input
                       type="text"
                       required
-                      placeholder="ej: Marcos Propietario"
+                      placeholder="ej: Marcos"
                       value={solicitanteNombre}
                       onChange={(e) => setSolicitanteNombre(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3 py-2.5 text-xs font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 min-h-[42px]"
@@ -273,7 +305,23 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-extrabold text-slate-700">Correo Electrónico *</label>
+                  <label className="font-extrabold text-slate-700">Apellido</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="ej: Torres"
+                      value={solicitanteApellido}
+                      onChange={(e) => setSolicitanteApellido(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3 py-2.5 text-xs font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 min-h-[42px]"
+                    />
+                    <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-extrabold text-slate-700">Correo Electrónico (Login) *</label>
                   <div className="relative">
                     <input
                       type="email"
@@ -288,6 +336,24 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
                 </div>
 
                 <div className="space-y-1">
+                  <label className="font-extrabold text-slate-700">Contraseña de Acceso *</label>
+                  <div className="relative">
+                    <input
+                      type="password"
+                      required
+                      minLength={6}
+                      placeholder="Mínimo 6 caracteres"
+                      value={solicitantePassword}
+                      onChange={(e) => setSolicitantePassword(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3 py-2.5 text-xs font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 min-h-[42px]"
+                    />
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
                   <label className="font-bold text-slate-700">Teléfono / Celular</label>
                   <div className="relative">
                     <input
@@ -300,35 +366,45 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
                     <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   </div>
                 </div>
-              </div>
 
-              {/* Observaciones Adicionales */}
-              <div className="space-y-1 pt-1">
-                <label className="font-bold text-slate-700 block">Comentarios o Requerimientos Especiales</label>
-                <textarea
-                  rows={2}
-                  placeholder="ej: Requiero importar stock ganadero inicial de vacunas y ovinos desde DICOSE."
-                  value={observaciones}
-                  onChange={(e) => setObservaciones(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-emerald-500"
-                />
+                {/* Observaciones */}
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 block">Comentarios Adicionales</label>
+                  <input
+                    type="text"
+                    placeholder="ej: Producción Ganadera y Agrícola"
+                    value={observaciones}
+                    onChange={(e) => setObservaciones(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-emerald-500 min-h-[42px]"
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Botón de Enviar Solicitud */}
+            {/* Botón de Alta Autónoma */}
             <div className="pt-3">
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-emerald-700 via-emerald-800 to-emerald-900 hover:from-emerald-800 hover:to-emerald-950 text-white font-black text-xs py-4 rounded-xl shadow-lg shadow-emerald-950/20 transition-all flex items-center justify-center space-x-2 cursor-pointer active:scale-95 min-h-[48px]"
+                disabled={cargandoEnvio}
+                className="w-full bg-gradient-to-r from-emerald-700 via-emerald-800 to-emerald-900 hover:from-emerald-800 hover:to-emerald-950 text-white font-black text-xs py-4 rounded-xl shadow-lg shadow-emerald-950/20 transition-all flex items-center justify-center space-x-2 cursor-pointer active:scale-95 min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Send className="w-4 h-4 text-emerald-300" />
-                <span>Enviar Solicitud de Registro de Empresa</span>
+                {cargandoEnvio ? (
+                  <>
+                    <Loader2 className="w-4 h-4 text-emerald-300 animate-spin" />
+                    <span>Creando Empresa y Cuenta Supabase...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 text-emerald-300" />
+                    <span>Registrar Empresa y Cuenta Propietario</span>
+                  </>
+                )}
               </button>
             </div>
 
           </form>
 
-          {/* Footer Footer Link */}
+          {/* Footer Link */}
           <div className="text-center pt-2 border-t border-slate-100">
             <button
               type="button"
@@ -345,3 +421,4 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
     </main>
   );
 };
+

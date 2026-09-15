@@ -28,7 +28,7 @@ export const EstadisticasView: React.FC = () => {
   const { movimientos } = useGanadoStore();
 
   const currentRole = usuario?.rol || 'OPERARIO';
-  const canAccess = currentRole === 'ADMIN' || currentRole === 'CONTADOR';
+  const canAccess = currentRole === 'ADMIN' || currentRole === 'CONTADOR' || currentRole === 'PROPIETARIO' || currentRole === 'SUPERADMIN';
 
   const ejercicioActualCalculado = useMemo(() => obtenerEjercicioAgricolaActual(), []);
 
