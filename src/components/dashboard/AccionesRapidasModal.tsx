@@ -4,6 +4,7 @@ import { useEstanciasStore } from '../../stores/useEstanciasStore';
 import { useFinanzasStore } from '../../stores/useFinanzasStore';
 import { useCampoNotasStore } from '../../stores/useCampoNotasStore';
 import { useToastStore } from '../../stores/useToastStore';
+import { hoyISO } from '../../utils/fechas';
 import type { CategoriaFinanciera, Moneda, TipoTransaccion } from '../../types';
 import {
   X,
@@ -89,7 +90,7 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
       monto: valMonto,
       categoria,
       descripcion: descripcionFinanciera || `${tipoFinanciero === 'INGRESO' ? 'Ingreso' : 'Egreso'} rápido`,
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: hoyISO(),
     });
 
     mostrarToast('Transacción Registrada', `${tipoFinanciero} por ${moneda} ${valMonto.toLocaleString()}`, 'EXITO');
@@ -106,7 +107,7 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
 
     agregarPluviometro({
       estancia_id: estanciaFormId,
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: hoyISO(),
       milimetros: valMm,
       observacion: observacionPluviometro,
       registrado_por: usuario?.username || 'usuario',
@@ -125,7 +126,7 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
 
     agregarNotaCampo({
       estancia_id: estanciaFormId,
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: hoyISO(),
       titulo: tituloNota.trim(),
       descripcion: descripcionNota.trim(),
       prioridad: prioridadNota,

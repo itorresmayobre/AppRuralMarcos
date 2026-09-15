@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
 @theme {
+  --color-brand-primary: var(--color-primary, #059669);
+  --color-brand-dark: var(--color-primary-dark, #064e3b);
+  --color-brand-accent: var(--color-accent, #10b981);
   --color-rural-50: #f4f7f4;
   --color-rural-100: #e3ebe4;
   --color-rural-500: #2e5a36;
@@ -9,6 +12,13 @@
   --color-rural-800: #102213;
   --color-gold-500: #d4af37;
   --color-gold-600: #b89628;
+}
+
+:root {
+  /* Variables de la paleta centralizada */
+  --color-primary: #059669; /* Emerald 600 */
+  --color-primary-dark: #064e3b; /* Emerald 950 */
+  --color-accent: #10b981; /* Emerald 500 */
 }
 
 body {

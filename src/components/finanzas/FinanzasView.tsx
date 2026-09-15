@@ -1,26 +1,15 @@
-import React, { useState } from 'react';
-import { useAuthStore } from '../../stores/useAuthStore';
-import { useEstanciasStore } from '../../stores/useEstanciasStore';
-import { useFinanzasStore } from '../../stores/useFinanzasStore';
+import React from 'react';
+import { useFinanzasState } from '../../hooks/useFinanzasState';
 import { TransaccionModal } from '../modals/TransaccionModal';
 import { ConfiguracionConceptosView } from './ConfiguracionConceptosView';
 import { calcularEjercicioYMesAgricola } from '../../utils/periodoAgricola';
+import { formatearFechaUY } from '../../utils/fechas';
 import { DollarSign, Plus, ArrowUpRight, ArrowDownRight, ShieldAlert, Settings, TableProperties } from 'lucide-react';
 
 export const FinanzasView: React.FC = () => {
-  const { usuario } = useAuthStore();
-  const { estanciaSeleccionadaId } = useEstanciasStore();
-  const { obtenerTransaccionesEstancia } = useFinanzasStore();
+  const finanzas = useFinanzasState();
 
-  const currentRole = usuario?.rol || 'OPERARIO';
-  const canAccess = currentRole === 'ADMIN' || currentRole === 'CONTADOR';
-
-  const [tabActiva, setTabActiva] = useState<'TRANSACCIONES' | 'CONFIGURACION'>('TRANSACCIONES');
-  const [modalAbierto, setModalAbierto] = useState(false);
-
-  const transacciones = obtenerTransaccionesEstancia(estanciaSeleccionadaId);
-
-  if (!canAccess) {
+  if (!finanzas.canAccess) {
     return (
       <main className="p-4 sm:p-6 max-w-lg mx-auto mt-6">
         <section aria-label="Acceso denegado a finanzas" className="bg-amber-50 border border-amber-200/90 rounded-2xl p-6 sm:p-8 text-center space-y-4 shadow-sm">
@@ -30,7 +19,7 @@ export const FinanzasView: React.FC = () => {
             Las transacciones financieras, precios de hacienda y liquidaciones están reservadas para roles de <strong>Administrador / Propietario</strong> y <strong>Contador</strong>.
           </p>
           <p className="text-xs text-slate-500">
-            Usa el selector de rol en la barra superior para probar la vista con rol ADMIN o CONTADOR.
+            Usa el selector de rol en la barra superior para probar la vista con rol ADMIN, PROPIETARIO o CONTADOR.
           </p>
         </section>
       </main>
@@ -38,7 +27,7 @@ export const FinanzasView: React.FC = () => {
   }
 
   return (
-    <section aria-label="Registro Financiero Bimoneda" className="space-y-4 sm:space-y-6">
+    <section aria-label="Gestión Financiera Bimoneda" className="space-y-4 sm:space-y-6">
       {/* Header con Pestañas de Navegación Inline */}
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm">
         <div>
@@ -52,12 +41,12 @@ export const FinanzasView: React.FC = () => {
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200/80 self-start sm:self-auto">
+        <nav aria-label="Secciones de Finanzas" className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200/80 self-start sm:self-auto">
           <button
             type="button"
-            onClick={() => setTabActiva('TRANSACCIONES')}
+            onClick={() => finanzas.setTabActiva('TRANSACCIONES')}
             className={`inline-flex items-center space-x-2 text-xs font-black px-4 py-2.5 rounded-xl transition-all cursor-pointer ${
-              tabActiva === 'TRANSACCIONES'
+              finanzas.tabActiva === 'TRANSACCIONES'
                 ? 'bg-slate-900 text-white shadow-md'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
             }`}
@@ -66,12 +55,12 @@ export const FinanzasView: React.FC = () => {
             <span>Transacciones</span>
           </button>
 
-          {currentRole === 'ADMIN' && (
+          {(finanzas.currentRole === 'ADMIN' || finanzas.currentRole === 'PROPIETARIO' || finanzas.currentRole === 'SUPERADMIN') && (
             <button
               type="button"
-              onClick={() => setTabActiva('CONFIGURACION')}
+              onClick={() => finanzas.setTabActiva('CONFIGURACION')}
               className={`inline-flex items-center space-x-2 text-xs font-black px-4 py-2.5 rounded-xl transition-all cursor-pointer ${
-                tabActiva === 'CONFIGURACION'
+                finanzas.tabActiva === 'CONFIGURACION'
                   ? 'bg-slate-900 text-white shadow-md'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
               }`}
@@ -80,28 +69,28 @@ export const FinanzasView: React.FC = () => {
               <span>Configuración de Rubros</span>
             </button>
           )}
-        </div>
+        </nav>
       </header>
 
       {/* Vista Inline según Pestaña Seleccionada */}
-      {tabActiva === 'TRANSACCIONES' ? (
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+      {finanzas.tabActiva === 'TRANSACCIONES' ? (
+        <article className="space-y-4">
+          <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
             <div>
               <h3 className="text-sm font-extrabold text-slate-900">Historial de Movimientos de Caja</h3>
               <p className="text-xs text-slate-500">Listado de ingresos y egresos registrados en USD y UYU</p>
             </div>
-            {currentRole === 'ADMIN' && (
+            {(finanzas.currentRole === 'ADMIN' || finanzas.currentRole === 'PROPIETARIO' || finanzas.currentRole === 'SUPERADMIN') && (
               <button 
                 type="button"
-                onClick={() => setModalAbierto(true)}
+                onClick={() => finanzas.setModalAbierto(true)}
                 className="inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-extrabold text-xs px-4 py-3 rounded-xl shadow-md cursor-pointer transition-all active:scale-95 min-h-[44px]"
               >
                 <Plus className="w-4 h-4" />
                 <span>Nueva Transacción</span>
               </button>
             )}
-          </div>
+          </header>
 
           {/* Tabla Transacciones Responsiva */}
           <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
@@ -118,8 +107,8 @@ export const FinanzasView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
-                  {transacciones.length > 0 ? (
-                    transacciones.map((t) => {
+                  {finanzas.transacciones.length > 0 ? (
+                    finanzas.transacciones.map((t) => {
                       const { ejercicio, mes } = calcularEjercicioYMesAgricola(t.fecha);
                       return (
                         <tr key={t.id} className="hover:bg-slate-50/80 transition-colors">
@@ -132,7 +121,7 @@ export const FinanzasView: React.FC = () => {
                             </span>
                           </td>
                           <td className="py-3.5 px-4">
-                            <time dateTime={t.fecha} className="font-mono text-slate-700 block font-bold">{t.fecha}</time>
+                            <time dateTime={t.fecha} className="font-mono text-slate-700 block font-bold">{formatearFechaUY(t.fecha)}</time>
                             <span className="text-[10px] text-emerald-800 font-extrabold block mt-0.5">
                               {t.periodo_mes || mes} (Ej. {t.ejercicio_agricola || ejercicio})
                             </span>
@@ -172,16 +161,15 @@ export const FinanzasView: React.FC = () => {
               </table>
             </div>
           </div>
-        </div>
+        </article>
       ) : (
         <ConfiguracionConceptosView />
       )}
 
       <TransaccionModal
-        isOpen={modalAbierto}
-        onClose={() => setModalAbierto(false)}
+        isOpen={finanzas.modalAbierto}
+        onClose={() => finanzas.setModalAbierto(false)}
       />
     </section>
   );
 };
-

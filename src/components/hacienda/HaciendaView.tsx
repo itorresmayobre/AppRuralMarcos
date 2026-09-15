@@ -3,6 +3,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useEstanciasStore } from '../../stores/useEstanciasStore';
 import { useGanadoStore } from '../../stores/useGanadoStore';
 import { TrasladoGanadoModal } from '../modals/TrasladoGanadoModal';
+import { formatearFechaUY } from '../../utils/fechas';
 import { Plus, Beef, Truck } from 'lucide-react';
 
 export const HaciendaView: React.FC = () => {
@@ -103,8 +104,8 @@ export const HaciendaView: React.FC = () => {
                   <td className="py-3.5 px-4 text-slate-600 font-medium">
                     {item.kilos_promedio ? `${item.kilos_promedio} kg` : '-'}
                   </td>
-                  <td className="py-3.5 px-4 text-slate-400 font-mono">
-                    <time dateTime={item.ultima_actualizacion}>{item.ultima_actualizacion}</time>
+                  <td className="py-3.5 px-4 text-slate-600 font-mono font-bold">
+                    <time dateTime={item.ultima_actualizacion}>{formatearFechaUY(item.ultima_actualizacion)}</time>
                   </td>
                 </tr>
               ))}
@@ -152,8 +153,8 @@ export const HaciendaView: React.FC = () => {
                   const destinoNom = estancias.find(e => e.id === m.estancia_destino_id)?.nombre || 'Destino';
                   return (
                     <tr key={m.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-4 text-slate-500 font-mono">
-                        <time dateTime={m.fecha}>{m.fecha}</time>
+                      <td className="py-3.5 px-4 text-slate-700 font-mono font-bold">
+                        <time dateTime={m.fecha}>{formatearFechaUY(m.fecha)}</time>
                       </td>
                       <td className="py-3.5 px-4 font-extrabold text-slate-800">
                         <span className="text-rose-700">{origenNom}</span> ➔ <span className="text-emerald-700">{destinoNom}</span>

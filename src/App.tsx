@@ -13,6 +13,9 @@ import { FinanzasView } from './components/finanzas/FinanzasView';
 import { EstadisticasView } from './components/estadisticas/EstadisticasView';
 import { SqlView } from './components/sql/SqlView';
 
+import { RegistroEmpresaView } from './components/registro/RegistroEmpresaView';
+import { DevConsoleView } from './components/dev/DevConsoleView';
+
 function MainLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -45,6 +48,7 @@ export function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/registro" element={<RegistroEmpresaView />} />
 
         <Route element={<MainLayout />}>
           <Route
@@ -79,7 +83,7 @@ export function App() {
           <Route
             path="/finanzas"
             element={
-              <ProtectedRoute rolesPermitidos={['ADMIN', 'CONTADOR']}>
+              <ProtectedRoute rolesPermitidos={['ADMIN', 'CONTADOR', 'SUPERADMIN']}>
                 <FinanzasView />
               </ProtectedRoute>
             }
@@ -88,8 +92,17 @@ export function App() {
           <Route
             path="/estadisticas"
             element={
-              <ProtectedRoute rolesPermitidos={['ADMIN', 'CONTADOR']}>
+              <ProtectedRoute rolesPermitidos={['ADMIN', 'CONTADOR', 'SUPERADMIN']}>
                 <EstadisticasView />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/dev"
+            element={
+              <ProtectedRoute rolesPermitidos={['SUPERADMIN']}>
+                <DevConsoleView />
               </ProtectedRoute>
             }
           />
@@ -106,7 +119,7 @@ export function App() {
           <Route
             path="/usuarios"
             element={
-              <ProtectedRoute rolesPermitidos={['ADMIN']}>
+              <ProtectedRoute rolesPermitidos={['ADMIN', 'SUPERADMIN']}>
                 <UsuariosPage />
               </ProtectedRoute>
             }

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useFinanzasStore } from '../../stores/useFinanzasStore';
 import { useConceptosFinancierosStore } from '../../stores/useConceptosFinancierosStore';
 import { useEstanciasStore } from '../../stores/useEstanciasStore';
-import { calcularEjercicioYMesAgricola } from '../../utils/periodoAgricola';
+import { calcularEjercicioYMesAgricola, obtenerEjercicioAgricolaActual } from '../../utils/periodoAgricola';
 import {
   BarChart3,
   TrendingUp,
@@ -21,8 +21,8 @@ export const MetricasEjercicioCard: React.FC = () => {
 
   const transacciones = obtenerTransaccionesEstancia(estanciaSeleccionadaId);
 
-  // Filtrar por el Ejercicio Actual (2025/2026) y Moneda USD
-  const ejercicioActual = '2025/2026';
+  // Ejercicio agrícola actual dinámico (calculado según la fecha del sistema 1 Jul - 30 Jun)
+  const ejercicioActual = obtenerEjercicioAgricolaActual();
   const transaccionesEjercicio = transacciones.filter((t) => {
     const { ejercicio } = calcularEjercicioYMesAgricola(t.fecha);
     const ef = t.ejercicio_agricola || ejercicio;
@@ -67,7 +67,6 @@ export const MetricasEjercicioCard: React.FC = () => {
 
   return (
     <section aria-label="Métricas del Ejercicio Agrícola" className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 space-y-4">
-      
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
         <div className="flex items-center space-x-2.5">
@@ -99,7 +98,6 @@ export const MetricasEjercicioCard: React.FC = () => {
 
       {/* Grid Resumen del Ejercicio */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        
         {/* KPI 1: Ingresos vs Egresos */}
         <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/70 space-y-2">
           <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block">Flujo de Caja Ejercicio</span>
@@ -127,7 +125,7 @@ export const MetricasEjercicioCard: React.FC = () => {
             <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block">Estructura de Costos</span>
             <Tag className="w-3.5 h-3.5 text-slate-400" />
           </div>
-          
+
           <div className="space-y-2">
             <div className="h-3 bg-slate-200 rounded-full overflow-hidden flex">
               <div style={{ width: `${pctFijos}%` }} className="bg-amber-500" title={`Fijos: ${pctFijos}%`} />
@@ -161,9 +159,7 @@ export const MetricasEjercicioCard: React.FC = () => {
             )}
           </div>
         </div>
-
       </div>
-
     </section>
   );
 };

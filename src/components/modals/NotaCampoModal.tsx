@@ -3,6 +3,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useEstanciasStore } from '../../stores/useEstanciasStore';
 import { useCampoNotasStore } from '../../stores/useCampoNotasStore';
 import { useToastStore } from '../../stores/useToastStore';
+import { hoyISO } from '../../utils/fechas';
 import { X, FileText, Check, MapPin, Calendar, AlertTriangle } from 'lucide-react';
 
 interface NotaCampoModalProps {
@@ -24,7 +25,7 @@ export const NotaCampoModal: React.FC<NotaCampoModalProps> = ({ isOpen, onClose 
   const [tituloNota, setTituloNota] = useState<string>('');
   const [descripcionNota, setDescripcionNota] = useState<string>('');
   const [prioridadNota, setPrioridadNota] = useState<'ALTA' | 'MEDIA' | 'BAJA'>('MEDIA');
-  const [fecha, setFecha] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [fecha, setFecha] = useState<string>(hoyISO());
 
   if (!isOpen) return null;
 

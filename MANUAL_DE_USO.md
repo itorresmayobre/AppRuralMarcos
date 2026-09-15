@@ -154,4 +154,40 @@ Un empleado puede estar asignado a una estancia específica o tener la casilla *
 
 ---
 
+## 📋 11. AUDITORÍA DE OPERACIONES Y BACKLOG DE CRUDS PENDIENTES
+
+Relevamiento de acciones de **Edición (Update)** y **Anulación / Eliminación (Delete)** a implementar en la siguiente fase:
+
+1. **Finanzas y Transacciones**:
+   * 🔴 *Edición de Comprobantes*: Modificar fecha, monto, rubro o tipo de cambio de una transacción ingresada con error.
+   * 🔴 *Anulación / Eliminación*: Botón con confirmación para revocar o borrar un movimiento.
+2. **Hacienda y Stock Ganadero**:
+   * 🔴 *Causales de Modificación*: Registro explícito de motivo (Nacimiento/Parición, Muerte/Baja sanitaria, Consumo interno, Ajuste inventario).
+   * 🔴 *Anulación de Traslados*: Revocar un traslado de ganado para restituir automáticamente el stock de origen y destino.
+3. **Establecimientos y Campos**:
+   * 🔴 *Edición de Predio*: Actualizar Hectáreas Totales, DICOSE o Nombre del campo.
+   * 🔴 *Dar de Baja / Inactivar Predio*: Para contratos de arrendamiento o pastoreo finalizados.
+4. **Notas de Campo y Pluviómetro**:
+   * 🔴 *Marcar Nota como "Resuelta"*: Cambiar estado cuando la tarea de campo se completó.
+   * 🔴 *Editar / Borrar Precipitaciones*: Corregir milímetros de lluvia mal ingresados.
+
+---
+
+## 🏛️ 12. ARQUITECTURA MULTI-EMPRESA, ESTILOS CENTRALIZADOS Y FOTOS
+
+### A) Escalabilidad Multi-Empresa (Multi-Tenant / SaaS White-Label):
+* **Estructura**: La base de datos está preparada para incorporar el campo `empresa_id` (tenant ID) en todas las tablas (`establecimientos`, `perfiles`, `transacciones`, `stock`).
+* **Aislamiento Seguro (RLS)**: Las políticas de Supabase (*Row Level Security*) garantizan que la Empresa A jamás pueda consultar los datos o finanzas de la Empresa B.
+* **Marca Blanca (White-Label)**: Posibilidad de asignar logo, nombre corporativo y tema de color personalizado por cada firma contratante.
+
+### B) Paleta de Colores y Estilos Centralizados:
+* **Variables CSS Globales**: Los colores de la interfaz (Verde Esmeralda Agro, Slate, Rose, Amber) se centralizarán en `index.css` utilizando variables CSS (`--color-primary`, `--color-primary-dark`, `--color-accent`).
+* **Cambio Global Instantáneo**: Permite cambiar la paleta completa de toda la aplicación modificando una sola línea de código o adaptando el tema según la empresa logueada.
+
+### C) Almacenamiento de Fotografías de Campo (Supabase Storage):
+* **Integración Directa**: Las fotos de potreros, ganado, alambres o comprobantes se subirán directamente a buckets privados/públicos en **Supabase Storage**.
+* **Captura Móvil**: Compatible con la cámara del celular/tablet para adjuntar imágenes a las notas de campo (`imagen_url`).
+
+---
+
 *AppRural Uruguay - Sistema de Gestión Agropecuaria Bimoneda.*

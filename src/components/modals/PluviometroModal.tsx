@@ -3,6 +3,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useEstanciasStore } from '../../stores/useEstanciasStore';
 import { useCampoNotasStore } from '../../stores/useCampoNotasStore';
 import { useToastStore } from '../../stores/useToastStore';
+import { hoyISO } from '../../utils/fechas';
 import { X, CloudDrizzle, Check, MapPin, Calendar, Droplets } from 'lucide-react';
 
 interface PluviometroModalProps {
@@ -22,7 +23,7 @@ export const PluviometroModal: React.FC<PluviometroModalProps> = ({ isOpen, onCl
   );
 
   const [milimetros, setMilimetros] = useState<string>('');
-  const [fecha, setFecha] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [fecha, setFecha] = useState<string>(hoyISO());
   const [observacion, setObservacion] = useState<string>('');
 
   if (!isOpen) return null;

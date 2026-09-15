@@ -6,6 +6,7 @@ import { PluviometroModal } from '../modals/PluviometroModal';
 import { TransaccionModal } from '../modals/TransaccionModal';
 import { NotaCampoModal } from '../modals/NotaCampoModal';
 import { TrasladoGanadoModal } from '../modals/TrasladoGanadoModal';
+import { formatearFechaUY } from '../../utils/fechas';
 import {
   Zap,
   DollarSign,
@@ -14,6 +15,7 @@ import {
   Truck,
   Plus
 } from 'lucide-react';
+
 export const AccionesRapidasBar: React.FC = () => {
   const { usuario } = useAuthStore();
   const { estanciaSeleccionadaId } = useEstanciasStore();
@@ -145,8 +147,8 @@ export const AccionesRapidasBar: React.FC = () => {
               <div className="space-y-0.5">
                 <div className="flex items-center space-x-2">
                   <span className="text-xl font-black text-blue-900">{ultimaLluvia.milimetros} mm</span>
-                  <span className="text-[10px] text-blue-700 font-bold bg-blue-100 px-2 py-0.5 rounded-full">
-                    {ultimaLluvia.fecha}
+                  <span className="text-[10px] text-blue-800 font-black bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200">
+                    {formatearFechaUY(ultimaLluvia.fecha)}
                   </span>
                 </div>
                 {ultimaLluvia.observacion && (
@@ -201,6 +203,7 @@ export const AccionesRapidasBar: React.FC = () => {
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-600 line-clamp-1">{nota.descripcion}</p>
+                    <span className="text-[9px] text-slate-400 font-mono block pt-0.5">{formatearFechaUY(nota.fecha)}</span>
                   </div>
                 </div>
               ))

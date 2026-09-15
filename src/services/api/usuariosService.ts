@@ -1,4 +1,5 @@
 import { simularLlamadoApi } from './mockApi';
+import { hoyISO } from '../../utils/fechas';
 import type { UsuarioEmpleado, UserRole } from '../../types';
 
 function generarUsername(nombre: string, apellido: string): string {
@@ -32,7 +33,7 @@ export const usuariosService = {
       ...nuevaData,
       username: usernameGenerado,
       id: `user-${Date.now()}`,
-      fecha_alta: new Date().toISOString().split('T')[0],
+      fecha_alta: hoyISO(),
       activo: true,
     };
 

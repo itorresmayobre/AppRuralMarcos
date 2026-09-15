@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useEstanciasStore } from '../../stores/useEstanciasStore';
+import { SelectorEmpresaBar } from '../empresas/SelectorEmpresaBar';
 import { StatCard } from './StatCard';
 import { AccionesRapidasBar } from './AccionesRapidasBar';
 import { FiltroEstablecimientosRapido } from './FiltroEstablecimientosRapido';
@@ -13,7 +14,7 @@ export const DashboardView: React.FC = () => {
 
   const currentRole = usuario?.rol || 'OPERARIO';
   const estanciaActual = obtenerEstanciaActual();
-  const canSeeMoney = currentRole === 'ADMIN' || currentRole === 'CONTADOR';
+  const canSeeMoney = currentRole === 'ADMIN' || currentRole === 'CONTADOR' || currentRole === 'SUPERADMIN';
 
   // Si no hay establecimiento seleccionado (o 'TODAS'), mostramos el acumulado consolidado
   const totalHectareas = estanciaActual 
@@ -25,6 +26,9 @@ export const DashboardView: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Selector de Empresa Matriz (Multi-Tenant) */}
+      <SelectorEmpresaBar />
+
       {/* Banner Principal Adaptado al Establecimiento Seleccionado */}
       <section aria-label="Resumen Ejecutivo de la Zafra" className="relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-900 text-white p-6 sm:p-7 rounded-2xl shadow-xl border border-emerald-800/40">
         <div className="space-y-2 z-10">

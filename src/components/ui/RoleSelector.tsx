@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { UserRole } from '../../types';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { Shield, ChevronDown, Check, UserCheck, DollarSign, Tractor, HardHat } from 'lucide-react';
+import { Shield, ChevronDown, Check, UserCheck, DollarSign, Tractor, HardHat, Code, Crown } from 'lucide-react';
 
 const rolesDetalle: {
   rol: UserRole;
@@ -12,9 +12,25 @@ const rolesDetalle: {
   colorBorder: string;
 }[] = [
   {
+    rol: 'SUPERADMIN',
+    titulo: 'Desarrollador / SaaS',
+    descripcion: 'Consola global de empresas, solicitudes de alta y métricas de plataforma',
+    icono: Code,
+    colorBadge: 'bg-purple-950 text-purple-300 border-purple-700/60',
+    colorBorder: 'border-purple-500/80 bg-purple-950/60',
+  },
+  {
+    rol: 'PROPIETARIO',
+    titulo: 'Propietario / Dueño',
+    descripcion: 'Titular legal inamovible de la empresa. Control absoluto y gestión de gerentes',
+    icono: Crown,
+    colorBadge: 'bg-amber-950 text-amber-300 border-amber-600/70',
+    colorBorder: 'border-amber-500/80 bg-amber-950/70',
+  },
+  {
     rol: 'ADMIN',
-    titulo: 'Propietario / Admin',
-    descripcion: 'Control total de finanzas USD/UYU, hacienda y usuarios',
+    titulo: 'Administrador / Gerente',
+    descripcion: 'Gerente de campo contratado. Gestión operativa de finanzas, ganado y personal',
     icono: UserCheck,
     colorBadge: 'bg-emerald-950 text-emerald-300 border-emerald-700/60',
     colorBorder: 'border-emerald-500/80 bg-emerald-950/60',

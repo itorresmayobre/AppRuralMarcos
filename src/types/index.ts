@@ -1,4 +1,4 @@
-export type UserRole = 'ADMIN' | 'CAPATAZ' | 'CONTADOR' | 'OPERARIO';
+export type UserRole = 'SUPERADMIN' | 'PROPIETARIO' | 'ADMIN' | 'CAPATAZ' | 'CONTADOR' | 'OPERARIO';
 
 export interface UserProfile {
   id: string;
@@ -7,6 +7,8 @@ export interface UserProfile {
   nombre: string;
   apellido: string;
   rol: UserRole;
+  empresa_id?: string; // ID de la empresa principal a la que pertenece
+  empresas_asignadas_ids?: string[]; // Lista de IDs de empresas asignadas a las que tiene acceso (ej: ['emp-1', 'emp-2'] o ['TODAS'])
   estancias_asignadas_ids: string[]; // Lista de IDs de estancias asignadas (ej: ['est-1', 'est-2'] o ['TODAS'])
 }
 
@@ -19,6 +21,7 @@ export interface PermisoRol {
   ver_estancias: boolean;
   editar_estancias: boolean;
   administrar_usuarios: boolean;
+  ver_consola_dev?: boolean;
 }
 
 export interface UsuarioEmpleado extends UserProfile {
@@ -26,10 +29,45 @@ export interface UsuarioEmpleado extends UserProfile {
   activo: boolean;
 }
 
+export type PlanSaaS = 'BASIC' | 'PRO' | 'ENTERPRISE';
+
+export interface Empresa {
+  id: string;
+  propietario_usuario_id?: string; // ID del usuario Propietario (titular inamovible)
+  razon_social: string;
+  nombre_fantasia: string;
+  rut: string;
+  email_contacto: string;
+  telefono_contacto: string;
+  departamento_sede: string;
+  hectareas_totales_grupo: number;
+  plan: PlanSaaS;
+  activa: boolean;
+  fecha_registro: string;
+}
+
+export type EstadoSolicitud = 'PENDIENTE' | 'APROBADA' | 'RECHAZADA';
+
+export interface SolicitudRegistro {
+  id: string;
+  nombre_empresa: string;
+  rut: string;
+  solicitante_nombre: string;
+  solicitante_email: string;
+  solicitante_telefono: string;
+  departamento: string;
+  hectareas_estimadas: number;
+  estancias_estimadas: number;
+  estado: EstadoSolicitud;
+  fecha_solicitud: string;
+  observaciones?: string;
+}
+
 export type TipoTenencia = 'PROPIO' | 'ARRENDADO' | 'PASTOREO';
 
 export interface Estancia {
   id: string;
+  empresa_id?: string;
   nombre: string;
   dicose: string; // Código DICOSE Uruguay (ej: 04-123456-7)
   hectareas_totales: number;
@@ -61,6 +99,7 @@ export type CategoriaOvino =
 export interface StockGanadero {
   id: string;
   estancia_id: string;
+  empresa_id?: string;
   especie: EspecieGanado;
   categoria: CategoriaVacuno | CategoriaOvino;
   cabezas: number;
@@ -99,6 +138,7 @@ export interface ReglaProrrateoEstablecimiento {
 export interface TransaccionFinanciera {
   id: string;
   estancia_id: string;
+  empresa_id?: string;
   tipo: TipoTransaccion;
   moneda: Moneda;
   monto: number;
@@ -141,6 +181,7 @@ export interface MovimientoGanado {
   id: string;
   estancia_origen_id: string;
   estancia_destino_id: string;
+  empresa_id?: string;
   especie: EspecieGanado;
   categoria: CategoriaVacuno | CategoriaOvino;
   cabezas: number;
@@ -154,6 +195,3 @@ export interface MovimientoGanado {
   monto_total_imputado: number;
   creado_por_usuario: string;
 }
-
-
-

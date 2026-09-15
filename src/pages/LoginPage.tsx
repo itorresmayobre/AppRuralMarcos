@@ -156,6 +156,17 @@ export const LoginPage: React.FC = () => {
 
         </section>
 
+        {/* Enlace hacia Solicitud de Registro de Empresa */}
+        <div className="text-center pt-2">
+          <button
+            type="button"
+            onClick={() => navigate('/registro')}
+            className="text-xs font-bold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer"
+          >
+            ¿Tu empresa aún no está en AppRural? <strong className="underline">Solicita el alta de tu empresa aquí ➔</strong>
+          </button>
+        </div>
+
         {/* Footer */}
         <footer className="text-center text-[11px] text-slate-600">
           AgroUY • Sistema de Gestión de Empresa Rural en Uruguay

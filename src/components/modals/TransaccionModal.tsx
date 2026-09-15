@@ -1,12 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useAuthStore } from '../../stores/useAuthStore';
-import { useEstanciasStore } from '../../stores/useEstanciasStore';
-import { useFinanzasStore } from '../../stores/useFinanzasStore';
-import { useConceptosFinancierosStore } from '../../stores/useConceptosFinancierosStore';
-import { useToastStore } from '../../stores/useToastStore';
-import { cotizacionService } from '../../services/api/cotizacionService';
-import { calcularEjercicioYMesAgricola } from '../../utils/periodoAgricola';
-import type { Moneda, TipoTransaccion, DistribucionProrrateoItem } from '../../types';
+import React from 'react';
+import { useTransaccionForm } from '../../hooks/finanzas/useTransaccionForm';
 import {
   X,
   DollarSign,
@@ -26,135 +19,26 @@ interface TransaccionModalProps {
 }
 
 export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onClose }) => {
-  const { usuario } = useAuthStore();
-  const { estancias, obtenerEstanciaActual, reglasProrrateo } = useEstanciasStore();
-  const { agregarTransaccion } = useFinanzasStore();
-  const { catalog, obtenerConceptosActivosPorTipo } = useConceptosFinancierosStore();
-  const { mostrarToast } = useToastStore();
+  const form = useTransaccionForm(onClose);
 
-  const currentRole = usuario?.rol || 'OPERARIO';
-  const puedeVerFinanzas = currentRole === 'ADMIN' || currentRole === 'CONTADOR';
-
-  const estanciaActual = obtenerEstanciaActual();
-  const [estanciaFormId, setEstanciaFormId] = useState<string>(
-    estanciaActual?.id || (estancias[0]?.id ?? 'est-1')
-  );
-
-  const [tipoFinanciero, setTipoFinanciero] = useState<TipoTransaccion>('INGRESO');
-  const [moneda, setMoneda] = useState<Moneda>('USD');
-  const [monto, setMonto] = useState<string>('');
-
-  const conceptosDisponibles = obtenerConceptosActivosPorTipo(tipoFinanciero);
-  const [categoria, setCategoria] = useState<string>(conceptosDisponibles[0]?.nombre || 'Ventas de Hacienda');
-  const [naturalezaCosto, setNaturalezaCosto] = useState<'FIJO' | 'VARIABLE'>(
-    conceptosDisponibles[0]?.naturaleza_costo || 'VARIABLE'
-  );
-  const [descripcionFinanciera, setDescripcionFinanciera] = useState<string>('');
-  const [fecha, setFecha] = useState<string>(new Date().toISOString().split('T')[0]);
-
-  // Cotización Bimoneda y Prorrateo State
-  const [tipoCambio, setTipoCambio] = useState<number>(40.50);
-  const [esProrrateado, setEsProrrateado] = useState<boolean>(false);
-  const [customProrrateo, setCustomProrrateo] = useState<Record<string, number>>(reglasProrrateo);
-
-  // Obtener cotización oficial al cambiar fecha
-  useEffect(() => {
-    let unmounted = false;
-    cotizacionService.obtenerCotizacionDolar(fecha).then((tc) => {
-      if (!unmounted && tc > 0) setTipoCambio(tc);
-    });
-    return () => { unmounted = true; };
-  }, [fecha]);
-
-  const { ejercicio: ejercicioAgricola, mes: mesAgricola } = calcularEjercicioYMesAgricola(fecha);
-
-  if (!isOpen || !puedeVerFinanzas) return null;
-
-  const handleSeleccionarCategoria = (conceptoItem: typeof catalog[0]) => {
-    setCategoria(conceptoItem.nombre);
-    if (conceptoItem.naturaleza_costo) {
-      setNaturalezaCosto(conceptoItem.naturaleza_costo);
-    }
-    if (conceptoItem.es_recurrente_mensual || conceptoItem.naturaleza_costo === 'FIJO') {
-      setEsProrrateado(true);
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const valMonto = parseFloat(monto);
-
-    if (isNaN(valMonto) || valMonto <= 0) {
-      mostrarToast('Error de Validación', 'Por favor ingresa un monto válido mayor a 0', 'ERROR');
-      return;
-    }
-
-    const conversion = cotizacionService.convertirMonto(valMonto, moneda, tipoCambio);
-
-    let distribucion: DistribucionProrrateoItem[] | undefined = undefined;
-    if (esProrrateado) {
-      distribucion = estancias.map((est) => {
-        const pct = customProrrateo[est.id] || 0;
-        const montoParcial = Math.round((valMonto * (pct / 100)) * 100) / 100;
-        return {
-          estancia_id: est.id,
-          porcentaje: pct,
-          monto: montoParcial,
-        };
-      });
-    }
-
-    agregarTransaccion({
-      estancia_id: esProrrateado ? 'TODAS' : estanciaFormId,
-      tipo: tipoFinanciero,
-      moneda,
-      monto: valMonto,
-      categoria: categoria || 'General',
-      descripcion: descripcionFinanciera || `${tipoFinanciero === 'INGRESO' ? 'Ingreso' : 'Egreso'} financiero`,
-      fecha,
-      ejercicio_agricola: ejercicioAgricola,
-      periodo_mes: mesAgricola,
-      naturaleza_costo: tipoFinanciero === 'EGRESO' ? naturalezaCosto : undefined,
-      es_prorrateado: esProrrateado,
-      distribucion_prorrateo: distribucion,
-      moneda_original: moneda,
-      monto_original: valMonto,
-      tipo_cambio: tipoCambio,
-      monto_usd: conversion.monto_usd,
-      monto_uyu: conversion.monto_uyu,
-    });
-
-    const nombreEstablecimiento = esProrrateado
-      ? 'Prorrateado entre Campos'
-      : estancias.find(e => e.id === estanciaFormId)?.nombre || 'Establecimiento';
-
-    mostrarToast(
-      'Transacción Registrada',
-      `${tipoFinanciero} por ${moneda} ${valMonto.toLocaleString()} (USD ${conversion.monto_usd.toLocaleString()}) en ${nombreEstablecimiento}`,
-      'EXITO'
-    );
-
-    setMonto('');
-    setDescripcionFinanciera('');
-    onClose();
-  };
+  if (!isOpen || !form.puedeVerFinanzas) return null;
 
   // Agrupar conceptos activos disponibles por su Grupo del Plan Agropecuario
-  const gruposMap: Record<string, typeof conceptosDisponibles> = {};
-  conceptosDisponibles.forEach((c) => {
+  const gruposMap: Record<string, typeof form.conceptosDisponibles> = {};
+  form.conceptosDisponibles.forEach((c) => {
     if (!gruposMap[c.grupo]) gruposMap[c.grupo] = [];
     gruposMap[c.grupo].push(c);
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh]">
+    <section aria-label="Modal Registrar Transacción Financiera" className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+      <article className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh]">
         
         {/* Cabecera Exclusiva Transacciones */}
         <header className="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between border-b border-slate-800 flex-shrink-0">
           <div className="flex items-center space-x-3">
             <div className={`p-2.5 rounded-2xl flex-shrink-0 ${
-              tipoFinanciero === 'INGRESO' ? 'bg-emerald-600 text-white shadow-md' : 'bg-rose-600 text-white shadow-md'
+              form.tipoFinanciero === 'INGRESO' ? 'bg-emerald-600 text-white shadow-md' : 'bg-rose-600 text-white shadow-md'
             }`}>
               <DollarSign className="w-5 h-5" />
             </div>
@@ -178,16 +62,16 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
         </header>
 
         {/* Selector de Establecimiento Destino */}
-        <div className="p-3 bg-slate-50 border-b border-slate-200/80 space-y-1.5 flex-shrink-0">
+        <nav aria-label="Selección de Establecimiento" className="p-3 bg-slate-50 border-b border-slate-200/80 space-y-1.5 flex-shrink-0">
           <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block">Establecimiento Destino:</label>
           <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1">
-            {estancias.map((est) => {
-              const esSeleccionado = estanciaFormId === est.id;
+            {form.prorrateo.estancias.map((est) => {
+              const esSeleccionado = form.estanciaFormId === est.id;
               return (
                 <button
                   key={est.id}
                   type="button"
-                  onClick={() => setEstanciaFormId(est.id)}
+                  onClick={() => form.setEstanciaFormId(est.id)}
                   className={`px-3 py-2 rounded-xl text-xs font-extrabold flex items-center space-x-1.5 transition-all cursor-pointer flex-shrink-0 border ${
                     esSeleccionado
                       ? 'bg-emerald-700 text-white border-emerald-600 shadow-sm'
@@ -201,22 +85,19 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
               );
             })}
           </div>
-        </div>
+        </nav>
 
         {/* Formulario Exclusivo de Finanzas */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1 text-xs">
+        <form onSubmit={form.handleSubmit} className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1 text-xs">
 
           {/* Selector Prominente Ingreso vs Egreso */}
-          <div className="grid grid-cols-2 gap-3">
+          <fieldset className="grid grid-cols-2 gap-3 border-0 p-0 m-0">
+            <legend className="sr-only">Tipo de Operación Financiera</legend>
             <button
               type="button"
-              onClick={() => {
-                setTipoFinanciero('INGRESO');
-                const activos = obtenerConceptosActivosPorTipo('INGRESO');
-                if (activos.length > 0) setCategoria(activos[0].nombre);
-              }}
+              onClick={() => form.setTipoFinanciero('INGRESO')}
               className={`p-3 rounded-2xl border font-extrabold text-xs flex items-center justify-center space-x-2 transition-all cursor-pointer ${
-                tipoFinanciero === 'INGRESO'
+                form.tipoFinanciero === 'INGRESO'
                   ? 'bg-emerald-100 border-emerald-500 text-emerald-950 shadow-sm ring-2 ring-emerald-500/30'
                   : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
               }`}
@@ -227,13 +108,9 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
 
             <button
               type="button"
-              onClick={() => {
-                setTipoFinanciero('EGRESO');
-                const activos = obtenerConceptosActivosPorTipo('EGRESO');
-                if (activos.length > 0) setCategoria(activos[0].nombre);
-              }}
+              onClick={() => form.setTipoFinanciero('EGRESO')}
               className={`p-3 rounded-2xl border font-extrabold text-xs flex items-center justify-center space-x-2 transition-all cursor-pointer ${
-                tipoFinanciero === 'EGRESO'
+                form.tipoFinanciero === 'EGRESO'
                   ? 'bg-rose-100 border-rose-500 text-rose-950 shadow-sm ring-2 ring-rose-500/30'
                   : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
               }`}
@@ -241,17 +118,17 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
               <ArrowDownRight className="w-4 h-4 text-rose-600" />
               <span>EGRESO (Salida US$)</span>
             </button>
-          </div>
+          </fieldset>
 
           {/* Selector de Moneda (USD / UYU) */}
-          <div className="space-y-1">
-            <label className="font-bold text-slate-700 block">Moneda de la Operación</label>
+          <fieldset className="space-y-1 border-0 p-0 m-0">
+            <legend className="font-bold text-slate-700 block mb-1">Moneda de la Operación</legend>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => setMoneda('USD')}
+                onClick={() => form.setMoneda('USD')}
                 className={`p-2.5 rounded-xl border text-xs font-black flex items-center justify-center space-x-2 transition-all cursor-pointer ${
-                  moneda === 'USD'
+                  form.moneda === 'USD'
                     ? 'bg-emerald-950 text-emerald-300 border-emerald-700 shadow-sm'
                     : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                 }`}
@@ -261,9 +138,9 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
 
               <button
                 type="button"
-                onClick={() => setMoneda('UYU')}
+                onClick={() => form.setMoneda('UYU')}
                 className={`p-2.5 rounded-xl border text-xs font-black flex items-center justify-center space-x-2 transition-all cursor-pointer ${
-                  moneda === 'UYU'
+                  form.moneda === 'UYU'
                     ? 'bg-blue-950 text-blue-300 border-blue-700 shadow-sm'
                     : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                 }`}
@@ -271,52 +148,54 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
                 <span>🇺🇾 Pesos (UYU)</span>
               </button>
             </div>
-          </div>
+          </fieldset>
 
           {/* Monto Total y Conversión Bimoneda */}
-          <div className="space-y-1">
+          <fieldset className="space-y-1 border-0 p-0 m-0">
             <div className="flex items-center justify-between">
-              <label className="font-extrabold text-slate-700 block">Monto Total ({moneda})</label>
+              <label htmlFor="monto-input" className="font-extrabold text-slate-700 block">Monto Total ({form.moneda})</label>
               <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md flex items-center gap-1">
-                <RefreshCw className="w-3 h-3 text-emerald-600" /> TC: $ {tipoCambio}
+                <RefreshCw className="w-3 h-3 text-emerald-600" /> TC: $ {form.cotizacion.tipoCambio}
               </span>
             </div>
 
             <div className="relative">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-500">
-                {moneda === 'USD' ? '$ US' : '$ UYU'}
+                {form.moneda === 'USD' ? '$ US' : '$ UYU'}
               </span>
               <input
+                id="monto-input"
                 type="number"
                 step="0.01"
                 required
                 placeholder="ej: 14500"
-                value={monto}
-                onChange={(e) => setMonto(e.target.value)}
+                value={form.monto}
+                onChange={(e) => form.setMonto(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm font-black rounded-xl pl-16 pr-4 py-3 focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
               />
             </div>
 
             {/* Vista Previa Conversión Bimoneda Automática */}
-            {parseFloat(monto) > 0 && (
-              <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-950 flex items-center justify-between text-xs font-bold">
+            {parseFloat(form.monto) > 0 && (
+              <output className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-950 flex items-center justify-between text-xs font-bold block">
                 <span>Equivalente estimado:</span>
                 <span className="font-black text-emerald-800">
-                  {moneda === 'USD'
-                    ? `$ ${(parseFloat(monto) * tipoCambio).toLocaleString('es-UY')} UYU`
-                    : `USD ${(parseFloat(monto) / tipoCambio).toLocaleString('es-UY', { maximumFractionDigits: 2 })}`}
+                  {form.moneda === 'USD'
+                    ? `$ ${(parseFloat(form.monto) * form.cotizacion.tipoCambio).toLocaleString('es-UY')} UYU`
+                    : `USD ${(parseFloat(form.monto) / form.cotizacion.tipoCambio).toLocaleString('es-UY', { maximumFractionDigits: 2 })}`}
                 </span>
-              </div>
+              </output>
             )}
-          </div>
+          </fieldset>
 
           {/* Bloque Prorratear entre Campos */}
-          <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl space-y-3">
+          <fieldset className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl space-y-3 border-0">
+            <legend className="sr-only">Prorrateo Multipredial</legend>
             <label className="flex items-center space-x-2.5 cursor-pointer">
               <input
                 type="checkbox"
-                checked={esProrrateado}
-                onChange={(e) => setEsProrrateado(e.target.checked)}
+                checked={form.prorrateo.esProrrateado}
+                onChange={(e) => form.prorrateo.setEsProrrateado(e.target.checked)}
                 className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer"
               />
               <span className="font-extrabold text-slate-900 text-xs flex items-center gap-1.5">
@@ -325,16 +204,16 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
               </span>
             </label>
 
-            {esProrrateado && (
+            {form.prorrateo.esProrrateado && (
               <div className="space-y-2.5 pt-2 border-t border-slate-200/80 animate-fadeIn">
                 <p className="text-[11px] text-slate-500 font-medium">
                   Carga los porcentajes asignados a cada campo para esta transacción:
                 </p>
 
                 <div className="space-y-2">
-                  {estancias.map((est) => {
-                    const pct = customProrrateo[est.id] || 0;
-                    const valMonto = parseFloat(monto) || 0;
+                  {form.prorrateo.estancias.map((est) => {
+                    const pct = form.prorrateo.customProrrateo[est.id] || 0;
+                    const valMonto = parseFloat(form.monto) || 0;
                     const montoParcial = Math.round((valMonto * (pct / 100)) * 100) / 100;
 
                     return (
@@ -352,7 +231,7 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
                             value={pct}
                             onChange={(e) => {
                               const v = Math.min(100, Math.max(0, parseInt(e.target.value, 10) || 0));
-                              setCustomProrrateo({ ...customProrrateo, [est.id]: v });
+                              form.prorrateo.handleProrrateoChange(est.id, v);
                             }}
                             className="w-12 text-center text-xs font-black bg-slate-50 border border-slate-300 rounded-lg py-1 focus:ring-2 focus:ring-emerald-500"
                           />
@@ -360,7 +239,7 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
 
                           {valMonto > 0 && (
                             <span className="text-[11px] font-mono font-black text-emerald-800 ml-1">
-                              ({moneda} {montoParcial.toLocaleString()})
+                              ({form.moneda} {montoParcial.toLocaleString()})
                             </span>
                           )}
                         </div>
@@ -370,14 +249,14 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
                 </div>
               </div>
             )}
-          </div>
+          </fieldset>
 
           {/* Categorías / Rubros Habilitados por el Admin */}
-          <div className="space-y-2">
+          <fieldset className="space-y-2 border-0 p-0 m-0">
             <div className="flex items-center justify-between">
-              <label className="font-bold text-slate-700 block">Rubro / Concepto (Habilitados por Admin)</label>
+              <legend className="font-bold text-slate-700 block">Rubro / Concepto (Habilitados por Admin)</legend>
               <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                {conceptosDisponibles.length} disponibles
+                {form.conceptosDisponibles.length} disponibles
               </span>
             </div>
 
@@ -391,15 +270,15 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
 
                   <div className="grid grid-cols-2 gap-1.5">
                     {gruposMap[grupo].map((item) => {
-                      const esSeleccionado = categoria === item.nombre;
+                      const esSeleccionado = form.categoria === item.nombre;
                       return (
                         <button
                           key={item.id}
                           type="button"
-                          onClick={() => handleSeleccionarCategoria(item)}
+                          onClick={() => form.handleSeleccionarCategoria(item)}
                           className={`p-2 rounded-xl text-left text-[11px] font-bold border transition-all flex items-center justify-between space-x-1.5 cursor-pointer ${
                             esSeleccionado
-                              ? tipoFinanciero === 'INGRESO'
+                              ? form.tipoFinanciero === 'INGRESO'
                                 ? 'bg-emerald-800 text-white border-emerald-600 shadow-sm ring-1 ring-emerald-500/50'
                                 : 'bg-rose-800 text-white border-rose-600 shadow-sm ring-1 ring-rose-500/50'
                               : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
@@ -428,20 +307,20 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
                 </div>
               ))}
             </div>
-          </div>
+          </fieldset>
 
           {/* Selector de Clasificación de Costo (Solo para Egresos) */}
-          {tipoFinanciero === 'EGRESO' && (
-            <div className="space-y-1.5 bg-slate-50 p-3 rounded-2xl border border-slate-200/80">
-              <label className="font-extrabold text-slate-700 block text-[11px]">
+          {form.tipoFinanciero === 'EGRESO' && (
+            <fieldset className="space-y-1.5 bg-slate-50 p-3 rounded-2xl border border-slate-200/80">
+              <legend className="font-extrabold text-slate-700 block text-[11px]">
                 Clasificación de Costo para esta Transacción:
-              </label>
+              </legend>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={() => setNaturalezaCosto('FIJO')}
+                  onClick={() => form.setNaturalezaCosto('FIJO')}
                   className={`p-2.5 rounded-xl border text-xs font-black flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
-                    naturalezaCosto === 'FIJO'
+                    form.naturalezaCosto === 'FIJO'
                       ? 'bg-amber-900 text-amber-200 border-amber-600 shadow-sm ring-1 ring-amber-500'
                       : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
                   }`}
@@ -451,9 +330,9 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
 
                 <button
                   type="button"
-                  onClick={() => setNaturalezaCosto('VARIABLE')}
+                  onClick={() => form.setNaturalezaCosto('VARIABLE')}
                   className={`p-2.5 rounded-xl border text-xs font-black flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
-                    naturalezaCosto === 'VARIABLE'
+                    form.naturalezaCosto === 'VARIABLE'
                       ? 'bg-blue-900 text-blue-200 border-blue-600 shadow-sm ring-1 ring-blue-500'
                       : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
                   }`}
@@ -461,56 +340,58 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
                   <span>📈 Costo Variable (Productivo)</span>
                 </button>
               </div>
-            </div>
+            </fieldset>
           )}
 
           {/* Fecha y Período Agrícola */}
-          <div className="space-y-1">
+          <fieldset className="space-y-1 border-0 p-0 m-0">
             <div className="flex items-center justify-between">
-              <label className="font-bold text-slate-700 block flex items-center gap-1.5">
+              <label htmlFor="fecha-comprobante" className="font-bold text-slate-700 flex items-center gap-1.5">
                 <Calendar className="w-4 h-4 text-slate-500" />
                 <span>Fecha del Comprobante</span>
               </label>
               <span className="text-[10px] font-black text-emerald-900 bg-emerald-100 px-2.5 py-0.5 rounded-md border border-emerald-200">
-                Mes: {mesAgricola} | Ej. {ejercicioAgricola}
+                Mes: {form.fecha}
               </span>
             </div>
             <input
+              id="fecha-comprobante"
               type="date"
               required
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
+              value={form.fecha}
+              onChange={(e) => form.setFecha(e.target.value)}
               className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 min-h-[42px]"
             />
-          </div>
+          </fieldset>
 
           {/* Descripción */}
-          <div className="space-y-1">
-            <label className="font-bold text-slate-700 block">Descripción / Detalle de la Operación</label>
+          <fieldset className="space-y-1 border-0 p-0 m-0">
+            <label htmlFor="descripcion-op" className="font-bold text-slate-700 block">Descripción / Detalle de la Operación</label>
             <input
+              id="descripcion-op"
               type="text"
-              placeholder={tipoFinanciero === 'INGRESO' ? "ej: Venta novillos remate pantalla" : "ej: Compra ración destete y vacuna 1er dosis"}
-              value={descripcionFinanciera}
-              onChange={(e) => setDescripcionFinanciera(e.target.value)}
+              placeholder={form.tipoFinanciero === 'INGRESO' ? "ej: Venta novillos remate pantalla" : "ej: Compra ración destete y vacuna 1er dosis"}
+              value={form.descripcionFinanciera}
+              onChange={(e) => form.setDescripcionFinanciera(e.target.value)}
               className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl p-3 focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
             />
-          </div>
+          </fieldset>
 
           {/* Botón de Enviar */}
           <button
             type="submit"
             className={`w-full text-white font-extrabold text-xs py-3.5 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 min-h-[46px] cursor-pointer mt-2 ${
-              tipoFinanciero === 'INGRESO'
+              form.tipoFinanciero === 'INGRESO'
                 ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800'
                 : 'bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-700 hover:to-rose-800'
             }`}
           >
             <Check className="w-4 h-4 text-white" />
-            <span>{tipoFinanciero === 'INGRESO' ? 'Guardar Ingreso Financiero' : 'Guardar Egreso Financiero'}</span>
+            <span>{form.tipoFinanciero === 'INGRESO' ? 'Guardar Ingreso Financiero' : 'Guardar Egreso Financiero'}</span>
           </button>
 
         </form>
-      </div>
-    </div>
+      </article>
+    </section>
   );
 };

@@ -37,12 +37,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           <div className="flex items-center space-x-2">
-            <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 p-1.5 sm:p-2 rounded-xl text-white shadow-sm border border-emerald-400/30 flex-shrink-0">
+            <div className="bg-gradient-to-br from-brand-primary to-brand-dark p-1.5 sm:p-2 rounded-xl text-white shadow-sm border border-brand-accent/30 flex-shrink-0">
               <Tractor className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h1 className="font-extrabold text-sm sm:text-lg leading-tight tracking-wider bg-gradient-to-r from-white via-slate-100 to-emerald-400 bg-clip-text text-transparent">
-                AGRO<span className="text-emerald-400">UY</span>
+              <h1 className="font-extrabold text-sm sm:text-lg leading-tight tracking-wider bg-gradient-to-r from-white via-slate-100 to-brand-accent bg-clip-text text-transparent">
+                AGRO<span className="text-brand-accent">UY</span>
               </h1>
               <p className="text-[10px] text-slate-400 font-medium hidden md:block">Gestión Rural Uruguay</p>
             </div>

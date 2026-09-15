@@ -19,7 +19,8 @@ import {
   UserCheck,
   Tractor,
   HardHat,
-  Check
+  Check,
+  Code
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -28,6 +29,7 @@ interface SidebarProps {
 }
 
 const rolesDisponibles: { rol: UserRole; label: string; icono: React.ElementType }[] = [
+  { rol: 'SUPERADMIN', label: 'Dev / SaaS', icono: Code },
   { rol: 'ADMIN', label: 'Admin / Owner', icono: UserCheck },
   { rol: 'CAPATAZ', label: 'Capataz', icono: Tractor },
   { rol: 'CONTADOR', label: 'Contador', icono: DollarSign },
@@ -43,7 +45,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navigate = useNavigate();
 
   const currentRole = usuario?.rol || 'OPERARIO';
-  const canViewFinances = currentRole === 'ADMIN' || currentRole === 'CONTADOR';
+  const canViewFinances = currentRole === 'ADMIN' || currentRole === 'CONTADOR' || currentRole === 'SUPERADMIN';
   const estanciaActual = obtenerEstanciaActual();
 
   const handleCerrarSesion = () => {
@@ -58,7 +60,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { path: '/ganado', label: 'Ganado y Stock', icon: Beef, allowed: true },
     { path: '/finanzas', label: 'Ingresos / Egresos', icon: DollarSign, allowed: canViewFinances },
     { path: '/estadisticas', label: 'Estadísticas & Análisis', icon: BarChart3, allowed: canViewFinances },
-    { path: '/usuarios', label: 'Roles y Permisos', icon: Users, allowed: currentRole === 'ADMIN' },
+    { path: '/dev', label: 'Consola Desarrollador', icon: Code, allowed: currentRole === 'SUPERADMIN' },
+    { path: '/usuarios', label: 'Roles y Permisos', icon: Users, allowed: currentRole === 'ADMIN' || currentRole === 'SUPERADMIN' },
     { path: '/sql', label: 'Estado SQL (Supabase)', icon: Database, allowed: true },
   ];
 
@@ -132,7 +135,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   className={({ isActive }) =>
                     `w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-sm lg:text-xs font-bold transition-all min-h-[44px] ${
                       isActive
-                        ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-md shadow-emerald-950/40 border border-emerald-500/30'
+                        ? 'bg-gradient-to-r from-brand-primary to-brand-dark text-white shadow-md shadow-slate-950/40 border border-brand-accent/30'
                         : 'text-slate-400 hover:bg-slate-800/70 hover:text-white'
                     }`
                   }
