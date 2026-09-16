@@ -587,16 +587,18 @@ export async function enviarSolicitudRegistroBD(data: {
   hectareasEstimadas?: number;
 }): Promise<{ exito: boolean; id?: string; error?: string }> {
   try {
-    const payload = {
+    // Payload limpio y magro: solo enviamos los datos REALES ingresados en el formulario
+    const payload: Record<string, any> = {
+      nombre_empresa: data.nombreEmpresa,
       nombre_solicitante: data.nombreContacto,
       email: data.email.trim().toLowerCase(),
-      telefono: data.telefono || 'Sin teléfono',
-      nombre_empresa: data.nombreEmpresa,
-      rut: data.rut || '219999990019',
-      departamento: data.departamento || 'CANELONES',
-      hectareas_estimadas: data.hectareasEstimadas || 100,
       estado: 'PENDIENTE',
     };
+
+    if (data.telefono) payload.telefono = data.telefono;
+    if (data.rut) payload.rut = data.rut;
+    if (data.departamento) payload.departamento = data.departamento;
+    if (data.hectareasEstimadas) payload.hectareas_estimadas = data.hectareasEstimadas;
 
     // Crear cliente público anónimo sin tokens de sesiones previas para evitar HTTP 401 por tokens vencidos
     const clientePublico = createClient(supabaseUrl, supabaseAnonKey, {

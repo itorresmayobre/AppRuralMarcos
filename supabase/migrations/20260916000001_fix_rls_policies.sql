@@ -121,6 +121,12 @@ USING (
 -- 5. POLÍTICAS PARA LA TABLA SOLICITUDES_REGISTRO (PRE-ALTA DE EMPRESAS)
 ALTER TABLE public.solicitudes_registro ENABLE ROW LEVEL SECURITY;
 
+-- Hacer opcionales los campos secundarios para permitir altas públicas magras (solo nombre_empresa, nombre_solicitante, email)
+ALTER TABLE public.solicitudes_registro ALTER COLUMN rut DROP NOT NULL;
+ALTER TABLE public.solicitudes_registro ALTER COLUMN telefono DROP NOT NULL;
+ALTER TABLE public.solicitudes_registro ALTER COLUMN departamento DROP NOT NULL;
+ALTER TABLE public.solicitudes_registro ALTER COLUMN hectareas_estimadas DROP NOT NULL;
+
 GRANT ALL ON public.solicitudes_registro TO anon, authenticated, service_role;
 
 DROP POLICY IF EXISTS "Permitir insercion solicitudes a anonimos y autenticados" ON public.solicitudes_registro;
