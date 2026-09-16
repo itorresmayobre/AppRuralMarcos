@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/useAuthStore';
-import { Tractor, Lock, User, KeyRound, AlertCircle, ArrowRight } from 'lucide-react';
+import { Tractor, Lock, Mail, AlertCircle, ArrowRight } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
-  const [credencial, setCredencial] = useState('marcos.propietario');
-  const [password, setPassword] = useState('admin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [cargando, setCargando] = useState(false);
 
   const { iniciarSesion, errorAutenticacion, estaAutenticado } = useAuthStore();
@@ -23,16 +23,11 @@ export const LoginPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setCargando(true);
-    const exito = await iniciarSesion(credencial, password);
+    const exito = await iniciarSesion(email, password);
     setCargando(false);
     if (exito) {
       navigate(from, { replace: true });
     }
-  };
-
-  const handleUsarCredenciales = (demoCredencial: string, demoPass: string) => {
-    setCredencial(demoCredencial);
-    setPassword(demoPass);
   };
 
   return (
@@ -65,20 +60,20 @@ export const LoginPage: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             
-            {/* Campo Usuario o Correo Electrónico */}
+            {/* Campo Correo Electrónico */}
             <div className="space-y-1.5">
-              <label htmlFor="credencial" className="block text-xs font-bold text-slate-300">
-                Usuario (nombre.apellido) o Email
+              <label htmlFor="email" className="block text-xs font-bold text-slate-300">
+                Correo Electrónico *
               </label>
               <div className="relative">
-                <User className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
-                  id="credencial"
-                  type="text"
+                  id="email"
+                  type="email"
                   required
-                  value={credencial}
-                  onChange={(e) => setCredencial(e.target.value)}
-                  placeholder="marcos.propietario o admin@admin.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="ej: usuario@empresa.com"
                   className="w-full bg-slate-950 text-white placeholder-slate-600 text-xs rounded-xl pl-10 pr-4 py-3 border border-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all min-h-[44px]"
                 />
               </div>
@@ -87,7 +82,7 @@ export const LoginPage: React.FC = () => {
             {/* Campo Contraseña */}
             <div className="space-y-1.5">
               <label htmlFor="password" className="block text-xs font-bold text-slate-300">
-                Contraseña
+                Contraseña *
               </label>
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -113,44 +108,6 @@ export const LoginPage: React.FC = () => {
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
-
-          {/* Ayudante de Credenciales Demo sin arroba */}
-          <article className="pt-4 border-t border-slate-800 space-y-2 text-xs">
-            <div className="flex items-center space-x-1.5 text-slate-400 font-semibold">
-              <KeyRound className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Acceso Rápido por Nombre de Usuario:</span>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
-              <button
-                type="button"
-                onClick={() => handleUsarCredenciales('marcos.propietario', 'admin')}
-                className="bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-800/60 p-2.5 rounded-xl text-left transition-all cursor-pointer hover:shadow-sm"
-              >
-                <p className="font-bold flex items-center gap-1"><User className="w-3 h-3 text-emerald-400" /> marcos.propietario</p>
-                <p className="text-[10px] text-slate-400 mt-0.5">Clave: admin</p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleUsarCredenciales('juan.perez', 'capataz')}
-                className="bg-amber-950/60 hover:bg-amber-900/60 text-amber-300 border border-amber-800/60 p-2.5 rounded-xl text-left transition-all cursor-pointer hover:shadow-sm"
-              >
-                <p className="font-bold flex items-center gap-1"><User className="w-3 h-3 text-amber-400" /> juan.perez</p>
-                <p className="text-[10px] text-slate-400 mt-0.5">Clave: capataz</p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleUsarCredenciales('carlos.silva', 'contador')}
-                className="bg-blue-950/60 hover:bg-blue-900/60 text-blue-300 border border-blue-800/60 p-2.5 rounded-xl text-left transition-all cursor-pointer hover:shadow-sm"
-              >
-                <p className="font-bold flex items-center gap-1"><User className="w-3 h-3 text-blue-400" /> carlos.silva</p>
-                <p className="text-[10px] text-slate-400 mt-0.5">Clave: contador</p>
-              </button>
-            </div>
-          </article>
-
         </section>
 
         {/* Enlace hacia Solicitud de Registro de Empresa */}
