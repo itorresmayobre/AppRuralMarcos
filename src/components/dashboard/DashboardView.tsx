@@ -1,6 +1,8 @@
 import React from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useEstanciasStore } from '../../stores/useEstanciasStore';
+import { useGanadoStore } from '../../stores/useGanadoStore';
+import { useFinanzasStore } from '../../stores/useFinanzasStore';
 import { SelectorEmpresaBar } from '../empresas/SelectorEmpresaBar';
 import { StatCard } from './StatCard';
 import { AccionesRapidasBar } from './AccionesRapidasBar';
@@ -11,6 +13,8 @@ import { Beef, DollarSign, TrendingUp, ShieldAlert, Award, MapPin } from 'lucide
 export const DashboardView: React.FC = () => {
   const { usuario } = useAuthStore();
   const { estancias, estanciaSeleccionadaId, obtenerEstanciaActual } = useEstanciasStore();
+  const { stockList } = useGanadoStore();
+  const { obtenerTransaccionesEstancia } = useFinanzasStore();
 
   const currentRole = usuario?.rol || 'OPERARIO';
   const estanciaActual = obtenerEstanciaActual();
@@ -23,6 +27,38 @@ export const DashboardView: React.FC = () => {
 
   const nombreEstanciaVista = estanciaActual ? estanciaActual.nombre : 'Consolidado Empresa (Todos los Establecimientos)';
   const dicoseVista = estanciaActual ? estanciaActual.dicose : 'Multi-DICOSE';
+
+  // 1. Cálculo Dinámico de Stock Ganadero y Carga Animal (UG/ha)
+  const stockFiltrado = estanciaSeleccionadaId === 'TODAS'
+    ? stockList
+    : stockList.filter((s) => s.estancia_id === estanciaSeleccionadaId);
+
+  const totalVacunos = stockFiltrado
+    .filter((s) => s.especie === 'VACUNO')
+    .reduce((sum, item) => sum + item.cabezas, 0);
+
+  const totalOvinos = stockFiltrado
+    .filter((s) => s.especie === 'OVINO')
+    .reduce((sum, item) => sum + item.cabezas, 0);
+
+  // Equivalencia Uruguaya UG: Vacuno ~0.8 UG, Ovino ~0.15 UG
+  const totalUG = stockFiltrado.reduce((sum, item) => {
+    const equiv = item.especie === 'OVINO' ? 0.15 : 0.8;
+    return sum + (item.cabezas * equiv);
+  }, 0);
+
+  const cargaUGPerHa = totalHectareas > 0 ? (totalUG / totalHectareas) : 0;
+
+  // 2. Cálculo Dinámico de Finanzas en USD (Ventas vs Egresos)
+  const transaccionesVista = obtenerTransaccionesEstancia(estanciaSeleccionadaId);
+
+  const ventasHaciendaUSD = transaccionesVista
+    .filter((t) => t.tipo === 'INGRESO')
+    .reduce((sum, t) => sum + (t.moneda === 'USD' ? t.monto : t.monto / 40), 0);
+
+  const egresosInsumosUSD = transaccionesVista
+    .filter((t) => t.tipo === 'EGRESO')
+    .reduce((sum, t) => sum + (t.moneda === 'USD' ? t.monto : t.monto / 40), 0);
 
   return (
     <div className="space-y-6">
@@ -39,7 +75,7 @@ export const DashboardView: React.FC = () => {
           </div>
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">Dashboard Agronómico & Financiero</h2>
           <p className="text-slate-300 text-xs max-w-xl leading-relaxed">
-            Métricas de carga animal ($UG/ha$), existencias ganaderas y flujo de fondos para <strong>{totalHectareas.toLocaleString()} Hectáreas</strong>.
+            Métricas de carga animal ($UG/ha$), existencias ganaderas y flujo de fondos para <strong>{totalHectareas.toLocaleString('es-UY')} Hectáreas</strong>.
           </p>
         </div>
 
@@ -61,40 +97,40 @@ export const DashboardView: React.FC = () => {
       {/* Módulo de Métricas Financieras del Ejercicio en Curso */}
       {canSeeMoney && <MetricasEjercicioCard />}
 
-      {/* Tarjetas KPIs */}
+      {/* Tarjetas KPIs Calculadas 100% Dinámicas desde Supabase */}
       <section aria-label="Indicadores Clave de Desempeño (KPIs)" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Stock Vacunos"
-          value={estanciaSeleccionadaId === 'TODAS' ? '2.140 Cabezas' : '845 Cabezas'}
-          subtitle="Vacas de cría, novillos y terneros"
+          value={`${totalVacunos.toLocaleString('es-UY')} Cabezas`}
+          subtitle={totalOvinos > 0 ? `Vacunos (+ ${totalOvinos.toLocaleString('es-UY')} Ovinos)` : "Vacas de cría, novillos, toros y terneros"}
           icon={Beef}
-          trend="+4.2% parición"
+          trend={totalVacunos > 0 ? "Existencias registradas en BD" : "Sin hacienda registrada"}
           color="emerald"
         />
         <StatCard
           title="Carga Animal"
-          value="0.82 UG/ha"
-          subtitle={`Superficie: ${totalHectareas.toLocaleString()} Ha`}
+          value={`${cargaUGPerHa.toFixed(2)} UG/ha`}
+          subtitle={`Superficie: ${totalHectareas.toLocaleString('es-UY')} Ha`}
           icon={TrendingUp}
-          trend="Pastura sin sobrepastoreo"
+          trend={cargaUGPerHa > 0 ? (cargaUGPerHa <= 1.0 ? "Carga equilibrada" : "Carga alta") : "Sin animales asignados"}
           color="blue"
         />
         {canSeeMoney ? (
           <>
             <StatCard
               title="Ventas Hacienda (USD)"
-              value={estanciaSeleccionadaId === 'TODAS' ? '$ 380.000' : '$ 142.500'}
-              subtitle="Consignatarios & Frigorífico"
+              value={`$ ${Math.round(ventasHaciendaUSD).toLocaleString('es-UY')}`}
+              subtitle="Ingresos totales zafra (USD)"
               icon={DollarSign}
-              trend="Liquidaciones cerradas"
+              trend={ventasHaciendaUSD > 0 ? "Ingresos registrados" : "Sin ventas registradas"}
               color="emerald"
             />
             <StatCard
               title="Egresos Insumos (USD)"
-              value={estanciaSeleccionadaId === 'TODAS' ? '$ 94.000' : '$ 38.200'}
-              subtitle="Ración, sanidad y combustible"
+              value={`$ ${Math.round(egresosInsumosUSD).toLocaleString('es-UY')}`}
+              subtitle="Egresos e insumos (USD)"
               icon={DollarSign}
-              trend="Dentro de presupuesto"
+              trend={egresosInsumosUSD > 0 ? "Gastos registrados" : "Sin egresos registrados"}
               color="amber"
             />
           </>
