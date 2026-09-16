@@ -8,7 +8,7 @@ interface AuthState {
   estaAutenticado: boolean;
   errorAutenticacion: string | null;
   cargando: boolean;
-  iniciarSesion: (credencial: string, contrasenia: string) => Promise<boolean>;
+  iniciarSesion: (email: string, contrasenia: string) => Promise<boolean>;
   cerrarSesion: () => Promise<void>;
   cambiarRolSimulado: (nuevoRol: UserRole) => void;
 }
@@ -21,21 +21,20 @@ export const useAuthStore = create<AuthState>()(
       errorAutenticacion: null,
       cargando: false,
 
-      iniciarSesion: async (credencial: string, contrasenia: string) => {
-        const credencialLimpia = credencial.trim().toLowerCase();
+      iniciarSesion: async (email: string, contrasenia: string) => {
+        const emailLimpio = email.trim().toLowerCase();
         const passLimpia = contrasenia.trim();
 
         set({ cargando: true, errorAutenticacion: null });
 
-        // 1. Resolver email a partir del username o usar la credencial si es email
-        let emailParaLogin = credencialLimpia;
-
         try {
-          if (!credencialLimpia.includes('@')) {
+          // Resolver email si ingresó por username
+          let emailParaLogin = emailLimpio;
+          if (!emailLimpio.includes('@')) {
             const { data: perfilBusqueda } = await supabase
               .from('perfiles')
               .select('email')
-              .eq('username', credencialLimpia)
+              .eq('username', emailLimpio)
               .maybeSingle();
 
             if (perfilBusqueda?.email) {
@@ -43,7 +42,7 @@ export const useAuthStore = create<AuthState>()(
             }
           }
 
-          // Intentar autenticación real en Supabase Auth
+          // Autenticación directa por Correo Electrónico en Supabase Auth
           const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
             email: emailParaLogin,
             password: passLimpia,
@@ -52,17 +51,17 @@ export const useAuthStore = create<AuthState>()(
           if (!authError && authData.user) {
             let perfilBD = await obtenerPerfilUsuarioBD(authData.user.id);
             
-            // Si el perfil no existe en BD aún, construir objeto de perfil funcional
+            // Si el perfil no se encontró aún en la tabla perfiles, estructurar objeto de perfil basado en Auth
             if (!perfilBD) {
-              const email = authData.user.email || emailParaLogin;
-              const nombreFallback = authData.user.user_metadata?.nombre || email.split('@')[0] || 'Usuario';
+              const correo = authData.user.email || emailParaLogin;
+              const metaNombre = authData.user.user_metadata?.nombre || correo.split('@')[0];
               perfilBD = {
                 id: authData.user.id,
-                email: email,
-                username: email.split('@')[0],
-                nombre: nombreFallback,
-                apellido: '',
-                rol: 'PROPIETARIO',
+                email: correo,
+                username: correo.split('@')[0],
+                nombre: metaNombre,
+                apellido: authData.user.user_metadata?.apellido || '',
+                rol: (authData.user.user_metadata?.rol as UserRole) || 'PROPIETARIO',
                 estancias_asignadas_ids: ['TODAS'],
               };
             }
@@ -75,76 +74,23 @@ export const useAuthStore = create<AuthState>()(
             });
             return true;
           }
-        } catch (err) {
-          console.warn('Supabase auth no disponible o error inesperado:', err);
-        }
 
-        // 2. Fallback Demo local (Acceso rápido con credenciales de prueba)
-        if (
-          (credencialLimpia === 'admin@admin.com' || credencialLimpia === 'admin' || credencialLimpia === 'marcos.propietario') && 
-          (passLimpia === 'admin' || passLimpia === 'admin123')
-        ) {
-          set({
-            usuario: {
-              id: 'user-admin-1',
-              email: 'admin@admin.com',
-              username: 'marcos.propietario',
-              nombre: 'Marcos (Admin)',
-              apellido: 'Propietario',
-              rol: 'PROPIETARIO',
-              estancias_asignadas_ids: ['TODAS'],
-            },
-            estaAutenticado: true,
-            errorAutenticacion: null,
-            cargando: false,
-          });
-          return true;
-        }
-
-        if (
-          (credencialLimpia === 'capataz@campo.com' || credencialLimpia === 'juan.perez' || credencialLimpia === 'capataz') && 
-          (passLimpia === 'capataz' || passLimpia === 'admin')
-        ) {
-          set({
-            usuario: {
-              id: 'user-capataz-2',
-              email: 'capataz@campo.com',
-              username: 'juan.perez',
-              nombre: 'Juan (Capataz)',
-              apellido: 'Pérez',
-              rol: 'CAPATAZ',
-              estancias_asignadas_ids: ['est-1', 'est-2'],
-            },
-            estaAutenticado: true,
-            errorAutenticacion: null,
-            cargando: false,
-          });
-          return true;
-        }
-
-        if (
-          (credencialLimpia === 'contador@empresa.com' || credencialLimpia === 'carlos.silva' || credencialLimpia === 'contador') && 
-          (passLimpia === 'contador' || passLimpia === 'admin')
-        ) {
-          set({
-            usuario: {
-              id: 'user-contador-3',
-              email: 'contador@empresa.com',
-              username: 'carlos.silva',
-              nombre: 'Carlos (Contador)',
-              apellido: 'Silva',
-              rol: 'CONTADOR',
-              estancias_asignadas_ids: ['TODAS'],
-            },
-            estaAutenticado: true,
-            errorAutenticacion: null,
-            cargando: false,
-          });
-          return true;
+          if (authError) {
+            let msg = 'Correo electrónico o contraseña incorrectos.';
+            if (authError.message.includes('Email not confirmed')) {
+              msg = 'Tu correo electrónico aún no ha sido verificado. Por favor revisa tu bandeja de entrada o solicita asistencia.';
+            } else if (authError.message.includes('Invalid login credentials')) {
+              msg = 'Las credenciales ingresadas son incorrectas. Verifica tu email y contraseña.';
+            }
+            set({ errorAutenticacion: msg, cargando: false });
+            return false;
+          }
+        } catch (err: any) {
+          console.error('Error durante iniciarSesion:', err);
         }
 
         set({
-          errorAutenticacion: 'Usuario, correo o contraseña incorrectos.',
+          errorAutenticacion: 'No se pudo iniciar sesión. Verifica tu correo y contraseña.',
           cargando: false,
         });
         return false;

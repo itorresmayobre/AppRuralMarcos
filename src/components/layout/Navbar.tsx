@@ -68,7 +68,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-emerald-800 to-emerald-600 flex items-center justify-center text-[10px] font-bold text-white shadow-sm border border-emerald-400/20">
                 <User className="w-3.5 h-3.5" />
               </div>
-              <span className="text-xs font-bold text-slate-200">{usuario.nombre}</span>
+              <span className="text-xs font-bold text-slate-200">
+                {usuario.nombre} {usuario.apellido || ''}
+              </span>
             </div>
 
             {/* Botón de Acción de Salir / Cerrar Sesión */}

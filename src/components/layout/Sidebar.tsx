@@ -175,7 +175,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="pt-2 border-t border-slate-800/80 lg:hidden space-y-2">
           <div className="flex items-center space-x-2 px-1 text-slate-300 text-xs font-bold">
             <User className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-            <span className="truncate">{usuario?.nombre} ({usuario?.rol})</span>
+            <span className="truncate">
+              {usuario?.nombre} {usuario?.apellido || ''} ({usuario?.rol})
+            </span>
           </div>
           <button
             onClick={handleCerrarSesion}
