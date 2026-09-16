@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useEmpresasStore } from '../../stores/useEmpresasStore';
 import { useEstanciasStore } from '../../stores/useEstanciasStore';
@@ -20,7 +20,8 @@ import {
   FileCheck2,
   ToggleLeft,
   ToggleRight,
-  Sparkles
+  Sparkles,
+  RefreshCw
 } from 'lucide-react';
 
 export const DevConsoleView: React.FC = () => {
@@ -28,6 +29,8 @@ export const DevConsoleView: React.FC = () => {
   const {
     empresas,
     solicitudesRegistro,
+    cargarEmpresasDesdeSupabase,
+    cargando,
     aprobarSolicitud,
     rechazarSolicitud,
     toggleEstadoEmpresa,
@@ -43,6 +46,13 @@ export const DevConsoleView: React.FC = () => {
   const isSuperAdmin = currentRole === 'SUPERADMIN';
 
   const [tabActiva, setTabActiva] = useState<'DASHBOARD' | 'SOLICITUDES' | 'EMPRESAS'>('DASHBOARD');
+
+  // Disparar consulta HTTP directa a Supabase al montar la consola o cambiar de pestaña
+  useEffect(() => {
+    if (isSuperAdmin) {
+      cargarEmpresasDesdeSupabase();
+    }
+  }, [isSuperAdmin, tabActiva, cargarEmpresasDesdeSupabase]);
 
   if (!isSuperAdmin) {
     return (
@@ -113,48 +123,62 @@ export const DevConsoleView: React.FC = () => {
           )}
         </div>
 
-        {/* Tab Switcher de Consola */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          <button
-            type="button"
-            onClick={() => setTabActiva('DASHBOARD')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center space-x-2 ${
-              tabActiva === 'DASHBOARD'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <TrendingUp className="w-4 h-4 text-indigo-300" />
-            <span>Dashboard Global SaaS</span>
-          </button>
+        {/* Tab Switcher de Consola + Botón Refrescar HTTP */}
+        <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setTabActiva('DASHBOARD')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center space-x-2 ${
+                tabActiva === 'DASHBOARD'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <TrendingUp className="w-4 h-4 text-indigo-300" />
+              <span>Dashboard Global SaaS</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setTabActiva('SOLICITUDES')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center space-x-2 relative ${
-              tabActiva === 'SOLICITUDES'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <FileCheck2 className="w-4 h-4 text-indigo-300" />
-            <span>Solicitudes de Registro ({solicitudesRegistro.length})</span>
-            {solicitudesPendientes.length > 0 && (
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" />
-            )}
-          </button>
+            <button
+              type="button"
+              onClick={() => setTabActiva('SOLICITUDES')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center space-x-2 relative ${
+                tabActiva === 'SOLICITUDES'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <FileCheck2 className="w-4 h-4 text-indigo-300" />
+              <span>Solicitudes de Registro ({solicitudesRegistro.length})</span>
+              {solicitudesPendientes.length > 0 && (
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" />
+              )}
+            </button>
 
+            <button
+              type="button"
+              onClick={() => setTabActiva('EMPRESAS')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center space-x-2 ${
+                tabActiva === 'EMPRESAS'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <Building2 className="w-4 h-4 text-indigo-300" />
+              <span>Empresas & Licencias ({empresas.length})</span>
+            </button>
+          </div>
+
+          {/* Botón Refrescar HTTP a Supabase */}
           <button
             type="button"
-            onClick={() => setTabActiva('EMPRESAS')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center space-x-2 ${
-              tabActiva === 'EMPRESAS'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
+            onClick={() => cargarEmpresasDesdeSupabase()}
+            disabled={cargando}
+            className="bg-slate-900/90 hover:bg-indigo-900/60 border border-indigo-700/50 text-indigo-300 hover:text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all cursor-pointer disabled:opacity-50 ml-auto flex-shrink-0"
+            title="Refrescar solicitudes y empresas desde Supabase"
           >
-            <Building2 className="w-4 h-4 text-indigo-300" />
-            <span>Directorio de Empresas ({empresas.length})</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${cargando ? 'animate-spin text-indigo-400' : ''}`} />
+            <span className="hidden sm:inline">{cargando ? 'Cargando...' : 'Refrescar Datos'}</span>
           </button>
         </div>
       </header>
