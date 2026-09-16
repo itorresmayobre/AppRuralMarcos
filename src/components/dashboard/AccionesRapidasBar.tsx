@@ -8,11 +8,8 @@ import { NotaCampoModal } from '../modals/NotaCampoModal';
 import { TrasladoGanadoModal } from '../modals/TrasladoGanadoModal';
 import { formatearFechaUY } from '../../utils/fechas';
 import {
-  Zap,
-  DollarSign,
   CloudDrizzle,
   FileText,
-  Truck,
   Plus
 } from 'lucide-react';
 
@@ -37,89 +34,40 @@ export const AccionesRapidasBar: React.FC = () => {
     <section aria-label="Acciones Rápidas y Bitácora del Campo" className="space-y-4">
 
       {/* Botonera de Acciones Rápidas */}
-      <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/90 shadow-sm space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="p-2 bg-amber-500/10 text-amber-600 rounded-xl">
-              <Zap className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-extrabold text-slate-900">Acciones Rápidas Operativas</h3>
-              <p className="text-[11px] text-slate-500">Acceso directo a operaciones diarias del establecimiento</p>
-            </div>
-          </div>
-        </div>
+      {/* Botonera de Acciones Rápidas */}
+      <div className="bg-white p-3 rounded-xl border border-slate-200/90 shadow-2xs space-y-2">
+        <h3 className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Acciones Rápidas</h3>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-
-          {/* Acción 1: Transacción Financiera */}
-          {puedeVerFinanzas ? (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {puedeVerFinanzas && (
             <button
               onClick={() => setModalTransaccionAbierto(true)}
-              className="p-3 rounded-2xl bg-gradient-to-br from-emerald-50 to-slate-50 hover:from-emerald-100 hover:to-emerald-50 border border-emerald-200/80 text-emerald-950 font-bold text-xs flex flex-col items-start space-y-2 transition-all shadow-sm hover:shadow-md active:scale-98 cursor-pointer group"
+              className="p-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs text-center transition-all cursor-pointer min-h-[38px]"
             >
-              <div className="p-2 bg-emerald-600 text-white rounded-xl shadow-sm group-hover:scale-105 transition-transform">
-                <DollarSign className="w-4 h-4" />
-              </div>
-              <div className="text-left">
-                <span className="block font-black text-xs text-emerald-950">+ Transacción</span>
-                <span className="text-[10px] text-emerald-700 font-medium">Ingreso / Egreso caja</span>
-              </div>
+              + Transacción
             </button>
-          ) : (
-            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-slate-400 text-xs flex flex-col items-start space-y-2 opacity-60">
-              <div className="p-2 bg-slate-200 text-slate-500 rounded-xl">
-                <DollarSign className="w-4 h-4" />
-              </div>
-              <div>
-                <span className="block font-bold text-xs">Caja Restringida</span>
-                <span className="text-[10px]">Solo Admin/Contador</span>
-              </div>
-            </div>
           )}
 
-          {/* Acción 2: Pluviómetro */}
           <button
             onClick={() => setModalPluviometroAbierto(true)}
-            className="p-3 rounded-2xl bg-gradient-to-br from-blue-50 to-slate-50 hover:from-blue-100 hover:to-blue-50 border border-blue-200/80 text-blue-950 font-bold text-xs flex flex-col items-start space-y-2 transition-all shadow-sm hover:shadow-md active:scale-98 cursor-pointer group"
+            className="p-2.5 rounded-lg bg-blue-700 hover:bg-blue-800 text-white font-black text-xs text-center transition-all cursor-pointer min-h-[38px]"
           >
-            <div className="p-2 bg-blue-600 text-white rounded-xl shadow-sm group-hover:scale-105 transition-transform">
-              <CloudDrizzle className="w-4 h-4" />
-            </div>
-            <div className="text-left">
-              <span className="block font-black text-xs text-blue-950">+ Pluviómetro</span>
-              <span className="text-[10px] text-blue-700 font-medium">Lluvia caída (mm)</span>
-            </div>
+            + Pluviómetro
           </button>
 
-          {/* Acción 3: Nota / Alerta Campo */}
           <button
             onClick={() => setModalNotaAbierto(true)}
-            className="p-3 rounded-2xl bg-gradient-to-br from-purple-50 to-slate-50 hover:from-purple-100 hover:to-purple-50 border border-purple-200/80 text-purple-950 font-bold text-xs flex flex-col items-start space-y-2 transition-all shadow-sm hover:shadow-md active:scale-98 cursor-pointer group"
+            className="p-2.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white font-black text-xs text-center transition-all cursor-pointer min-h-[38px]"
           >
-            <div className="p-2 bg-purple-600 text-white rounded-xl shadow-sm group-hover:scale-105 transition-transform">
-              <FileText className="w-4 h-4" />
-            </div>
-            <div className="text-left">
-              <span className="block font-black text-xs text-purple-950">+ Nota de Campo</span>
-              <span className="text-[10px] text-purple-700 font-medium">Alerta o trabajo</span>
-            </div>
+            + Nota de Campo
           </button>
 
-          {/* Acción 4: Traslado de Ganado entre Campos */}
           <button
             onClick={() => setModalTrasladoAbierto(true)}
-            className="p-3 rounded-2xl bg-gradient-to-br from-amber-50 to-slate-50 hover:from-amber-100 hover:to-amber-50 border border-amber-200/80 text-amber-950 font-bold text-xs flex flex-col items-start space-y-2 transition-all shadow-sm hover:shadow-md active:scale-98 cursor-pointer group"
+            className="p-2.5 rounded-lg bg-amber-700 hover:bg-amber-800 text-white font-black text-xs text-center transition-all cursor-pointer min-h-[38px]"
           >
-            <div className="p-2 bg-amber-600 text-white rounded-xl shadow-sm group-hover:scale-105 transition-transform">
-              <Truck className="w-4 h-4" />
-            </div>
-            <div className="text-left">
-              <span className="block font-black text-xs text-amber-950">+ Traslado Ganado</span>
-              <span className="text-[10px] text-amber-700 font-medium">Entre campos (con valor)</span>
-            </div>
+            + Traslado Ganado
           </button>
-
         </div>
       </div>
 
@@ -186,19 +134,20 @@ export const AccionesRapidasBar: React.FC = () => {
             </button>
           </div>
 
-          <div className="space-y-2 max-h-36 overflow-y-auto">
-            {notasCampo.length > 0 ? (
-              notasCampo.slice(0, 2).map((nota) => (
+          {notasCampo.length > 0 ? (
+            <div className="space-y-2 max-h-36 overflow-y-auto">
+              {notasCampo.slice(0, 2).map((nota) => (
                 <div key={nota.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-start justify-between">
                   <div className="space-y-0.5">
                     <div className="flex items-center space-x-2">
                       <span className="text-xs font-bold text-slate-900">{nota.titulo}</span>
-                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${nota.prioridad === 'ALTA'
+                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${
+                        nota.prioridad === 'ALTA'
                           ? 'bg-rose-100 text-rose-800'
                           : nota.prioridad === 'MEDIA'
                             ? 'bg-amber-100 text-amber-800'
                             : 'bg-slate-200 text-slate-700'
-                        }`}>
+                      }`}>
                         {nota.prioridad}
                       </span>
                     </div>
@@ -206,11 +155,20 @@ export const AccionesRapidasBar: React.FC = () => {
                     <span className="text-[9px] text-slate-400 font-mono block pt-0.5">{formatearFechaUY(nota.fecha)}</span>
                   </div>
                 </div>
-              ))
-            ) : (
-              <p className="text-xs text-slate-400 italic py-2 text-center">Sin notas ni observaciones registradas</p>
-            )}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-3 space-y-2">
+              <p className="text-xs text-slate-400 italic">Sin notas ni observaciones registradas</p>
+              <button
+                onClick={() => setModalNotaAbierto(true)}
+                className="inline-flex items-center space-x-1 bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs px-3 py-1.5 rounded-xl shadow-sm cursor-pointer transition-all active:scale-95"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>+ Registrar Nueva Nota</span>
+              </button>
+            </div>
+          )}
         </article>
 
       </div>

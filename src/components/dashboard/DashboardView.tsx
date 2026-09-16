@@ -3,12 +3,11 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useEstanciasStore } from '../../stores/useEstanciasStore';
 import { useGanadoStore } from '../../stores/useGanadoStore';
 import { useFinanzasStore } from '../../stores/useFinanzasStore';
-import { SelectorEmpresaBar } from '../empresas/SelectorEmpresaBar';
 import { StatCard } from './StatCard';
 import { AccionesRapidasBar } from './AccionesRapidasBar';
 import { FiltroEstablecimientosRapido } from './FiltroEstablecimientosRapido';
 import { MetricasEjercicioCard } from './MetricasEjercicioCard';
-import { Beef, DollarSign, TrendingUp, ShieldAlert, Award, MapPin } from 'lucide-react';
+import { Beef, DollarSign, TrendingUp, ShieldAlert } from 'lucide-react';
 
 export const DashboardView: React.FC = () => {
   const { usuario } = useAuthStore();
@@ -18,15 +17,12 @@ export const DashboardView: React.FC = () => {
 
   const currentRole = usuario?.rol || 'OPERARIO';
   const estanciaActual = obtenerEstanciaActual();
-  const canSeeMoney = currentRole === 'ADMIN' || currentRole === 'CONTADOR' || currentRole === 'SUPERADMIN';
+  const canSeeMoney = currentRole === 'ADMIN' || currentRole === 'CONTADOR' || currentRole === 'PROPIETARIO' || currentRole === 'SUPERADMIN';
 
-  // Si no hay establecimiento seleccionado (o 'TODAS'), mostramos el acumulado consolidado
+  // Superficie en hectáreas
   const totalHectareas = estanciaActual 
     ? estanciaActual.hectareas_totales 
     : estancias.reduce((acc, curr) => acc + curr.hectareas_totales, 0);
-
-  const nombreEstanciaVista = estanciaActual ? estanciaActual.nombre : 'Consolidado Empresa (Todos los Establecimientos)';
-  const dicoseVista = estanciaActual ? estanciaActual.dicose : 'Multi-DICOSE';
 
   // 1. Cálculo Dinámico de Stock Ganadero y Carga Animal (UG/ha)
   const stockFiltrado = estanciaSeleccionadaId === 'TODAS'
@@ -61,50 +57,18 @@ export const DashboardView: React.FC = () => {
     .reduce((sum, t) => sum + (t.moneda === 'USD' ? t.monto : t.monto / 40), 0);
 
   return (
-    <div className="space-y-6">
-      {/* Selector de Empresa Matriz (Multi-Tenant) */}
-      <SelectorEmpresaBar />
-
-      {/* Banner Principal Adaptado al Establecimiento Seleccionado */}
-      <section aria-label="Resumen Ejecutivo de la Zafra" className="relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-900 text-white p-6 sm:p-7 rounded-2xl shadow-xl border border-emerald-800/40">
-        <div className="space-y-2 z-10">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="bg-emerald-500/20 text-emerald-300 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-widest border border-emerald-500/30 flex items-center gap-1">
-              <MapPin className="w-3 h-3 text-emerald-400" /> {nombreEstanciaVista}
-            </span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">Dashboard Agronómico & Financiero</h2>
-          <p className="text-slate-300 text-xs max-w-xl leading-relaxed">
-            Métricas de carga animal ($UG/ha$), existencias ganaderas y flujo de fondos para <strong>{totalHectareas.toLocaleString('es-UY')} Hectáreas</strong>.
-          </p>
-        </div>
-
-        <figure className="z-10 flex items-center space-x-3 bg-emerald-950/80 px-4 py-3 rounded-xl border border-emerald-700/50 shadow-inner self-start sm:self-auto">
-          <Award className="w-8 h-8 text-amber-400 flex-shrink-0" />
-          <figcaption className="text-xs">
-            <p className="font-extrabold text-white">DICOSE Oficial</p>
-            <p className="text-emerald-300 font-mono">{dicoseVista}</p>
-          </figcaption>
-        </figure>
-      </section>
-
-      {/* Acciones Rápidas de Filtro por Establecimiento / Campo */}
+    <div className="space-y-3 sm:space-y-4">
+      {/* 1. Filtros de Empresa & Campo (Barra Novedosa Ultra-Compacta 1-Fila) */}
       <FiltroEstablecimientosRapido />
 
-      {/* Panel de Acciones Rápidas Operativas & Bitácora del Campo */}
-      <AccionesRapidasBar />
-
-      {/* Módulo de Métricas Financieras del Ejercicio en Curso */}
-      {canSeeMoney && <MetricasEjercicioCard />}
-
-      {/* Tarjetas KPIs Calculadas 100% Dinámicas desde Supabase */}
-      <section aria-label="Indicadores Clave de Desempeño (KPIs)" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 2. DATOS DE ALTA PRIORIDAD: Tarjetas KPIs (Stock, Carga UG/ha, Ventas, Egresos) */}
+      <section aria-label="Indicadores Clave de Desempeño (KPIs)" className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
         <StatCard
           title="Stock Vacunos"
-          value={`${totalVacunos.toLocaleString('es-UY')} Cabezas`}
-          subtitle={totalOvinos > 0 ? `Vacunos (+ ${totalOvinos.toLocaleString('es-UY')} Ovinos)` : "Vacas de cría, novillos, toros y terneros"}
+          value={`${totalVacunos.toLocaleString('es-UY')} Cab`}
+          subtitle={totalOvinos > 0 ? `+ ${totalOvinos.toLocaleString('es-UY')} Ovinos` : "Vacunos totales"}
           icon={Beef}
-          trend={totalVacunos > 0 ? "Existencias registradas en BD" : "Sin hacienda registrada"}
+          trend={totalVacunos > 0 ? "Existencias BD" : "Sin hacienda"}
           color="emerald"
         />
         <StatCard
@@ -112,7 +76,7 @@ export const DashboardView: React.FC = () => {
           value={`${cargaUGPerHa.toFixed(2)} UG/ha`}
           subtitle={`Superficie: ${totalHectareas.toLocaleString('es-UY')} Ha`}
           icon={TrendingUp}
-          trend={cargaUGPerHa > 0 ? (cargaUGPerHa <= 1.0 ? "Carga equilibrada" : "Carga alta") : "Sin animales asignados"}
+          trend={cargaUGPerHa > 0 ? (cargaUGPerHa <= 1.0 ? "Equilibrada" : "Alta") : "Sin animales"}
           color="blue"
         />
         {canSeeMoney ? (
@@ -120,33 +84,36 @@ export const DashboardView: React.FC = () => {
             <StatCard
               title="Ventas Hacienda (USD)"
               value={`$ ${Math.round(ventasHaciendaUSD).toLocaleString('es-UY')}`}
-              subtitle="Ingresos totales zafra (USD)"
+              subtitle="Ingresos totales"
               icon={DollarSign}
-              trend={ventasHaciendaUSD > 0 ? "Ingresos registrados" : "Sin ventas registradas"}
+              trend={ventasHaciendaUSD > 0 ? "Ingresos registrados" : "Sin ventas"}
               color="emerald"
             />
             <StatCard
               title="Egresos Insumos (USD)"
               value={`$ ${Math.round(egresosInsumosUSD).toLocaleString('es-UY')}`}
-              subtitle="Egresos e insumos (USD)"
+              subtitle="Egresos caja"
               icon={DollarSign}
-              trend={egresosInsumosUSD > 0 ? "Gastos registrados" : "Sin egresos registrados"}
+              trend={egresosInsumosUSD > 0 ? "Gastos registrados" : "Sin egresos"}
               color="amber"
             />
           </>
         ) : (
-          <article className="col-span-1 sm:col-span-2 bg-amber-50/90 border border-amber-200/90 rounded-2xl p-5 flex items-center space-x-3 text-amber-900 text-xs shadow-sm">
-            <ShieldAlert className="w-7 h-7 text-amber-600 flex-shrink-0" />
+          <article className="col-span-2 bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center space-x-2 text-amber-900 text-xs">
+            <ShieldAlert className="w-5 h-5 text-amber-600 flex-shrink-0" />
             <div>
-              <p className="font-bold text-amber-950">Métricas Financieras Protegidas</p>
-              <p className="mt-0.5 text-amber-800">
-                Tu rol activo (<strong>{currentRole}</strong>) tiene permisos restringidos para ver montos en dinero según las reglas de RLS.
-              </p>
+              <p className="font-bold">Métricas Protegidas</p>
+              <p className="text-[10px] text-amber-800">Tu rol ({currentRole}) no permite ver montos monetarios.</p>
             </div>
           </article>
         )}
       </section>
+
+      {/* 3. ESTADÍSTICAS Y MÉTRICAS FINANCIERAS DEL EJERCICIO (VISIBLES ARRIBA) */}
+      {canSeeMoney && <MetricasEjercicioCard />}
+
+      {/* 4. ACCIONES RÁPIDAS OPERATIVAS & BITÁCORA DEL CAMPO (NOTAS AL FINAL) */}
+      <AccionesRapidasBar />
     </div>
   );
 };
-

@@ -11,8 +11,6 @@ import { DashboardView } from './components/dashboard/DashboardView';
 import { HaciendaView } from './components/hacienda/HaciendaView';
 import { FinanzasView } from './components/finanzas/FinanzasView';
 import { EstadisticasView } from './components/estadisticas/EstadisticasView';
-import { SqlView } from './components/sql/SqlView';
-
 import { RegistroEmpresaView } from './components/registro/RegistroEmpresaView';
 import { DevConsoleView } from './components/dev/DevConsoleView';
 
@@ -41,7 +39,7 @@ function MainLayout() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 w-full overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-slate-200 w-full overflow-x-hidden">
       <Navbar 
         isMobileMenuOpen={isMobileMenuOpen}
         onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -104,7 +102,7 @@ export function App() {
           <Route
             path="/finanzas"
             element={
-              <ProtectedRoute rolesPermitidos={['ADMIN', 'CONTADOR', 'SUPERADMIN']}>
+              <ProtectedRoute rolesPermitidos={['ADMIN', 'CONTADOR', 'PROPIETARIO', 'SUPERADMIN']}>
                 <FinanzasView />
               </ProtectedRoute>
             }
@@ -113,7 +111,7 @@ export function App() {
           <Route
             path="/estadisticas"
             element={
-              <ProtectedRoute rolesPermitidos={['ADMIN', 'CONTADOR', 'SUPERADMIN']}>
+              <ProtectedRoute rolesPermitidos={['ADMIN', 'CONTADOR', 'PROPIETARIO', 'SUPERADMIN']}>
                 <EstadisticasView />
               </ProtectedRoute>
             }
@@ -129,18 +127,9 @@ export function App() {
           />
 
           <Route
-            path="/sql"
-            element={
-              <ProtectedRoute>
-                <SqlView />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
             path="/usuarios"
             element={
-              <ProtectedRoute rolesPermitidos={['ADMIN', 'SUPERADMIN']}>
+              <ProtectedRoute rolesPermitidos={['ADMIN', 'PROPIETARIO', 'SUPERADMIN']}>
                 <UsuariosPage />
               </ProtectedRoute>
             }

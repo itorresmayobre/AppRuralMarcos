@@ -9,7 +9,6 @@ import {
   DollarSign, 
   BarChart3,
   Users, 
-  Database, 
   MapPin, 
   X, 
   Building2, 
@@ -63,7 +62,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { path: '/estadisticas', label: 'Estadísticas & Análisis', icon: BarChart3, allowed: canViewFinances },
     { path: '/dev', label: 'Consola Desarrollador', icon: Code, allowed: currentRole === 'SUPERADMIN' },
     { path: '/usuarios', label: 'Roles y Permisos', icon: Users, allowed: isOwnerOrAdmin },
-    { path: '/sql', label: 'Estado SQL (Supabase)', icon: Database, allowed: true },
   ];
 
   const navContent = (
