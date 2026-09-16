@@ -386,99 +386,137 @@ export async function registrarClienteAutonomoSupabase(params: {
     const campoNombre = params.nombreCampoInicial?.trim() || 'Estancia Por Defecto';
     const totalHa = params.hectareas || 500;
 
-    // 1. Crear Usuario en Supabase Auth
+    let userId: string | undefined = undefined;
+
+    // 1. Crear o Autenticar Usuario en Supabase Auth (Auto-recuperación si quedó registrado previamente)
     const { data: authData, error: errAuth } = await supabase.auth.signUp({
       email: emailNormalizado,
       password: params.password,
     });
 
     if (errAuth) {
-      let mensajeError = errAuth.message;
       if (errAuth.message.includes('already registered') || errAuth.status === 400) {
-        mensajeError = 'El correo electrónico ya se encuentra registrado en la plataforma.';
+        // El usuario ya existía en Auth (ej. por intento anterior bloqueado por RLS). Intentamos autenticarlo:
+        const { data: signInData, error: errSignIn } = await supabase.auth.signInWithPassword({
+          email: emailNormalizado,
+          password: params.password,
+        });
+
+        if (!errSignIn && signInData?.user) {
+          userId = signInData.user.id;
+        } else {
+          return {
+            exito: false,
+            error: 'El correo electrónico ya se encuentra registrado. Si es tu cuenta, ingresa tu contraseña correcta en el Login.',
+          };
+        }
+      } else {
+        return { exito: false, error: errAuth.message };
       }
-      return { exito: false, error: mensajeError };
+    } else {
+      userId = authData.user?.id;
     }
 
-    const userId = authData.user?.id;
     if (!userId) {
-      return { exito: false, error: 'No se pudo generar el usuario en el servicio de autenticación.' };
+      return { exito: false, error: 'No se pudo generar ni autenticar el usuario en Auth.' };
     }
 
-    // 1.5 Intentar iniciar sesión para obtener JWT si la auto-confirmación está activa
+    // 1.5 Asegurar token JWT activo en la sesión
     try {
       await supabase.auth.signInWithPassword({
         email: emailNormalizado,
         password: params.password,
       });
     } catch {
-      // Si requiere confirmación por mail, se mantiene token anónimo
+      // Ignorar si requiere confirmación por email
     }
 
-    // 2. Crear Empresa (Asignando propietario_usuario_id = userId)
-    const { data: empresaRes, error: errEmpresa } = await supabase
+    // 2. Verificar si la Empresa ya existe o debe crearse
+    let empresaId: string | undefined = undefined;
+
+    const { data: empresaExistente } = await supabase
       .from('empresas')
-      .insert([{
-        razon_social: params.nombreEmpresa,
-        nombre_fantasia: params.nombreEmpresa,
-        rut: rutFinal,
-        email_contacto: emailNormalizado,
-        departamento_sede: depto,
-        propietario_usuario_id: userId,
-        hectareas_totales_grupo: totalHa,
-        plan: 'PRO',
-        activa: true,
-      }])
       .select('id')
-      .single();
+      .eq('propietario_usuario_id', userId)
+      .maybeSingle();
 
-    if (errEmpresa || !empresaRes) {
-      let msg = errEmpresa?.message || 'Error creando la empresa en la base de datos';
-      if (errEmpresa?.code === '42501') {
-        msg = 'Error de permisos RLS en Supabase (42501). Ejecuta las políticas RLS en el SQL Editor de Supabase para permitir INSERT.';
+    if (empresaExistente?.id) {
+      empresaId = empresaExistente.id;
+    } else {
+      const { data: empresaRes, error: errEmpresa } = await supabase
+        .from('empresas')
+        .insert([{
+          razon_social: params.nombreEmpresa,
+          nombre_fantasia: params.nombreEmpresa,
+          rut: rutFinal,
+          email_contacto: emailNormalizado,
+          departamento_sede: depto,
+          propietario_usuario_id: userId,
+          hectareas_totales_grupo: totalHa,
+          plan: 'PRO',
+          activa: true,
+        }])
+        .select('id')
+        .single();
+
+      if (errEmpresa || !empresaRes) {
+        let msg = errEmpresa?.message || 'Error creando la empresa en la base de datos';
+        if (errEmpresa?.code === '42501') {
+          msg = 'Error de permisos RLS en Supabase (42501). Recuerda ejecutar las políticas SQL en el panel de Supabase.';
+        }
+        return { exito: false, error: msg };
       }
-      return { exito: false, error: msg };
+      empresaId = empresaRes.id;
     }
 
-    const empresaId = empresaRes.id;
-
-    // 3. Crear Campo / Establecimiento Inicial ("Estancia Por Defecto")
-    const { error: errCampo } = await supabase
+    // 3. Crear Campo / Establecimiento Inicial ("Estancia Por Defecto") si no existe
+    const { data: camposExistentes } = await supabase
       .from('establecimientos')
-      .insert([{
-        empresa_id: empresaId,
-        nombre: campoNombre,
-        dicose: `00-000000-0`,
-        hectareas_totales: totalHa,
-        hectareas_pastoreables: Math.round(totalHa * 0.9),
-        departamento: depto,
-        tipo_tenencia: 'PROPIO',
-        activa: true,
-      }]);
+      .select('id')
+      .eq('empresa_id', empresaId);
 
-    if (errCampo) {
-      console.warn('Aviso: No se pudo crear la estancia por defecto automáticamente:', errCampo.message);
+    if (!camposExistentes || camposExistentes.length === 0) {
+      await supabase
+        .from('establecimientos')
+        .insert([{
+          empresa_id: empresaId,
+          nombre: campoNombre,
+          dicose: `00-000000-0`,
+          hectareas_totales: totalHa,
+          hectareas_pastoreables: Math.round(totalHa * 0.9),
+          departamento: depto,
+          tipo_tenencia: 'PROPIO',
+          activa: true,
+        }]);
     }
 
-    // 4. Crear Perfil en public.perfiles con rol PROPIETARIO
-    const ape = params.apellidoContacto?.trim() || 'Propietario';
-    const username = `${params.nombreContacto.toLowerCase().replace(/\s+/g, '')}.${ape.toLowerCase().replace(/\s+/g, '')}`;
-
-    const { error: errPerfil } = await supabase
+    // 4. Crear Perfil en public.perfiles con rol PROPIETARIO si no existe
+    const { data: perfilExistente } = await supabase
       .from('perfiles')
-      .insert([{
-        id: userId,
-        empresa_id: empresaId,
-        username: username,
-        nombre: params.nombreContacto,
-        apellido: ape,
-        email: emailNormalizado,
-        rol: 'PROPIETARIO',
-        activo: true,
-      }]);
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
 
-    if (errPerfil) {
-      console.warn('Aviso al crear perfil:', errPerfil.message);
+    if (!perfilExistente) {
+      const ape = params.apellidoContacto?.trim() || 'Propietario';
+      const username = `${params.nombreContacto.toLowerCase().replace(/\s+/g, '')}.${ape.toLowerCase().replace(/\s+/g, '')}`;
+
+      const { error: errPerfil } = await supabase
+        .from('perfiles')
+        .insert([{
+          id: userId,
+          empresa_id: empresaId,
+          username: username,
+          nombre: params.nombreContacto,
+          apellido: ape,
+          email: emailNormalizado,
+          rol: 'PROPIETARIO',
+          activo: true,
+        }]);
+
+      if (errPerfil) {
+        console.warn('Aviso al crear perfil:', errPerfil.message);
+      }
     }
 
     return { exito: true };
