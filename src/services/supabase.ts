@@ -587,12 +587,11 @@ export async function enviarSolicitudRegistroBD(data: {
   hectareasEstimadas?: number;
 }): Promise<{ exito: boolean; id?: string; error?: string }> {
   try {
-    // Payload limpio y magro: solo enviamos los datos REALES ingresados en el formulario
+    // Payload ultra-limpio: PostgreSQL asigna DEFAULT 'PENDIENTE' automáticamente a la columna estado
     const payload: Record<string, any> = {
       nombre_empresa: data.nombreEmpresa,
       nombre_solicitante: data.nombreContacto,
       email: data.email.trim().toLowerCase(),
-      estado: 'PENDIENTE',
     };
 
     if (data.telefono) payload.telefono = data.telefono;

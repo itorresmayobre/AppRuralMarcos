@@ -127,13 +127,12 @@ ALTER TABLE public.solicitudes_registro ALTER COLUMN telefono DROP NOT NULL;
 ALTER TABLE public.solicitudes_registro ALTER COLUMN departamento DROP NOT NULL;
 ALTER TABLE public.solicitudes_registro ALTER COLUMN hectareas_estimadas DROP NOT NULL;
 
-GRANT ALL ON public.solicitudes_registro TO anon, authenticated, service_role;
-
+DROP POLICY IF EXISTS "Permitir insercion solicitudes publica" ON public.solicitudes_registro;
 DROP POLICY IF EXISTS "Permitir insercion solicitudes a anonimos y autenticados" ON public.solicitudes_registro;
-CREATE POLICY "Permitir insercion solicitudes a anonimos y autenticados" 
+CREATE POLICY "Permitir insercion solicitudes publica" 
 ON public.solicitudes_registro 
 FOR INSERT 
-TO anon, authenticated 
+TO public 
 WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Permitir lectura solicitudes a autenticados" ON public.solicitudes_registro;
