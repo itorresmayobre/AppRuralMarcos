@@ -63,6 +63,11 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
         'EXITO'
       );
       setEnviadoExitoso(true);
+      // Limpiar formulario tras éxito
+      setNombreEmpresa('');
+      setSolicitanteNombre('');
+      setSolicitanteEmail('');
+      setSolicitantePassword('');
     } else {
       mostrarToast(
         'Error en el Registro',

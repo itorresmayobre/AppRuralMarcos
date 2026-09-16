@@ -91,6 +91,9 @@ export const useTransaccionForm = (onClose: () => void) => {
       'EXITO'
     );
 
+    // Limpiar formulario y cerrar
+    setMonto('');
+    setDescripcionFinanciera('');
     onClose();
   };
 

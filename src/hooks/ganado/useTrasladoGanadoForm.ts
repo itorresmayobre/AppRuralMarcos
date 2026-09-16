@@ -104,6 +104,9 @@ export const useTrasladoGanadoForm = (onClose: () => void) => {
       'EXITO'
     );
 
+    // Limpiar campos y cerrar
+    setCabezas('20');
+    setObservaciones('');
     onClose();
   };
 
