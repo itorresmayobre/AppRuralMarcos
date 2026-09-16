@@ -14,6 +14,51 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIU
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+/**
+ * Formatea errores provenientes de Supabase / PostgreSQL en un mensaje claro y legible en español.
+ * Extrae message, details y hint del objeto de error de Postgrest.
+ */
+export function formatearErrorSupabase(error: any): string {
+  if (!error) return 'Ocurrió un error desconocido.';
+
+  const code = error.code || '';
+  const message = error.message || '';
+  const details = error.details || '';
+  const hint = error.hint || '';
+
+  let mensajeClaro = '';
+
+  switch (code) {
+    case '42501':
+      mensajeClaro = 'Error de permisos (RLS). Tu usuario o el cliente público no tiene permisos para insertar en esta tabla.';
+      break;
+    case '23505':
+      mensajeClaro = 'Registro duplicado. El correo electrónico o identificador ya se encuentra registrado en el sistema.';
+      break;
+    case '23503':
+      mensajeClaro = 'Referencia inválida. Los datos asociados no existen o fueron eliminados.';
+      break;
+    case '23502':
+      mensajeClaro = 'Faltan campos obligatorios para completar este registro en la base de datos.';
+      break;
+    case 'PGRST116':
+      mensajeClaro = 'No se encontró el registro buscado en la base de datos.';
+      break;
+    default:
+      mensajeClaro = message || 'Error al procesar la solicitud en Supabase.';
+  }
+
+  const anexos: string[] = [];
+  if (details && details !== 'null') anexos.push(`Detalle: ${details}`);
+  if (hint && hint !== 'null') anexos.push(`Sugerencia: ${hint}`);
+
+  if (anexos.length > 0) {
+    return `${mensajeClaro} [${anexos.join(' - ')}]`;
+  }
+
+  return mensajeClaro;
+}
+
 // ==============================================================================
 // 1. FUNCIONES DE ALMACENAMIENTO (SUPABASE STORAGE BUCKETS)
 // ==============================================================================
@@ -560,7 +605,7 @@ export async function enviarSolicitudRegistroBD(data: {
       .single();
 
     if (error) {
-      return { exito: false, error: error.message };
+      return { exito: false, error: formatearErrorSupabase(error) };
     }
 
     return { exito: true, id: res.id };

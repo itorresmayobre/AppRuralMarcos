@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useToastStore } from '../../stores/useToastStore';
 import {
   Building2,
   CheckCircle2,
@@ -11,7 +10,8 @@ import {
   Mail,
   User,
   Lock,
-  Loader2
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 
 interface RegistroEmpresaViewProps {
@@ -20,7 +20,6 @@ interface RegistroEmpresaViewProps {
 
 export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolverALogin }) => {
   const navigate = useNavigate();
-  const { mostrarToast } = useToastStore();
 
   const [nombreEmpresa, setNombreEmpresa] = useState('');
   const [solicitanteNombre, setSolicitanteNombre] = useState('');
@@ -28,17 +27,19 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
   const [solicitantePassword, setSolicitantePassword] = useState('');
   const [cargandoEnvio, setCargandoEnvio] = useState(false);
   const [enviadoExitoso, setEnviadoExitoso] = useState(false);
+  const [errorFormulario, setErrorFormulario] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorFormulario(null);
 
     if (!nombreEmpresa.trim() || !solicitanteNombre.trim() || !solicitanteEmail.trim() || !solicitantePassword.trim()) {
-      mostrarToast('Campos Incompletos', 'Por favor completa todos los campos requeridos (*)', 'ERROR');
+      setErrorFormulario('Por favor completa todos los campos requeridos (*)');
       return;
     }
 
     if (solicitantePassword.length < 6) {
-      mostrarToast('Contraseña Corta', 'La contraseña debe tener al menos 6 caracteres', 'ERROR');
+      setErrorFormulario('La contraseña debe tener al menos 6 caracteres');
       return;
     }
 
@@ -55,18 +56,9 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
     setCargandoEnvio(false);
 
     if (res.exito) {
-      mostrarToast(
-        '¡Solicitud Registrada!',
-        'Tu solicitud de alta ha sido registrada correctamente. Queda pendiente de aprobación por el SuperAdministrador.',
-        'EXITO'
-      );
       setEnviadoExitoso(true);
     } else {
-      mostrarToast(
-        'Error en la Solicitud',
-        res.error || 'Ocurrió un error al enviar la solicitud de registro.',
-        'ERROR'
-      );
+      setErrorFormulario(res.error || 'Ocurrió un error al enviar la solicitud de registro.');
     }
   };
 
@@ -219,6 +211,14 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
                 />
               </div>
             </div>
+
+            {/* Mensaje de Error en Rojo directo sobre el botón */}
+            {errorFormulario && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-semibold flex items-start space-x-2 animate-fadeIn">
+                <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+                <span className="leading-snug">{errorFormulario}</span>
+              </div>
+            )}
 
             {/* Botón Submit */}
             <button

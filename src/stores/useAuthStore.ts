@@ -137,11 +137,23 @@ export const useAuthStore = create<AuthState>()(
       },
 
       cerrarSesion: async () => {
+        set({ cargando: true });
+
+        // 1. Esperar la confirmación del backend en Supabase Auth (Revocación real del token en el servidor)
         try {
           await supabase.auth.signOut();
         } catch (e) {
-          // Ignore
+          console.warn('Aviso en signOut de Supabase:', e);
         }
+
+        // 2. Limpiar cache local persistente
+        try {
+          localStorage.removeItem('agrouy-auth-session');
+        } catch {
+          // Ignorar
+        }
+
+        // 3. Limpiar el estado de sesión local una vez confirmado el backend
         set({
           usuario: null,
           estaAutenticado: false,

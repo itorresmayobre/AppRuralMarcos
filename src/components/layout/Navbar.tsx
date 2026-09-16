@@ -17,9 +17,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   const { usuario, cerrarSesion } = useAuthStore();
   const navigate = useNavigate();
 
-  const handleCerrarSesion = () => {
-    cerrarSesion();
-    navigate('/login');
+  const handleCerrarSesion = async () => {
+    await cerrarSesion();
+    navigate('/login', { replace: true });
   };
 
   return (

@@ -121,6 +121,8 @@ USING (
 -- 5. POLÍTICAS PARA LA TABLA SOLICITUDES_REGISTRO (PRE-ALTA DE EMPRESAS)
 ALTER TABLE public.solicitudes_registro ENABLE ROW LEVEL SECURITY;
 
+GRANT ALL ON public.solicitudes_registro TO anon, authenticated, service_role;
+
 DROP POLICY IF EXISTS "Permitir insercion solicitudes a anonimos y autenticados" ON public.solicitudes_registro;
 CREATE POLICY "Permitir insercion solicitudes a anonimos y autenticados" 
 ON public.solicitudes_registro 

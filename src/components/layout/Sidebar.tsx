@@ -48,10 +48,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const canViewFinances = isOwnerOrAdmin || currentRole === 'CONTADOR';
   const estanciaActual = obtenerEstanciaActual();
 
-  const handleCerrarSesion = () => {
-    cerrarSesion();
+  const handleCerrarSesion = async () => {
+    await cerrarSesion();
     onCloseMobileMenu();
-    navigate('/login');
+    navigate('/login', { replace: true });
   };
 
   const menuItems = [
