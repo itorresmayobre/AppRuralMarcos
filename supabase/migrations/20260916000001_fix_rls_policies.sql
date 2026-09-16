@@ -3,6 +3,27 @@
 -- Aplicar en Supabase SQL Editor o automáticamente vía Supabase CLI / GitHub
 -- ==============================================================================
 
+-- 0. FUNCIONES AUXILIARES SECURITY DEFINER (Evitan recursión infinita RLS 42P17)
+CREATE OR REPLACE FUNCTION public.get_mi_empresa_id()
+RETURNS uuid
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT empresa_id FROM public.perfiles WHERE id = auth.uid();
+$$;
+
+CREATE OR REPLACE FUNCTION public.es_superadmin()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.perfiles WHERE id = auth.uid() AND rol = 'SUPERADMIN'
+  );
+$$;
+
 -- 1. POLÍTICAS PARA LA TABLA EMPRESAS
 ALTER TABLE public.empresas ENABLE ROW LEVEL SECURITY;
 
@@ -19,9 +40,9 @@ ON public.empresas
 FOR SELECT 
 TO authenticated 
 USING (
-  id IN (SELECT empresa_id FROM public.perfiles WHERE id = auth.uid()) 
+  id = public.get_mi_empresa_id() 
   OR propietario_usuario_id = auth.uid()
-  OR EXISTS (SELECT 1 FROM public.perfiles WHERE id = auth.uid() AND rol = 'SUPERADMIN')
+  OR public.es_superadmin()
 );
 
 DROP POLICY IF EXISTS "Permitir actualizacion de su propia empresa" ON public.empresas;
@@ -30,9 +51,9 @@ ON public.empresas
 FOR UPDATE 
 TO authenticated 
 USING (
-  id IN (SELECT empresa_id FROM public.perfiles WHERE id = auth.uid()) 
+  id = public.get_mi_empresa_id() 
   OR propietario_usuario_id = auth.uid()
-  OR EXISTS (SELECT 1 FROM public.perfiles WHERE id = auth.uid() AND rol = 'SUPERADMIN')
+  OR public.es_superadmin()
 );
 
 -- 2. POLÍTICAS PARA LA TABLA ESTABLECIMIENTOS (CAMPOS / ESTANCIAS)
@@ -51,8 +72,8 @@ ON public.establecimientos
 FOR SELECT 
 TO authenticated 
 USING (
-  empresa_id IN (SELECT empresa_id FROM public.perfiles WHERE id = auth.uid())
-  OR EXISTS (SELECT 1 FROM public.perfiles WHERE id = auth.uid() AND rol = 'SUPERADMIN')
+  empresa_id = public.get_mi_empresa_id()
+  OR public.es_superadmin()
 );
 
 DROP POLICY IF EXISTS "Permitir actualizacion de sus establecimientos" ON public.establecimientos;
@@ -61,8 +82,8 @@ ON public.establecimientos
 FOR UPDATE 
 TO authenticated 
 USING (
-  empresa_id IN (SELECT empresa_id FROM public.perfiles WHERE id = auth.uid())
-  OR EXISTS (SELECT 1 FROM public.perfiles WHERE id = auth.uid() AND rol = 'SUPERADMIN')
+  empresa_id = public.get_mi_empresa_id()
+  OR public.es_superadmin()
 );
 
 -- 3. POLÍTICAS PARA LA TABLA PERFILES
@@ -73,7 +94,10 @@ CREATE POLICY "Permitir insercion de su propio perfil"
 ON public.perfiles 
 FOR INSERT 
 TO authenticated 
-WITH CHECK (id = auth.uid() OR EXISTS (SELECT 1 FROM public.perfiles WHERE id = auth.uid() AND rol = 'SUPERADMIN'));
+WITH CHECK (
+  id = auth.uid() 
+  OR public.es_superadmin()
+);
 
 DROP POLICY IF EXISTS "Permitir lectura de perfiles de la misma empresa" ON public.perfiles;
 CREATE POLICY "Permitir lectura de perfiles de la misma empresa" 
@@ -82,8 +106,8 @@ FOR SELECT
 TO authenticated 
 USING (
   id = auth.uid() 
-  OR empresa_id IN (SELECT empresa_id FROM public.perfiles WHERE id = auth.uid())
-  OR EXISTS (SELECT 1 FROM public.perfiles WHERE id = auth.uid() AND rol = 'SUPERADMIN')
+  OR (empresa_id IS NOT NULL AND empresa_id = public.get_mi_empresa_id())
+  OR public.es_superadmin()
 );
 
 DROP POLICY IF EXISTS "Permitir actualizacion de su propio perfil" ON public.perfiles;
@@ -91,7 +115,10 @@ CREATE POLICY "Permitir actualizacion de su propio perfil"
 ON public.perfiles 
 FOR UPDATE 
 TO authenticated 
-USING (id = auth.uid() OR EXISTS (SELECT 1 FROM public.perfiles WHERE id = auth.uid() AND rol = 'SUPERADMIN'));
+USING (
+  id = auth.uid() 
+  OR public.es_superadmin()
+);
 
 -- 4. POLÍTICAS PARA LA TABLA ESTABLECIMIENTO_USUARIOS
 ALTER TABLE public.establecimiento_usuarios ENABLE ROW LEVEL SECURITY;
@@ -103,8 +130,7 @@ FOR INSERT
 TO authenticated 
 WITH CHECK (
   perfil_id = auth.uid() 
-  OR perfil_id IN (SELECT id FROM public.perfiles WHERE empresa_id IN (SELECT empresa_id FROM public.perfiles WHERE id = auth.uid()))
-  OR EXISTS (SELECT 1 FROM public.perfiles WHERE id = auth.uid() AND rol = 'SUPERADMIN')
+  OR public.es_superadmin()
 );
 
 DROP POLICY IF EXISTS "Permitir lectura establecimiento_usuarios" ON public.establecimiento_usuarios;
@@ -114,8 +140,7 @@ FOR SELECT
 TO authenticated 
 USING (
   perfil_id = auth.uid() 
-  OR perfil_id IN (SELECT id FROM public.perfiles WHERE empresa_id IN (SELECT empresa_id FROM public.perfiles WHERE id = auth.uid()))
-  OR EXISTS (SELECT 1 FROM public.perfiles WHERE id = auth.uid() AND rol = 'SUPERADMIN')
+  OR public.es_superadmin()
 );
 
 -- 5. POLÍTICAS PARA LA TABLA SOLICITUDES_REGISTRO (PRE-ALTA DE EMPRESAS)
