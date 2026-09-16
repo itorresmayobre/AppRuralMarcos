@@ -389,9 +389,13 @@ export async function registrarClienteAutonomoSupabase(params: {
     let userId: string | undefined = undefined;
 
     // 1. Crear o Autenticar Usuario en Supabase Auth (Auto-recuperación si quedó registrado previamente)
+    const redirectUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
     const { data: authData, error: errAuth } = await supabase.auth.signUp({
       email: emailNormalizado,
       password: params.password,
+      options: {
+        emailRedirectTo: redirectUrl,
+      },
     });
 
     if (errAuth) {
@@ -524,3 +528,44 @@ export async function registrarClienteAutonomoSupabase(params: {
     return { exito: false, error: err?.message || 'Excepción imprevista en el alta de la empresa.' };
   }
 }
+
+/**
+ * Registrar una solicitud de alta pendiente de aprobación por el SuperAdmin
+ */
+export async function enviarSolicitudRegistroBD(data: {
+  nombreEmpresa: string;
+  nombreContacto: string;
+  email: string;
+  telefono?: string;
+  rut?: string;
+  departamento?: string;
+  hectareasEstimadas?: number;
+}): Promise<{ exito: boolean; id?: string; error?: string }> {
+  try {
+    const payload = {
+      nombre_solicitante: data.nombreContacto,
+      email: data.email.trim().toLowerCase(),
+      telefono: data.telefono || 'Sin teléfono',
+      nombre_empresa: data.nombreEmpresa,
+      rut: data.rut || '219999990019',
+      departamento: data.departamento || 'CANELONES',
+      hectareas_estimadas: data.hectareasEstimadas || 100,
+      estado: 'PENDIENTE',
+    };
+
+    const { data: res, error } = await supabase
+      .from('solicitudes_registro')
+      .insert([payload])
+      .select('id')
+      .single();
+
+    if (error) {
+      return { exito: false, error: error.message };
+    }
+
+    return { exito: true, id: res.id };
+  } catch (err: any) {
+    return { exito: false, error: err?.message || 'Error registrando la solicitud.' };
+  }
+}
+

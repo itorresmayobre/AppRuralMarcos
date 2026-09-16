@@ -44,34 +44,27 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
 
     setCargandoEnvio(true);
 
-    // Alta autónoma ultrarrápida en Supabase (Empresa + "Estancia Por Defecto" + Auth + Perfil PROPIETARIO)
-    const { registrarClienteAutonomoSupabase } = await import('../../services/supabase');
-    const res = await registrarClienteAutonomoSupabase({
+    // Enviar solicitud de alta a Supabase (Pendiente de aprobación por SuperAdmin)
+    const { enviarSolicitudRegistroBD } = await import('../../services/supabase');
+    const res = await enviarSolicitudRegistroBD({
       nombreEmpresa: nombreEmpresa.trim(),
       nombreContacto: solicitanteNombre.trim(),
       email: solicitanteEmail.trim(),
-      password: solicitantePassword.trim(),
-      nombreCampoInicial: 'Estancia Por Defecto',
     });
 
     setCargandoEnvio(false);
 
     if (res.exito) {
       mostrarToast(
-        '¡Registro Completado!',
-        'Tu Empresa y tu Cuenta de Propietario han sido creadas exitosamente.',
+        '¡Solicitud Registrada!',
+        'Tu solicitud de alta ha sido registrada correctamente. Queda pendiente de aprobación por el SuperAdministrador.',
         'EXITO'
       );
       setEnviadoExitoso(true);
-      // Limpiar formulario tras éxito
-      setNombreEmpresa('');
-      setSolicitanteNombre('');
-      setSolicitanteEmail('');
-      setSolicitantePassword('');
     } else {
       mostrarToast(
-        'Error en el Registro',
-        res.error || 'Ocurrió un error al dar de alta la empresa en la base de datos.',
+        'Error en la Solicitud',
+        res.error || 'Ocurrió un error al enviar la solicitud de registro.',
         'ERROR'
       );
     }
@@ -89,33 +82,33 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
     return (
       <main className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full text-center space-y-5 border border-slate-200 shadow-2xl animate-fadeIn">
-          <div className="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-3xl flex items-center justify-center mx-auto border border-emerald-200 shadow-sm">
-            <CheckCircle2 className="w-10 h-10" />
+          <div className="w-16 h-16 bg-amber-100 text-amber-700 rounded-3xl flex items-center justify-center mx-auto border border-amber-200 shadow-sm">
+            <CheckCircle2 className="w-10 h-10 text-emerald-600" />
           </div>
 
           <div className="space-y-2">
-            <h2 className="text-xl sm:text-2xl font-black text-slate-900">¡Empresa y Cuenta Creadas!</h2>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900">¡Solicitud de Alta Registrada!</h2>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
-              Se ha completado el registro autónomo para <strong>"{nombreEmpresa}"</strong> en AppRural Uruguay.
+              Tu solicitud para dar de alta la empresa <strong>"{nombreEmpresa}"</strong> fue enviada con éxito.
             </p>
           </div>
 
-          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 text-left text-xs space-y-1.5 font-medium text-slate-700">
-            <p><strong className="text-slate-900">Titular Propietario:</strong> {solicitanteNombre}</p>
-            <p><strong className="text-slate-900">Email de Ingreso:</strong> {solicitanteEmail}</p>
-            <p><strong className="text-slate-900">Establecimiento Inicial:</strong> Estancia Por Defecto</p>
+          <div className="p-4 bg-amber-50/80 rounded-2xl border border-amber-200/80 text-left text-xs space-y-1.5 font-medium text-amber-950">
+            <p><strong className="text-amber-900">Solicitante:</strong> {solicitanteNombre}</p>
+            <p><strong className="text-amber-900">Email de Contacto:</strong> {solicitanteEmail}</p>
+            <p><strong className="text-amber-900">Estado:</strong> PENDIENTE DE APROBACIÓN POR SUPERADMIN</p>
           </div>
 
           <p className="text-[11px] text-slate-500 font-medium">
-            Ya puedes iniciar sesión con tu correo <strong>{solicitanteEmail}</strong>.
+            El SuperAdministrador de AppRural revisará tu solicitud y habilitará tu acceso a la brevedad.
           </p>
 
           <button
             type="button"
             onClick={handleVolver}
-            className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs py-3.5 rounded-xl shadow-md cursor-pointer transition-all active:scale-95"
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs py-3.5 rounded-xl shadow-md cursor-pointer transition-all active:scale-95"
           >
-            Ir a Iniciar Sesión
+            Volver al Inicio de Sesión
           </button>
         </div>
       </main>

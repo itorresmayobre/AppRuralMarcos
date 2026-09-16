@@ -21,6 +21,7 @@ TO authenticated
 USING (
   id IN (SELECT empresa_id FROM public.perfiles WHERE id = auth.uid()) 
   OR propietario_usuario_id = auth.uid()
+  OR EXISTS (SELECT 1 FROM public.perfiles WHERE id = auth.uid() AND rol = 'SUPERADMIN')
 );
 
 DROP POLICY IF EXISTS "Permitir actualizacion de su propia empresa" ON public.empresas;
@@ -31,6 +32,7 @@ TO authenticated
 USING (
   id IN (SELECT empresa_id FROM public.perfiles WHERE id = auth.uid()) 
   OR propietario_usuario_id = auth.uid()
+  OR EXISTS (SELECT 1 FROM public.perfiles WHERE id = auth.uid() AND rol = 'SUPERADMIN')
 );
 
 -- 2. POLÍTICAS PARA LA TABLA ESTABLECIMIENTOS (CAMPOS / ESTANCIAS)
@@ -50,6 +52,7 @@ FOR SELECT
 TO authenticated 
 USING (
   empresa_id IN (SELECT empresa_id FROM public.perfiles WHERE id = auth.uid())
+  OR EXISTS (SELECT 1 FROM public.perfiles WHERE id = auth.uid() AND rol = 'SUPERADMIN')
 );
 
 DROP POLICY IF EXISTS "Permitir actualizacion de sus establecimientos" ON public.establecimientos;
@@ -59,6 +62,7 @@ FOR UPDATE
 TO authenticated 
 USING (
   empresa_id IN (SELECT empresa_id FROM public.perfiles WHERE id = auth.uid())
+  OR EXISTS (SELECT 1 FROM public.perfiles WHERE id = auth.uid() AND rol = 'SUPERADMIN')
 );
 
 -- 3. POLÍTICAS PARA LA TABLA PERFILES
@@ -69,7 +73,7 @@ CREATE POLICY "Permitir insercion de su propio perfil"
 ON public.perfiles 
 FOR INSERT 
 TO authenticated 
-WITH CHECK (id = auth.uid());
+WITH CHECK (id = auth.uid() OR EXISTS (SELECT 1 FROM public.perfiles WHERE id = auth.uid() AND rol = 'SUPERADMIN'));
 
 DROP POLICY IF EXISTS "Permitir lectura de perfiles de la misma empresa" ON public.perfiles;
 CREATE POLICY "Permitir lectura de perfiles de la misma empresa" 
@@ -79,6 +83,7 @@ TO authenticated
 USING (
   id = auth.uid() 
   OR empresa_id IN (SELECT empresa_id FROM public.perfiles WHERE id = auth.uid())
+  OR EXISTS (SELECT 1 FROM public.perfiles WHERE id = auth.uid() AND rol = 'SUPERADMIN')
 );
 
 DROP POLICY IF EXISTS "Permitir actualizacion de su propio perfil" ON public.perfiles;
@@ -86,7 +91,7 @@ CREATE POLICY "Permitir actualizacion de su propio perfil"
 ON public.perfiles 
 FOR UPDATE 
 TO authenticated 
-USING (id = auth.uid());
+USING (id = auth.uid() OR EXISTS (SELECT 1 FROM public.perfiles WHERE id = auth.uid() AND rol = 'SUPERADMIN'));
 
 -- 4. POLÍTICAS PARA LA TABLA ESTABLECIMIENTO_USUARIOS
 ALTER TABLE public.establecimiento_usuarios ENABLE ROW LEVEL SECURITY;
@@ -99,6 +104,7 @@ TO authenticated
 WITH CHECK (
   perfil_id = auth.uid() 
   OR perfil_id IN (SELECT id FROM public.perfiles WHERE empresa_id IN (SELECT empresa_id FROM public.perfiles WHERE id = auth.uid()))
+  OR EXISTS (SELECT 1 FROM public.perfiles WHERE id = auth.uid() AND rol = 'SUPERADMIN')
 );
 
 DROP POLICY IF EXISTS "Permitir lectura establecimiento_usuarios" ON public.establecimiento_usuarios;
@@ -109,4 +115,29 @@ TO authenticated
 USING (
   perfil_id = auth.uid() 
   OR perfil_id IN (SELECT id FROM public.perfiles WHERE empresa_id IN (SELECT empresa_id FROM public.perfiles WHERE id = auth.uid()))
+  OR EXISTS (SELECT 1 FROM public.perfiles WHERE id = auth.uid() AND rol = 'SUPERADMIN')
 );
+
+-- 5. POLÍTICAS PARA LA TABLA SOLICITUDES_REGISTRO (PRE-ALTA DE EMPRESAS)
+ALTER TABLE public.solicitudes_registro ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Permitir insercion solicitudes a anonimos y autenticados" ON public.solicitudes_registro;
+CREATE POLICY "Permitir insercion solicitudes a anonimos y autenticados" 
+ON public.solicitudes_registro 
+FOR INSERT 
+TO anon, authenticated 
+WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Permitir lectura solicitudes a autenticados" ON public.solicitudes_registro;
+CREATE POLICY "Permitir lectura solicitudes a autenticados" 
+ON public.solicitudes_registro 
+FOR SELECT 
+TO authenticated 
+USING (true);
+
+DROP POLICY IF EXISTS "Permitir actualizacion solicitudes a autenticados" ON public.solicitudes_registro;
+CREATE POLICY "Permitir actualizacion solicitudes a autenticados" 
+ON public.solicitudes_registro 
+FOR UPDATE 
+TO authenticated 
+USING (true);
