@@ -386,7 +386,7 @@ export async function registrarClienteAutonomoSupabase(params: {
     const campoNombre = params.nombreCampoInicial?.trim() || 'Estancia Por Defecto';
     const totalHa = params.hectareas || 500;
 
-    // 1. Crear Usuario en Supabase Auth primero (obtiene la identidad autenticada auth.uid())
+    // 1. Crear Usuario en Supabase Auth
     const { data: authData, error: errAuth } = await supabase.auth.signUp({
       email: emailNormalizado,
       password: params.password,
@@ -403,6 +403,16 @@ export async function registrarClienteAutonomoSupabase(params: {
     const userId = authData.user?.id;
     if (!userId) {
       return { exito: false, error: 'No se pudo generar el usuario en el servicio de autenticación.' };
+    }
+
+    // 1.5 Intentar iniciar sesión para obtener JWT si la auto-confirmación está activa
+    try {
+      await supabase.auth.signInWithPassword({
+        email: emailNormalizado,
+        password: params.password,
+      });
+    } catch {
+      // Si requiere confirmación por mail, se mantiene token anónimo
     }
 
     // 2. Crear Empresa (Asignando propietario_usuario_id = userId)
@@ -425,7 +435,7 @@ export async function registrarClienteAutonomoSupabase(params: {
     if (errEmpresa || !empresaRes) {
       let msg = errEmpresa?.message || 'Error creando la empresa en la base de datos';
       if (errEmpresa?.code === '42501') {
-        msg = 'Error de permisos en la base de datos (RLS). Revisa las políticas de RLS en Supabase para la tabla empresas.';
+        msg = 'Error de permisos RLS en Supabase (42501). Ejecuta las políticas RLS en el SQL Editor de Supabase para permitir INSERT.';
       }
       return { exito: false, error: msg };
     }
