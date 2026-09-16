@@ -7,7 +7,7 @@ export const FiltroEstablecimientosRapido: React.FC = () => {
   const { estancias, estanciaSeleccionadaId, seleccionarEstancia } = useEstanciasStore();
   const { usuario } = useAuthStore();
 
-  const tieneAccesoTodas = usuario?.estancias_asignadas_ids?.includes('TODAS') || usuario?.rol === 'ADMIN';
+  const tieneAccesoTodas = usuario?.estancias_asignadas_ids?.includes('TODAS') || usuario?.rol === 'ADMIN' || usuario?.rol === 'PROPIETARIO' || usuario?.rol === 'SUPERADMIN';
   const estanciasPermitidas = tieneAccesoTodas
     ? estancias
     : estancias.filter(e => usuario?.estancias_asignadas_ids?.includes(e.id));

@@ -23,6 +23,7 @@ import { useRecibosSueldoStore } from './stores/useRecibosSueldoStore';
 import { useConceptosFinancierosStore } from './stores/useConceptosFinancierosStore';
 import { useEmpresasStore } from './stores/useEmpresasStore';
 import { useCampoNotasStore } from './stores/useCampoNotasStore';
+import { useUsuariosStore } from './stores/useUsuariosStore';
 
 function MainLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -36,6 +37,7 @@ function MainLayout() {
     useRecibosSueldoStore.getState().cargarRecibosDesdeSupabase();
     useConceptosFinancierosStore.getState().cargarConceptosDesdeSupabase();
     useCampoNotasStore.getState().cargarNotasYPluviometroDesdeSupabase();
+    useUsuariosStore.getState().cargarUsuariosDesdeSupabase();
   }, []);
 
   return (

@@ -13,7 +13,7 @@ export const EstanciaSelector: React.FC = () => {
   const estanciaActual = obtenerEstanciaActual();
 
   // Filtrar estancias permitidas para el usuario autenticado
-  const tieneAccesoTodas = usuario?.estancias_asignadas_ids?.includes('TODAS') || usuario?.rol === 'ADMIN';
+  const tieneAccesoTodas = usuario?.estancias_asignadas_ids?.includes('TODAS') || usuario?.rol === 'ADMIN' || usuario?.rol === 'PROPIETARIO' || usuario?.rol === 'SUPERADMIN';
   const estanciasPermitidas = tieneAccesoTodas
     ? estancias
     : estancias.filter(e => usuario?.estancias_asignadas_ids?.includes(e.id));

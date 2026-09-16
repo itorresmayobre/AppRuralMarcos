@@ -22,7 +22,7 @@ export const AccionesRapidasBar: React.FC = () => {
   const { obtenerPluviometroEstancia, obtenerNotasEstancia } = useCampoNotasStore();
 
   const currentRole = usuario?.rol || 'OPERARIO';
-  const puedeVerFinanzas = currentRole === 'ADMIN' || currentRole === 'CONTADOR';
+  const puedeVerFinanzas = currentRole === 'ADMIN' || currentRole === 'CONTADOR' || currentRole === 'PROPIETARIO' || currentRole === 'SUPERADMIN';
 
   const [modalTransaccionAbierto, setModalTransaccionAbierto] = useState(false);
   const [modalPluviometroAbierto, setModalPluviometroAbierto] = useState(false);

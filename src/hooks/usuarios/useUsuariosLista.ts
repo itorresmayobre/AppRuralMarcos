@@ -7,7 +7,7 @@ import type { UserRole, PermisoRol } from '../../types';
 
 export const useUsuariosLista = () => {
   const { usuario } = useAuthStore();
-  const { usuarios, matrizPermisos, actualizarRolUsuario, toggleEstadoUsuario, togglePermisoRol } = useUsuariosStore();
+  const { usuarios, matrizPermisos, cargarUsuariosDesdeSupabase, actualizarRolUsuario, toggleEstadoUsuario, togglePermisoRol } = useUsuariosStore();
   const { mostrarToast } = useToastStore();
 
   const esAdmin = usuario?.rol === 'ADMIN' || usuario?.rol === 'PROPIETARIO' || usuario?.rol === 'SUPERADMIN';
@@ -19,7 +19,7 @@ export const useUsuariosLista = () => {
     setCargandoApi(true);
     setErrorApi(null);
     try {
-      await usuariosService.obtenerUsuarios(usuarios);
+      await cargarUsuariosDesdeSupabase();
       setCargandoApi(false);
     } catch (err: unknown) {
       setCargandoApi(false);

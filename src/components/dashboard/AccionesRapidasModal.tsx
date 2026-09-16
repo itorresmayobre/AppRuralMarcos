@@ -48,7 +48,7 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
   const { mostrarToast } = useToastStore();
 
   const currentRole = usuario?.rol || 'OPERARIO';
-  const puedeVerFinanzas = currentRole === 'ADMIN' || currentRole === 'CONTADOR';
+  const puedeVerFinanzas = currentRole === 'ADMIN' || currentRole === 'CONTADOR' || currentRole === 'PROPIETARIO' || currentRole === 'SUPERADMIN';
 
   const modoAccion = !puedeVerFinanzas && tabInicial === 'FINANZAS' ? 'PLUVIOMETRO' : tabInicial;
 

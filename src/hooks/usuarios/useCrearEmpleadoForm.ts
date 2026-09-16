@@ -6,7 +6,7 @@ import type { UserRole } from '../../types';
 import { UserCheck, Tractor, DollarSign, HardHat } from 'lucide-react';
 
 export const useCrearEmpleadoForm = () => {
-  const { usuarios, crearUsuario } = useUsuariosStore();
+  const { crearUsuario } = useUsuariosStore();
   const { mostrarToast } = useToastStore();
 
   const [mostrarModalAlta, setMostrarModalAlta] = useState(false);
@@ -47,36 +47,39 @@ export const useCrearEmpleadoForm = () => {
 
     setCargandoAltaEmpleado(true);
     try {
-      const nuevoEmpleado = await usuariosService.crearUsuarioEmpleado(
-        {
+      const res = await usuariosService.crearUsuarioEmpleado({
+        nombre,
+        apellido,
+        email,
+        rol: rolForm,
+        estancias_asignadas_ids: estanciasSeleccionadasForm,
+      });
+
+      if (res.exito) {
+        const usernameGenerado = `${nombre.trim().toLowerCase()}.${apellido.trim().toLowerCase()}`;
+        crearUsuario({
           nombre,
           apellido,
           email,
           rol: rolForm,
           estancias_asignadas_ids: estanciasSeleccionadasForm,
-        },
-        usuarios
-      );
+        });
 
-      crearUsuario({
-        nombre: nuevoEmpleado.nombre,
-        apellido: nuevoEmpleado.apellido,
-        email: nuevoEmpleado.email,
-        rol: nuevoEmpleado.rol,
-        estancias_asignadas_ids: nuevoEmpleado.estancias_asignadas_ids,
-      });
+        setCargandoAltaEmpleado(false);
+        setMostrarModalAlta(false);
+        setNombre('');
+        setApellido('');
+        setEmail('');
 
-      setCargandoAltaEmpleado(false);
-      setMostrarModalAlta(false);
-      setNombre('');
-      setApellido('');
-      setEmail('');
-
-      mostrarToast(
-        '¡Empleado Registrado!',
-        `Usuario generado: ${nuevoEmpleado.username} asignado a ${nuevoEmpleado.estancias_asignadas_ids.length} campo(s).`,
-        'EXITO'
-      );
+        mostrarToast(
+          '¡Empleado Registrado!',
+          `Usuario generado: ${usernameGenerado} asignado a ${estanciasSeleccionadasForm.length} campo(s).`,
+          'EXITO'
+        );
+      } else {
+        setCargandoAltaEmpleado(false);
+        mostrarToast('Error al Guardar Empleado', res.error || 'No se pudo crear el empleado', 'ERROR');
+      }
     } catch (err: unknown) {
       setCargandoAltaEmpleado(false);
       const mensaje = err instanceof Error ? err.message : 'Error al registrar el empleado';

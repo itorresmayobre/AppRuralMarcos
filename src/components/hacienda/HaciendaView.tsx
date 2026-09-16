@@ -12,7 +12,7 @@ export const HaciendaView: React.FC = () => {
   const { movimientos, obtenerStockEstancia } = useGanadoStore();
 
   const currentRole = usuario?.rol || 'OPERARIO';
-  const canEdit = currentRole === 'ADMIN' || currentRole === 'CAPATAZ';
+  const canEdit = currentRole === 'ADMIN' || currentRole === 'CAPATAZ' || currentRole === 'PROPIETARIO' || currentRole === 'SUPERADMIN';
 
   const [modalTrasladoAbierto, setModalTrasladoAbierto] = useState(false);
   const [filtroEspecie, setFiltroEspecie] = useState<'TODOS' | 'VACUNO' | 'OVINO'>('TODOS');

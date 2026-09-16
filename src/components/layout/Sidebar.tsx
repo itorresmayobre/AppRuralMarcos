@@ -45,7 +45,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navigate = useNavigate();
 
   const currentRole = usuario?.rol || 'OPERARIO';
-  const canViewFinances = currentRole === 'ADMIN' || currentRole === 'CONTADOR' || currentRole === 'SUPERADMIN';
+  const isOwnerOrAdmin = currentRole === 'ADMIN' || currentRole === 'PROPIETARIO' || currentRole === 'SUPERADMIN';
+  const canViewFinances = isOwnerOrAdmin || currentRole === 'CONTADOR';
   const estanciaActual = obtenerEstanciaActual();
 
   const handleCerrarSesion = () => {
@@ -61,7 +62,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { path: '/finanzas', label: 'Ingresos / Egresos', icon: DollarSign, allowed: canViewFinances },
     { path: '/estadisticas', label: 'Estadísticas & Análisis', icon: BarChart3, allowed: canViewFinances },
     { path: '/dev', label: 'Consola Desarrollador', icon: Code, allowed: currentRole === 'SUPERADMIN' },
-    { path: '/usuarios', label: 'Roles y Permisos', icon: Users, allowed: currentRole === 'ADMIN' || currentRole === 'SUPERADMIN' },
+    { path: '/usuarios', label: 'Roles y Permisos', icon: Users, allowed: isOwnerOrAdmin },
     { path: '/sql', label: 'Estado SQL (Supabase)', icon: Database, allowed: true },
   ];
 

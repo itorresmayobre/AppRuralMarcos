@@ -1,66 +1,66 @@
-import { simularLlamadoApi } from './mockApi';
-import { hoyISO } from '../../utils/fechas';
 import type { UsuarioEmpleado, UserRole } from '../../types';
-
-function generarUsername(nombre: string, apellido: string): string {
-  const n = nombre.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '');
-  const a = apellido.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '');
-  return `${n}.${a}`;
-}
+import { obtenerUsuariosBD, actualizarRolBD, supabase } from '../supabase';
 
 export const usuariosService = {
-  async obtenerUsuarios(listaActual: UsuarioEmpleado[]): Promise<UsuarioEmpleado[]> {
-    return simularLlamadoApi(listaActual, { latenciaMs: 500 });
+  async obtenerUsuarios(): Promise<UsuarioEmpleado[]> {
+    return await obtenerUsuariosBD();
   },
 
   async crearUsuarioEmpleado(
-    nuevaData: Omit<UsuarioEmpleado, 'id' | 'fecha_alta' | 'activo' | 'username'>,
-    listaActual: UsuarioEmpleado[]
-  ): Promise<UsuarioEmpleado> {
-    const emailExiste = listaActual.some((u) => u.email.toLowerCase() === nuevaData.email.toLowerCase());
-
-    if (emailExiste) {
-      return simularLlamadoApi(null as unknown as UsuarioEmpleado, {
-        latenciaMs: 700,
-        debeFallar: true,
-        mensajeError: `El correo electrónico "${nuevaData.email}" ya se encuentra registrado en el sistema.`,
+    nuevaData: Omit<UsuarioEmpleado, 'id' | 'fecha_alta' | 'activo' | 'username'>
+  ): Promise<{ exito: boolean; error?: string }> {
+    try {
+      const usernameGenerado = `${nuevaData.nombre.toLowerCase().trim()}.${nuevaData.apellido.toLowerCase().trim()}`;
+      
+      const { data: authData, error: authErr } = await supabase.auth.signUp({
+        email: nuevaData.email,
+        password: 'Password123!', // Contraseña temporal por defecto
       });
+
+      if (authErr) {
+        return { exito: false, error: authErr.message };
+      }
+
+      if (authData.user) {
+        await supabase.from('perfiles').insert([{
+          id: authData.user.id,
+          empresa_id: nuevaData.empresa_id,
+          username: usernameGenerado,
+          nombre: nuevaData.nombre,
+          apellido: nuevaData.apellido,
+          email: nuevaData.email,
+          rol: nuevaData.rol,
+          activo: true,
+        }]);
+      }
+
+      return { exito: true };
+    } catch (err: any) {
+      return { exito: false, error: err?.message || 'Error registrando empleado' };
     }
-
-    const usernameGenerado = generarUsername(nuevaData.nombre, nuevaData.apellido);
-
-    const nuevo: UsuarioEmpleado = {
-      ...nuevaData,
-      username: usernameGenerado,
-      id: `user-${Date.now()}`,
-      fecha_alta: hoyISO(),
-      activo: true,
-    };
-
-    return simularLlamadoApi(nuevo, { latenciaMs: 800 });
   },
 
-  async actualizarRol(usuarioId: string, nuevoRol: UserRole): Promise<{ id: string; nuevoRol: UserRole }> {
-    return simularLlamadoApi({ id: usuarioId, nuevoRol }, { latenciaMs: 600 });
+  async actualizarRol(usuarioId: string, nuevoRol: UserRole): Promise<boolean> {
+    return await actualizarRolBD(usuarioId, nuevoRol);
   },
 
-  async cambiarContrasenia(contraseniaActual: string, nuevaContrasenia: string): Promise<boolean> {
-    if (contraseniaActual.trim() === '') {
-      return simularLlamadoApi(false, {
-        latenciaMs: 500,
-        debeFallar: true,
-        mensajeError: 'Debes ingresar tu contraseña actual para confirmar el cambio de seguridad.',
-      });
+  async cambiarContrasenia(_contraseniaActual: string, nuevaContrasenia: string): Promise<{ exito: boolean; error?: string }> {
+    if (!nuevaContrasenia || nuevaContrasenia.length < 6) {
+      return { exito: false, error: 'La nueva contraseña debe tener al menos 6 caracteres.' };
     }
 
-    if (nuevaContrasenia.length < 4) {
-      return simularLlamadoApi(false, {
-        latenciaMs: 500,
-        debeFallar: true,
-        mensajeError: 'La nueva contraseña debe tener al menos 4 caracteres de longitud.',
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: nuevaContrasenia,
       });
-    }
 
-    return simularLlamadoApi(true, { latenciaMs: 900 });
+      if (error) {
+        return { exito: false, error: error.message };
+      }
+
+      return { exito: true };
+    } catch (e: any) {
+      return { exito: false, error: e?.message || 'Error cambiando contraseña en Supabase' };
+    }
   },
 };

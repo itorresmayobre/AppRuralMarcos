@@ -8,7 +8,7 @@ import { MapPin, Plus, CheckCircle2, Building2, X } from 'lucide-react';
 export const EstanciasPage: React.FC = () => {
   const { estancias, agregarEstancia, seleccionarEstancia, estanciaSeleccionadaId } = useEstanciasStore();
   const { usuario } = useAuthStore();
-  const esAdmin = usuario?.rol === 'ADMIN';
+  const esAdmin = usuario?.rol === 'ADMIN' || usuario?.rol === 'PROPIETARIO' || usuario?.rol === 'SUPERADMIN';
 
   const [mostrarModal, setMostrarModal] = useState(false);
   const [nombre, setNombre] = useState('');

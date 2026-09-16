@@ -1,13 +1,16 @@
 import { create } from 'zustand';
 import { hoyISO } from '../utils/fechas';
 import type { UsuarioEmpleado, UserRole, PermisoRol } from '../types';
+import { obtenerUsuariosBD, actualizarRolBD, supabase } from '../services/supabase';
 
 interface UsuariosState {
   usuarios: UsuarioEmpleado[];
   matrizPermisos: Record<UserRole, PermisoRol>;
+  cargando: boolean;
+  cargarUsuariosDesdeSupabase: () => Promise<void>;
   crearUsuario: (nuevo: Omit<UsuarioEmpleado, 'id' | 'fecha_alta' | 'activo' | 'username'>) => void;
-  actualizarRolUsuario: (usuarioId: string, nuevoRol: UserRole) => void;
-  toggleEstadoUsuario: (usuarioId: string) => void;
+  actualizarRolUsuario: (usuarioId: string, nuevoRol: UserRole) => Promise<void>;
+  toggleEstadoUsuario: (usuarioId: string) => Promise<void>;
   togglePermisoRol: (rol: UserRole, permiso: keyof PermisoRol) => void;
   vincularEmpresaAUsuario: (email: string, empresaId: string, nombreSolicitante?: string) => void;
 }
@@ -17,61 +20,6 @@ function generarUsername(nombre: string, apellido: string): string {
   const a = apellido.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '');
   return `${n}.${a}`;
 }
-
-const usuariosIniciales: UsuarioEmpleado[] = [
-  {
-    id: 'user-1',
-    email: 'admin@admin.com',
-    username: 'marcos.propietario',
-    nombre: 'Marcos',
-    apellido: 'Propietario',
-    rol: 'PROPIETARIO',
-    empresa_id: 'emp-1',
-    empresas_asignadas_ids: ['emp-1', 'emp-2'],
-    estancias_asignadas_ids: ['TODAS'],
-    fecha_alta: '2026-01-10',
-    activo: true,
-  },
-  {
-    id: 'user-2',
-    email: 'capataz@campo.com',
-    username: 'juan.perez',
-    nombre: 'Juan',
-    apellido: 'Pérez',
-    rol: 'CAPATAZ',
-    empresa_id: 'emp-1',
-    empresas_asignadas_ids: ['emp-1'],
-    estancias_asignadas_ids: ['est-1', 'est-2'],
-    fecha_alta: '2026-02-15',
-    activo: true,
-  },
-  {
-    id: 'user-3',
-    email: 'contador@empresa.com',
-    username: 'carlos.silva',
-    nombre: 'Carlos',
-    apellido: 'Silva',
-    rol: 'CONTADOR',
-    empresa_id: 'emp-1',
-    empresas_asignadas_ids: ['emp-1'],
-    estancias_asignadas_ids: ['TODAS'],
-    fecha_alta: '2026-03-01',
-    activo: true,
-  },
-  {
-    id: 'user-4',
-    email: 'operario@campo.com',
-    username: 'roberto.gonzalez',
-    nombre: 'Roberto',
-    apellido: 'González',
-    rol: 'OPERARIO',
-    empresa_id: 'emp-1',
-    empresas_asignadas_ids: ['emp-1'],
-    estancias_asignadas_ids: ['est-1'],
-    fecha_alta: '2026-04-20',
-    activo: true,
-  },
-];
 
 const matrizPermisosInicial: Record<UserRole, PermisoRol> = {
   SUPERADMIN: {
@@ -137,9 +85,16 @@ const matrizPermisosInicial: Record<UserRole, PermisoRol> = {
   },
 };
 
-export const useUsuariosStore = create<UsuariosState>((set) => ({
-  usuarios: usuariosIniciales,
+export const useUsuariosStore = create<UsuariosState>((set, get) => ({
+  usuarios: [],
   matrizPermisos: matrizPermisosInicial,
+  cargando: false,
+
+  cargarUsuariosDesdeSupabase: async () => {
+    set({ cargando: true });
+    const datosBD = await obtenerUsuariosBD();
+    set({ usuarios: datosBD, cargando: false });
+  },
 
   crearUsuario: (data) => {
     const usernameGenerado = generarUsername(data.nombre, data.apellido);
@@ -156,28 +111,41 @@ export const useUsuariosStore = create<UsuariosState>((set) => ({
     }));
   },
 
-  actualizarRolUsuario: (usuarioId, nuevoRol) => {
+  actualizarRolUsuario: async (usuarioId, nuevoRol) => {
+    // 1. Guardar en Supabase
+    await actualizarRolBD(usuarioId, nuevoRol);
+
+    // 2. Actualizar estado local
     set((state) => ({
       usuarios: state.usuarios.map((u) => {
         if (u.id === usuarioId && (u.rol === 'PROPIETARIO' || u.rol === 'SUPERADMIN')) {
-          return u; // El rol de Propietario o SuperAdmin no se puede degradar arbitrariamente
+          return u;
         }
         return u.id === usuarioId ? { ...u, rol: nuevoRol } : u;
       }),
     }));
   },
 
-  toggleEstadoUsuario: (usuarioId) => {
+  toggleEstadoUsuario: async (usuarioId) => {
+    const targetUser = get().usuarios.find((u) => u.id === usuarioId);
+    if (!targetUser) return;
+    if (targetUser.rol === 'PROPIETARIO' || targetUser.rol === 'SUPERADMIN') return;
+
+    const nuevoActivo = !targetUser.activo;
+
+    try {
+      await supabase
+        .from('perfiles')
+        .update({ activo: nuevoActivo })
+        .eq('id', usuarioId);
+    } catch (e) {
+      console.warn('Error cambiando activo en Supabase:', e);
+    }
+
     set((state) => ({
-      usuarios: state.usuarios.map((u) => {
-        if (u.id === usuarioId) {
-          if (u.rol === 'PROPIETARIO' || u.rol === 'SUPERADMIN') {
-            return u; // Protegido contra desactivación
-          }
-          return { ...u, activo: !u.activo };
-        }
-        return u;
-      }),
+      usuarios: state.usuarios.map((u) =>
+        u.id === usuarioId ? { ...u, activo: nuevoActivo } : u
+      ),
     }));
   },
 

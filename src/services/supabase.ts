@@ -5,7 +5,8 @@ import type {
   TransaccionFinanciera, 
   ReciboSueldo, 
   ConceptoFinanciero,
-  UserProfile
+  UserProfile,
+  UsuarioEmpleado
 } from '../types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://dyzeiwwafcdzwocuksao.supabase.co';
@@ -85,6 +86,51 @@ export async function obtenerPerfilUsuarioBD(userId: string): Promise<UserProfil
     empresa_id: data.empresa_id,
     estancias_asignadas_ids: ['TODAS'],
   };
+}
+
+/**
+ * Obtener todos los usuarios / perfiles desde public.perfiles
+ */
+export async function obtenerUsuariosBD(): Promise<UsuarioEmpleado[]> {
+  const { data, error } = await supabase
+    .from('perfiles')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error || !data) {
+    console.warn('No se pudieron obtener usuarios de Supabase.', error?.message);
+    return [];
+  }
+
+  return data.map((item) => ({
+    id: item.id,
+    email: item.email || '',
+    username: item.username || `${item.nombre?.toLowerCase() || 'usuario'}.${item.apellido?.toLowerCase() || ''}`,
+    nombre: item.nombre || 'Usuario',
+    apellido: item.apellido || '',
+    rol: item.rol || 'OPERARIO',
+    empresa_id: item.empresa_id,
+    empresas_asignadas_ids: item.empresa_id ? [item.empresa_id] : ['TODAS'],
+    estancias_asignadas_ids: ['TODAS'],
+    fecha_alta: item.created_at ? item.created_at.substring(0, 10) : '2026-01-01',
+    activo: item.activo !== false,
+  }));
+}
+
+/**
+ * Actualizar rol de un usuario en public.perfiles
+ */
+export async function actualizarRolBD(usuarioId: string, nuevoRol: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('perfiles')
+    .update({ rol: nuevoRol })
+    .eq('id', usuarioId);
+
+  if (error) {
+    console.warn('Error actualizando rol en Supabase:', error.message);
+    return false;
+  }
+  return true;
 }
 
 /**
