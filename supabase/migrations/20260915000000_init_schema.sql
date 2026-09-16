@@ -4,17 +4,34 @@
 -- Incluye Tablas, RLS, Storage Buckets y Datos de Semilla (Seed Data Precargados)
 -- ==============================================================================
 
--- 1. TIPOS ENUMERADOS (DOMINIO URUGUAY & SAAS)
-CREATE TYPE rol_usuario AS ENUM ('SUPERADMIN', 'PROPIETARIO', 'ADMIN', 'CAPATAZ', 'CONTADOR', 'OPERARIO');
-CREATE TYPE tipo_moneda AS ENUM ('USD', 'UYU');
-CREATE TYPE tipo_transaccion AS ENUM ('INGRESO', 'EGRESO');
-CREATE TYPE tipo_tenencia AS ENUM ('PROPIO', 'ARRENDADO', 'PASTOREO');
-CREATE TYPE prioridad_nota AS ENUM ('BAJA', 'MEDIA', 'ALTA');
-CREATE TYPE estado_solicitud AS ENUM ('PENDIENTE', 'APROBADA', 'RECHAZADA');
-CREATE TYPE plan_saas AS ENUM ('BASIC', 'PRO', 'ENTERPRISE');
+-- 1. TIPOS ENUMERADOS (DOMINIO URUGUAY & SAAS - DEFENSIVOS)
+DO $$ 
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'rol_usuario') THEN
+    CREATE TYPE rol_usuario AS ENUM ('SUPERADMIN', 'PROPIETARIO', 'ADMIN', 'CAPATAZ', 'CONTADOR', 'OPERARIO');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'tipo_moneda') THEN
+    CREATE TYPE tipo_moneda AS ENUM ('USD', 'UYU');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'tipo_transaccion') THEN
+    CREATE TYPE tipo_transaccion AS ENUM ('INGRESO', 'EGRESO');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'tipo_tenencia') THEN
+    CREATE TYPE tipo_tenencia AS ENUM ('PROPIO', 'ARRENDADO', 'PASTOREO');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'prioridad_nota') THEN
+    CREATE TYPE prioridad_nota AS ENUM ('BAJA', 'MEDIA', 'ALTA');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'estado_solicitud') THEN
+    CREATE TYPE estado_solicitud AS ENUM ('PENDIENTE', 'APROBADA', 'RECHAZADA');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'plan_saas') THEN
+    CREATE TYPE plan_saas AS ENUM ('BASIC', 'PRO', 'ENTERPRISE');
+  END IF;
+END $$;
 
 -- 2. TABLA DE EMPRESAS MATRIZ (MULTI-TENANT / GRUPOS CRECURSOS)
-CREATE TABLE public.empresas (
+CREATE TABLE IF NOT EXISTS public.empresas (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   razon_social TEXT NOT NULL,
   rut VARCHAR(12) NOT NULL UNIQUE, -- RUT Uruguay (12 dígitos)
@@ -30,7 +47,7 @@ CREATE TABLE public.empresas (
 );
 
 -- 2b. SOLICITUDES DE REGISTRO EN LÍNEA (ONBOARDING)
-CREATE TABLE public.solicitudes_registro (
+CREATE TABLE IF NOT EXISTS public.solicitudes_registro (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   nombre_solicitante TEXT NOT NULL,
   email TEXT NOT NULL,
@@ -45,7 +62,7 @@ CREATE TABLE public.solicitudes_registro (
 );
 
 -- 3. TABLA DE ESTABLECIMIENTOS RURALES (ESTANCIAS / CAMPOS / DICOSE)
-CREATE TABLE public.establecimientos (
+CREATE TABLE IF NOT EXISTS public.establecimientos (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   empresa_id UUID REFERENCES public.empresas(id) ON DELETE CASCADE NOT NULL,
   nombre TEXT NOT NULL,
@@ -60,7 +77,7 @@ CREATE TABLE public.establecimientos (
 );
 
 -- 4. TABLA DE PERFILES DE USUARIO (REEMPLAZA Y EXTIENDE auth.users)
-CREATE TABLE public.perfiles (
+CREATE TABLE IF NOT EXISTS public.perfiles (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   empresa_id UUID REFERENCES public.empresas(id) ON DELETE CASCADE,
   username TEXT NOT NULL UNIQUE, -- Formato nombre.apellido (sin @)
@@ -79,7 +96,7 @@ ADD CONSTRAINT fk_empresa_propietario
 FOREIGN KEY (propietario_usuario_id) REFERENCES public.perfiles(id) ON DELETE SET NULL;
 
 -- 5. TABLA INTERMEDIA: ASIGNACIÓN DE EMPLEADOS A MÚLTIPLES ESTANCIAS
-CREATE TABLE public.establecimiento_usuarios (
+CREATE TABLE IF NOT EXISTS public.establecimiento_usuarios (
   establecimiento_id UUID REFERENCES public.establecimientos(id) ON DELETE CASCADE NOT NULL,
   perfil_id UUID REFERENCES public.perfiles(id) ON DELETE CASCADE NOT NULL,
   assigned_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
@@ -87,7 +104,7 @@ CREATE TABLE public.establecimiento_usuarios (
 );
 
 -- 6. TABLA DE STOCK GANADERO (VACUNOS Y OVINOS)
-CREATE TABLE public.stock_ganadero (
+CREATE TABLE IF NOT EXISTS public.stock_ganadero (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   establecimiento_id UUID REFERENCES public.establecimientos(id) ON DELETE CASCADE NOT NULL,
   especie TEXT NOT NULL CHECK (especie IN ('VACUNO', 'OVINO')),
@@ -98,7 +115,7 @@ CREATE TABLE public.stock_ganadero (
 );
 
 -- 7. TABLA DE TRANSACCIONES FINANCIERAS (INGRESOS Y EGRESOS BIMONEDA CON FACTURAS Y ADJUNTOS)
-CREATE TABLE public.transacciones_financieras (
+CREATE TABLE IF NOT EXISTS public.transacciones_financieras (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   establecimiento_id UUID REFERENCES public.establecimientos(id) ON DELETE CASCADE NOT NULL,
   tipo tipo_transaccion NOT NULL,
@@ -128,7 +145,7 @@ CREATE TABLE public.transacciones_financieras (
 );
 
 -- 8. NUEVA TABLA: RECIBOS DE SUELDO Y LIQUIDACIÓN DE HABERES DEL PERSONAL
-CREATE TABLE public.recibos_sueldo (
+CREATE TABLE IF NOT EXISTS public.recibos_sueldo (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   empresa_id UUID REFERENCES public.empresas(id) ON DELETE CASCADE NOT NULL,
   usuario_id UUID REFERENCES public.perfiles(id) ON DELETE CASCADE NOT NULL, -- Empleado que cobra
@@ -146,7 +163,7 @@ CREATE TABLE public.recibos_sueldo (
 );
 
 -- 9. TABLA DE REGLAS PREDETERMINADAS DE PRORRATEO CORPORATIVO
-CREATE TABLE public.reglas_prorrateo_establecimiento (
+CREATE TABLE IF NOT EXISTS public.reglas_prorrateo_establecimiento (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   establecimiento_id UUID REFERENCES public.establecimientos(id) ON DELETE CASCADE NOT NULL UNIQUE,
   porcentaje_predeterminado NUMERIC(5,2) NOT NULL CHECK (porcentaje_predeterminado >= 0 AND porcentaje_predeterminado <= 100),
@@ -154,7 +171,7 @@ CREATE TABLE public.reglas_prorrateo_establecimiento (
 );
 
 -- 10. TABLA DE PLUVIÓMETRO (REGISTRO DIARIO DE PRECIPITACIONES MM)
-CREATE TABLE public.registros_pluviometro (
+CREATE TABLE IF NOT EXISTS public.registros_pluviometro (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   establecimiento_id UUID REFERENCES public.establecimientos(id) ON DELETE CASCADE NOT NULL,
   fecha DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -165,7 +182,7 @@ CREATE TABLE public.registros_pluviometro (
 );
 
 -- 11. TABLA DE NOTAS DE CAMPO / ALERTAS OPERATIVAS
-CREATE TABLE public.notas_campo (
+CREATE TABLE IF NOT EXISTS public.notas_campo (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   establecimiento_id UUID REFERENCES public.establecimientos(id) ON DELETE CASCADE NOT NULL,
   fecha DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -177,7 +194,7 @@ CREATE TABLE public.notas_campo (
 );
 
 -- 12. TABLAS DE CATÁLOGO Y CONFIGURACIÓN DE RUBROS (PLAN AGROPECUARIO)
-CREATE TABLE public.conceptos_financieros (
+CREATE TABLE IF NOT EXISTS public.conceptos_financieros (
   id TEXT PRIMARY KEY, -- ej: 'ing-vacunos', 'egr-sueldos-jornales'
   tipo tipo_transaccion NOT NULL,
   grupo TEXT NOT NULL, -- ej: 'Ventas de Hacienda', 'Mano de Obra', 'Impuestos'
@@ -189,7 +206,7 @@ CREATE TABLE public.conceptos_financieros (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
-CREATE TABLE public.conceptos_activos_empresa (
+CREATE TABLE IF NOT EXISTS public.conceptos_activos_empresa (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   concepto_id TEXT NOT NULL REFERENCES public.conceptos_financieros(id) ON DELETE CASCADE,
   activo BOOLEAN NOT NULL DEFAULT true,
@@ -198,7 +215,7 @@ CREATE TABLE public.conceptos_activos_empresa (
 );
 
 -- 13. TABLA DE TRASLADOS INTERNOS DE GANADO E IMPUTACIÓN ECONÓMICA
-CREATE TABLE public.movimientos_ganado (
+CREATE TABLE IF NOT EXISTS public.movimientos_ganado (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   estancia_origen_id UUID REFERENCES public.establecimientos(id) ON DELETE RESTRICT NOT NULL,
   estancia_destino_id UUID REFERENCES public.establecimientos(id) ON DELETE RESTRICT NOT NULL,
