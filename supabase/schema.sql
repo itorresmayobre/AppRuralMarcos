@@ -1,55 +1,74 @@
 -- ==============================================================================
--- ESQUEMA COMPLETO Y ACTUALIZADO SQL - AGRO UY (SISTEMA DE GESTIÓN RURAL URUGUAY)
--- Ejecutar en el Editor SQL de Supabase (https://supabase.com/dashboard)
--- Incluye Tablas, RLS, Storage Buckets y Datos de Semilla (Seed Data Precargados)
+-- ESQUEMA COMPLETO Y ACTUALIZADO DE BASE DE DATOS - AGRO UY (SUPABASE)
+-- Copiar y ejecutar este script en el SQL Editor de Supabase (https://supabase.com/dashboard)
+-- Incluye: Tipos ENUM, Tablas, Funciones RLS, Políticas Multi-tenant, Storage y Seed Data.
 -- ==============================================================================
 
 -- 1. TIPOS ENUMERADOS (DOMINIO URUGUAY & SAAS)
-CREATE TYPE rol_usuario AS ENUM ('SUPERADMIN', 'PROPIETARIO', 'ADMIN', 'CAPATAZ', 'CONTADOR', 'OPERARIO');
-CREATE TYPE tipo_moneda AS ENUM ('USD', 'UYU');
-CREATE TYPE tipo_transaccion AS ENUM ('INGRESO', 'EGRESO');
-CREATE TYPE tipo_tenencia AS ENUM ('PROPIO', 'ARRENDADO', 'PASTOREO');
-CREATE TYPE prioridad_nota AS ENUM ('BAJA', 'MEDIA', 'ALTA');
-CREATE TYPE estado_solicitud AS ENUM ('PENDIENTE', 'APROBADA', 'RECHAZADA');
-CREATE TYPE plan_saas AS ENUM ('BASIC', 'PRO', 'ENTERPRISE');
+DO $$ 
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'rol_usuario') THEN
+    CREATE TYPE rol_usuario AS ENUM ('SUPERADMIN', 'PROPIETARIO', 'ADMIN', 'CAPATAZ', 'CONTADOR', 'OPERARIO');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'tipo_moneda') THEN
+    CREATE TYPE tipo_moneda AS ENUM ('USD', 'UYU');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'tipo_transaccion') THEN
+    CREATE TYPE tipo_transaccion AS ENUM ('INGRESO', 'EGRESO');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'tipo_tenencia') THEN
+    CREATE TYPE tipo_tenencia AS ENUM ('PROPIO', 'ARRENDADO', 'PASTOREO');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'prioridad_nota') THEN
+    CREATE TYPE prioridad_nota AS ENUM ('BAJA', 'MEDIA', 'ALTA');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'estado_solicitud') THEN
+    CREATE TYPE estado_solicitud AS ENUM ('PENDIENTE', 'APROBADA', 'RECHAZADA');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'plan_saas') THEN
+    CREATE TYPE plan_saas AS ENUM ('BASIC', 'PRO', 'ENTERPRISE');
+  END IF;
+END $$;
 
--- 2. TABLA DE EMPRESAS MATRIZ (MULTI-TENANT / GRUPOS CRECURSOS)
-CREATE TABLE public.empresas (
+-- 2. TABLAS PRINCIPALES
+
+-- 2a. EMPRESAS MATRIZ (MULTI-TENANT)
+CREATE TABLE IF NOT EXISTS public.empresas (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   razon_social TEXT NOT NULL,
-  rut VARCHAR(12) NOT NULL UNIQUE, -- RUT Uruguay (12 dígitos)
+  rut VARCHAR(12) NOT NULL UNIQUE,
   nombre_fantasia TEXT,
   email_contacto TEXT NOT NULL,
   telefono TEXT,
   departamento_sede TEXT NOT NULL,
   hectareas_totales_grupo NUMERIC(10,2) DEFAULT 0,
-  propietario_usuario_id UUID, -- Referencia al Usuario Propietario Inamovible
+  propietario_usuario_id UUID,
   plan plan_saas NOT NULL DEFAULT 'PRO',
   activa BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 -- 2b. SOLICITUDES DE REGISTRO EN LÍNEA (ONBOARDING)
-CREATE TABLE public.solicitudes_registro (
+CREATE TABLE IF NOT EXISTS public.solicitudes_registro (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   nombre_solicitante TEXT NOT NULL,
   email TEXT NOT NULL,
-  telefono TEXT NOT NULL,
+  telefono TEXT,
   nombre_empresa TEXT NOT NULL,
-  rut VARCHAR(12) NOT NULL,
-  departamento TEXT NOT NULL,
+  rut VARCHAR(12),
+  departamento TEXT,
   hectareas_estimadas NUMERIC(10,2) DEFAULT 0,
   estado estado_solicitud NOT NULL DEFAULT 'PENDIENTE',
   fecha_solicitud DATE NOT NULL DEFAULT CURRENT_DATE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 3. TABLA DE ESTABLECIMIENTOS RURALES (ESTANCIAS / CAMPOS / DICOSE)
-CREATE TABLE public.establecimientos (
+-- 2c. ESTABLECIMIENTOS RURALES (CAMPOS / ESTANCIAS / DICOSE)
+CREATE TABLE IF NOT EXISTS public.establecimientos (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   empresa_id UUID REFERENCES public.empresas(id) ON DELETE CASCADE NOT NULL,
   nombre TEXT NOT NULL,
-  dicose VARCHAR(12) NOT NULL UNIQUE, -- Formato DICOSE Uruguay (ej: 04-123456-7)
+  dicose VARCHAR(12) NOT NULL UNIQUE,
   hectareas_totales NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (hectareas_totales >= 0),
   hectareas_pastoreables NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (hectareas_pastoreables >= 0),
   departamento TEXT NOT NULL,
@@ -59,11 +78,11 @@ CREATE TABLE public.establecimientos (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 4. TABLA DE PERFILES DE USUARIO (REEMPLAZA Y EXTIENDE auth.users)
-CREATE TABLE public.perfiles (
+-- 2d. PERFILES DE USUARIO (EXTIENDE auth.users)
+CREATE TABLE IF NOT EXISTS public.perfiles (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   empresa_id UUID REFERENCES public.empresas(id) ON DELETE CASCADE,
-  username TEXT NOT NULL UNIQUE, -- Formato nombre.apellido (sin @)
+  username TEXT NOT NULL UNIQUE,
   nombre TEXT NOT NULL,
   apellido TEXT NOT NULL,
   email TEXT NOT NULL UNIQUE,
@@ -74,87 +93,91 @@ CREATE TABLE public.perfiles (
 );
 
 -- Asignar FK de propietario a empresa
-ALTER TABLE public.empresas 
-ADD CONSTRAINT fk_empresa_propietario 
-FOREIGN KEY (propietario_usuario_id) REFERENCES public.perfiles(id) ON DELETE SET NULL;
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fk_empresa_propietario'
+  ) THEN
+    ALTER TABLE public.empresas 
+    ADD CONSTRAINT fk_empresa_propietario 
+    FOREIGN KEY (propietario_usuario_id) REFERENCES public.perfiles(id) ON DELETE SET NULL;
+  END IF;
+END $$;
 
--- 5. TABLA INTERMEDIA: ASIGNACIÓN DE EMPLEADOS A MÚLTIPLES ESTANCIAS
-CREATE TABLE public.establecimiento_usuarios (
+-- 2e. ASIGNACIÓN DE EMPLEADOS A MÚLTIPLES ESTANCIAS
+CREATE TABLE IF NOT EXISTS public.establecimiento_usuarios (
   establecimiento_id UUID REFERENCES public.establecimientos(id) ON DELETE CASCADE NOT NULL,
   perfil_id UUID REFERENCES public.perfiles(id) ON DELETE CASCADE NOT NULL,
   assigned_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   PRIMARY KEY (establecimiento_id, perfil_id)
 );
 
--- 6. TABLA DE STOCK GANADERO (VACUNOS Y OVINOS)
-CREATE TABLE public.stock_ganadero (
+-- 2f. STOCK GANADERO (VACUNOS Y OVINOS)
+CREATE TABLE IF NOT EXISTS public.stock_ganadero (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   establecimiento_id UUID REFERENCES public.establecimientos(id) ON DELETE CASCADE NOT NULL,
   especie TEXT NOT NULL CHECK (especie IN ('VACUNO', 'OVINO')),
-  categoria TEXT NOT NULL, -- ej: VACAS_DE_CRIA, NOVILLOS_1_2, TERNEROS, OVEJAS_CRIA
+  categoria TEXT NOT NULL,
   cabezas INT NOT NULL DEFAULT 0 CHECK (cabezas >= 0),
   kilos_promedio NUMERIC(6,2),
   ultima_actualizacion TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 7. TABLA DE TRANSACCIONES FINANCIERAS (INGRESOS Y EGRESOS BIMONEDA CON FACTURAS Y ADJUNTOS)
-CREATE TABLE public.transacciones_financieras (
+-- 2g. TRANSACCIONES FINANCIERAS (BIMONEDA CON FACTURAS Y PRORRATEO)
+CREATE TABLE IF NOT EXISTS public.transacciones_financieras (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   establecimiento_id UUID REFERENCES public.establecimientos(id) ON DELETE CASCADE NOT NULL,
   tipo tipo_transaccion NOT NULL,
   moneda tipo_moneda NOT NULL DEFAULT 'USD',
   monto NUMERIC(12,2) NOT NULL CHECK (monto >= 0),
-  categoria TEXT NOT NULL, -- ej: Venta vacunos, Sueldos y jornales, Rentas
+  categoria TEXT NOT NULL,
   descripcion TEXT,
   fecha DATE NOT NULL DEFAULT CURRENT_DATE,
-  ejercicio_agricola VARCHAR(10), -- ej: '2025/2026' (Julio a Junio)
-  periodo_mes VARCHAR(15), -- ej: 'Setiembre', 'Julio', etc.
+  ejercicio_agricola VARCHAR(10),
+  periodo_mes VARCHAR(15),
   naturaleza_costo TEXT CHECK (naturaleza_costo IN ('FIJO', 'VARIABLE')),
-  -- Prorrateo entre campos
   es_prorrateado BOOLEAN NOT NULL DEFAULT false,
-  distribucion_prorrateo JSONB, -- listado de {estancia_id, porcentaje, monto}
-  -- Cotización Bimoneda Automática USD / UYU
+  distribucion_prorrateo JSONB,
   moneda_original tipo_moneda DEFAULT 'USD',
   monto_original NUMERIC(12,2),
   tipo_cambio NUMERIC(8,4) DEFAULT 40.50,
   monto_usd NUMERIC(12,2),
   monto_uyu NUMERIC(12,2),
-  -- Adjuntos y Facturas en Storage
-  comprobante_url TEXT, -- URL pública o firmada de la foto de la factura/recibo en Storage
+  comprobante_url TEXT,
   comprobante_tipo TEXT CHECK (comprobante_tipo IN ('IMAGE', 'PDF')),
-  nro_factura TEXT, -- Número de e-factura / remisión física
+  nro_factura TEXT,
   creado_por UUID REFERENCES public.perfiles(id) ON DELETE SET NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 8. NUEVA TABLA: RECIBOS DE SUELDO Y LIQUIDACIÓN DE HABERES DEL PERSONAL
-CREATE TABLE public.recibos_sueldo (
+-- 2h. RECIBOS DE SUELDO Y LIQUIDACIÓN DE HABERES
+CREATE TABLE IF NOT EXISTS public.recibos_sueldo (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   empresa_id UUID REFERENCES public.empresas(id) ON DELETE CASCADE NOT NULL,
-  usuario_id UUID REFERENCES public.perfiles(id) ON DELETE CASCADE NOT NULL, -- Empleado que cobra
-  transaccion_id UUID REFERENCES public.transacciones_financieras(id) ON DELETE SET NULL, -- Vinculación a caja
-  periodo_mes TEXT NOT NULL, -- ej: "Setiembre 2026"
-  ejercicio_agricola VARCHAR(10) NOT NULL, -- ej: "2026/2027"
+  usuario_id UUID REFERENCES public.perfiles(id) ON DELETE CASCADE NOT NULL,
+  transaccion_id UUID REFERENCES public.transacciones_financieras(id) ON DELETE SET NULL,
+  periodo_mes TEXT NOT NULL,
+  ejercicio_agricola VARCHAR(10) NOT NULL,
   monto_liquido NUMERIC(12,2) NOT NULL CHECK (monto_liquido > 0),
   moneda tipo_moneda NOT NULL DEFAULT 'UYU',
   fecha_pago DATE NOT NULL DEFAULT CURRENT_DATE,
-  recibo_url TEXT NOT NULL, -- PDF o foto del recibo firmado almacenado en Supabase Storage
+  recibo_url TEXT NOT NULL,
   estado_firma TEXT NOT NULL DEFAULT 'PENDIENTE' CHECK (estado_firma IN ('PENDIENTE', 'FIRMADO', 'CONFORME')),
   observaciones TEXT,
   creado_por UUID REFERENCES public.perfiles(id) ON DELETE SET NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 9. TABLA DE REGLAS PREDETERMINADAS DE PRORRATEO CORPORATIVO
-CREATE TABLE public.reglas_prorrateo_establecimiento (
+-- 2i. REGLAS PREDETERMINADAS DE PRORRATEO
+CREATE TABLE IF NOT EXISTS public.reglas_prorrateo_establecimiento (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   establecimiento_id UUID REFERENCES public.establecimientos(id) ON DELETE CASCADE NOT NULL UNIQUE,
   porcentaje_predeterminado NUMERIC(5,2) NOT NULL CHECK (porcentaje_predeterminado >= 0 AND porcentaje_predeterminado <= 100),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 10. TABLA DE PLUVIÓMETRO (REGISTRO DIARIO DE PRECIPITACIONES MM)
-CREATE TABLE public.registros_pluviometro (
+-- 2j. PLUVIÓMETRO (REGISTRO DIARIO MM)
+CREATE TABLE IF NOT EXISTS public.registros_pluviometro (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   establecimiento_id UUID REFERENCES public.establecimientos(id) ON DELETE CASCADE NOT NULL,
   fecha DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -164,8 +187,8 @@ CREATE TABLE public.registros_pluviometro (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 11. TABLA DE NOTAS DE CAMPO / ALERTAS OPERATIVAS
-CREATE TABLE public.notas_campo (
+-- 2k. NOTAS DE CAMPO / ALERTAS OPERATIVAS
+CREATE TABLE IF NOT EXISTS public.notas_campo (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   establecimiento_id UUID REFERENCES public.establecimientos(id) ON DELETE CASCADE NOT NULL,
   fecha DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -176,12 +199,12 @@ CREATE TABLE public.notas_campo (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 12. TABLAS DE CATÁLOGO Y CONFIGURACIÓN DE RUBROS (PLAN AGROPECUARIO)
-CREATE TABLE public.conceptos_financieros (
-  id TEXT PRIMARY KEY, -- ej: 'ing-vacunos', 'egr-sueldos-jornales'
+-- 2l. CATÁLOGO Y CONFIGURACIÓN DE RUBROS (PLAN AGROPECUARIO)
+CREATE TABLE IF NOT EXISTS public.conceptos_financieros (
+  id TEXT PRIMARY KEY,
   tipo tipo_transaccion NOT NULL,
-  grupo TEXT NOT NULL, -- ej: 'Ventas de Hacienda', 'Mano de Obra', 'Impuestos'
-  nombre TEXT NOT NULL, -- ej: 'Vacunos', 'Sueldos y jornales'
+  grupo TEXT NOT NULL,
+  nombre TEXT NOT NULL,
   icono TEXT DEFAULT '📋',
   es_estandar BOOLEAN NOT NULL DEFAULT true,
   naturaleza_costo TEXT CHECK (naturaleza_costo IN ('FIJO', 'VARIABLE')),
@@ -189,7 +212,7 @@ CREATE TABLE public.conceptos_financieros (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
-CREATE TABLE public.conceptos_activos_empresa (
+CREATE TABLE IF NOT EXISTS public.conceptos_activos_empresa (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   concepto_id TEXT NOT NULL REFERENCES public.conceptos_financieros(id) ON DELETE CASCADE,
   activo BOOLEAN NOT NULL DEFAULT true,
@@ -197,8 +220,8 @@ CREATE TABLE public.conceptos_activos_empresa (
   CONSTRAINT unq_concepto_empresa UNIQUE (concepto_id)
 );
 
--- 13. TABLA DE TRASLADOS INTERNOS DE GANADO E IMPUTACIÓN ECONÓMICA
-CREATE TABLE public.movimientos_ganado (
+-- 2m. TRASLADOS INTERNOS DE GANADO E IMPUTACIÓN ECONÓMICA
+CREATE TABLE IF NOT EXISTS public.movimientos_ganado (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   estancia_origen_id UUID REFERENCES public.establecimientos(id) ON DELETE RESTRICT NOT NULL,
   estancia_destino_id UUID REFERENCES public.establecimientos(id) ON DELETE RESTRICT NOT NULL,
@@ -217,10 +240,41 @@ CREATE TABLE public.movimientos_ganado (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- ==============================================================================
--- SEGURIDAD: ROW LEVEL SECURITY (RLS) Y POLÍTICAS DE ACCESO MULTI-EMPRESA
--- ==============================================================================
+-- 3. FUNCIONES AUXILIARES SECURITY DEFINER (EVITAN RECURSIÓN RLS 42P17)
+CREATE OR REPLACE FUNCTION public.get_mi_empresa_id()
+RETURNS uuid
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT empresa_id FROM public.perfiles WHERE id = auth.uid();
+$$;
 
+CREATE OR REPLACE FUNCTION public.es_superadmin()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.perfiles WHERE id = auth.uid() AND rol = 'SUPERADMIN'
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.es_personal_administrativo()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.perfiles 
+    WHERE id = auth.uid() 
+    AND rol IN ('PROPIETARIO', 'ADMIN', 'CONTADOR', 'SUPERADMIN')
+  );
+$$;
+
+-- 4. SEGURIDAD Y POLÍTICAS RLS (ROW LEVEL SECURITY)
 ALTER TABLE public.empresas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.solicitudes_registro ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.establecimientos ENABLE ROW LEVEL SECURITY;
@@ -235,111 +289,118 @@ ALTER TABLE public.conceptos_financieros ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.conceptos_activos_empresa ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.movimientos_ganado ENABLE ROW LEVEL SECURITY;
 
--- POLÍTICAS GENERALES DE LECTURA POR AUTENTICADOS
-CREATE POLICY "Lectura de empresas por autenticados" 
-  ON public.empresas FOR SELECT TO authenticated USING (true);
+-- POLÍTICAS EMPRESAS
+DROP POLICY IF EXISTS "Permitir insercion empresa a autenticados" ON public.empresas;
+CREATE POLICY "Permitir insercion empresa a autenticados" ON public.empresas FOR INSERT TO authenticated WITH CHECK (true);
 
-CREATE POLICY "Lectura de establecimientos por autenticados" 
-  ON public.establecimientos FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Permitir lectura de su propia empresa" ON public.empresas;
+DROP POLICY IF EXISTS "Lectura de empresas por autenticados" ON public.empresas;
+CREATE POLICY "Permitir lectura de su propia empresa" ON public.empresas FOR SELECT TO authenticated 
+USING (id = public.get_mi_empresa_id() OR propietario_usuario_id = auth.uid() OR public.es_superadmin());
 
-CREATE POLICY "Lectura de perfiles por autenticados" 
-  ON public.perfiles FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Permitir actualizacion de su propia empresa" ON public.empresas;
+CREATE POLICY "Permitir actualizacion de su propia empresa" ON public.empresas FOR UPDATE TO authenticated 
+USING (id = public.get_mi_empresa_id() OR propietario_usuario_id = auth.uid() OR public.es_superadmin());
 
-CREATE POLICY "Lectura de stock por autenticados" 
-  ON public.stock_ganadero FOR SELECT TO authenticated USING (true);
+-- POLÍTICAS ESTABLECIMIENTOS
+DROP POLICY IF EXISTS "Permitir insercion establecimiento a autenticados" ON public.establecimientos;
+CREATE POLICY "Permitir insercion establecimiento a autenticados" ON public.establecimientos FOR INSERT TO authenticated WITH CHECK (true);
 
-CREATE POLICY "Lectura de pluviometro por autenticados" 
-  ON public.registros_pluviometro FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Permitir lectura de sus establecimientos" ON public.establecimientos;
+DROP POLICY IF EXISTS "Lectura de establecimientos por autenticados" ON public.establecimientos;
+CREATE POLICY "Permitir lectura de sus establecimientos" ON public.establecimientos FOR SELECT TO authenticated 
+USING (empresa_id = public.get_mi_empresa_id() OR public.es_superadmin());
 
-CREATE POLICY "Lectura de notas de campo por autenticados" 
-  ON public.notas_campo FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Permitir actualizacion de sus establecimientos" ON public.establecimientos;
+CREATE POLICY "Permitir actualizacion de sus establecimientos" ON public.establecimientos FOR UPDATE TO authenticated 
+USING (empresa_id = public.get_mi_empresa_id() OR public.es_superadmin());
 
-CREATE POLICY "Lectura de catálogo de conceptos por autenticados" 
-  ON public.conceptos_financieros FOR SELECT TO authenticated USING (true);
+-- POLÍTICAS PERFILES
+DROP POLICY IF EXISTS "Permitir insercion de su propio perfil" ON public.perfiles;
+CREATE POLICY "Permitir insercion de su propio perfil" ON public.perfiles FOR INSERT TO authenticated 
+WITH CHECK (id = auth.uid() OR public.es_superadmin());
 
-CREATE POLICY "Lectura de conceptos activos por autenticados" 
-  ON public.conceptos_activos_empresa FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Permitir lectura de perfiles de la misma empresa" ON public.perfiles;
+DROP POLICY IF EXISTS "Lectura de perfiles por autenticados" ON public.perfiles;
+CREATE POLICY "Permitir lectura de perfiles de la misma empresa" ON public.perfiles FOR SELECT TO authenticated 
+USING (id = auth.uid() OR (empresa_id IS NOT NULL AND empresa_id = public.get_mi_empresa_id()) OR public.es_superadmin());
 
--- POLÍTICA DE FINANZAS GENERALES: PROPIETARIO, ADMIN, CONTADOR Y SUPERADMIN
-CREATE POLICY "Lectura de finanzas restringida por rol" 
-  ON public.transacciones_financieras FOR SELECT TO authenticated 
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.perfiles 
-      WHERE perfiles.id = auth.uid() 
-      AND perfiles.rol IN ('PROPIETARIO', 'ADMIN', 'CONTADOR', 'SUPERADMIN')
-    )
-  );
+DROP POLICY IF EXISTS "Permitir actualizacion de su propio perfil" ON public.perfiles;
+CREATE POLICY "Permitir actualizacion de su propio perfil" ON public.perfiles FOR UPDATE TO authenticated 
+USING (id = auth.uid() OR public.es_superadmin());
 
-CREATE POLICY "Inserción de finanzas por roles autorizados" 
-  ON public.transacciones_financieras FOR INSERT TO authenticated 
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.perfiles 
-      WHERE perfiles.id = auth.uid() 
-      AND perfiles.rol IN ('PROPIETARIO', 'ADMIN', 'CONTADOR', 'SUPERADMIN')
-    )
-  );
+-- POLÍTICAS ESTABLECIMIENTO_USUARIOS
+DROP POLICY IF EXISTS "Permitir insercion establecimiento_usuarios" ON public.establecimiento_usuarios;
+CREATE POLICY "Permitir insercion establecimiento_usuarios" ON public.establecimiento_usuarios FOR INSERT TO authenticated 
+WITH CHECK (perfil_id = auth.uid() OR public.es_superadmin());
 
--- POLÍTICA EXCLUSIVA DE RECIBOS DE SUELDO: El Empleado ve SUS recibos; la Administración ve todos
-CREATE POLICY "Empleados leen exclusivamente sus propios recibos de sueldo" 
-  ON public.recibos_sueldo FOR SELECT TO authenticated 
-  USING (
-    usuario_id = auth.uid()
-    OR EXISTS (
-      SELECT 1 FROM public.perfiles 
-      WHERE perfiles.id = auth.uid() 
-      AND perfiles.rol IN ('PROPIETARIO', 'ADMIN', 'CONTADOR', 'SUPERADMIN')
-    )
-  );
+DROP POLICY IF EXISTS "Permitir lectura establecimiento_usuarios" ON public.establecimiento_usuarios;
+CREATE POLICY "Permitir lectura establecimiento_usuarios" ON public.establecimiento_usuarios FOR SELECT TO authenticated 
+USING (perfil_id = auth.uid() OR public.es_superadmin());
 
-CREATE POLICY "Administracion gestiona recibos de sueldo" 
-  ON public.recibos_sueldo FOR ALL TO authenticated 
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.perfiles 
-      WHERE perfiles.id = auth.uid() 
-      AND perfiles.rol IN ('PROPIETARIO', 'ADMIN', 'CONTADOR', 'SUPERADMIN')
-    )
-  );
+-- POLÍTICAS STOCK GANADERO
+DROP POLICY IF EXISTS "Lectura de stock por autenticados" ON public.stock_ganadero;
+CREATE POLICY "Lectura de stock por autenticados" ON public.stock_ganadero FOR SELECT TO authenticated USING (true);
 
--- POLÍTICAS DE ESCRITURA EN PLUVIÓMETRO, NOTAS Y MOVIMIENTOS
-CREATE POLICY "Insercion de pluviometro por usuarios" 
-  ON public.registros_pluviometro FOR INSERT TO authenticated WITH CHECK (true);
+DROP POLICY IF EXISTS "Escritura de stock por autenticados" ON public.stock_ganadero;
+CREATE POLICY "Escritura de stock por autenticados" ON public.stock_ganadero FOR ALL TO authenticated USING (true);
 
-CREATE POLICY "Insercion de notas de campo por usuarios" 
-  ON public.notas_campo FOR INSERT TO authenticated WITH CHECK (true);
+-- POLÍTICAS FINANZAS Y RECIBOS
+DROP POLICY IF EXISTS "Lectura de finanzas restringida por rol" ON public.transacciones_financieras;
+CREATE POLICY "Lectura de finanzas restringida por rol" ON public.transacciones_financieras FOR SELECT TO authenticated USING (public.es_personal_administrativo());
 
-CREATE POLICY "Lectura de movimientos de ganado por autenticados" 
-  ON public.movimientos_ganado FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Inserción de finanzas por roles autorizados" ON public.transacciones_financieras;
+CREATE POLICY "Inserción de finanzas por roles autorizados" ON public.transacciones_financieras FOR INSERT TO authenticated WITH CHECK (public.es_personal_administrativo());
 
-CREATE POLICY "Escritura de movimientos de ganado por capataz o admin" 
-  ON public.movimientos_ganado FOR INSERT TO authenticated WITH CHECK (true);
+DROP POLICY IF EXISTS "Empleados leen exclusivamente sus propios recibos de sueldo" ON public.recibos_sueldo;
+CREATE POLICY "Empleados leen exclusivamente sus propios recibos de sueldo" ON public.recibos_sueldo FOR SELECT TO authenticated 
+USING (usuario_id = auth.uid() OR public.es_personal_administrativo());
 
--- ==============================================================================
--- CONFIGURACIÓN DE SUPABASE STORAGE (BUCKETS Y POLÍTICAS DE ARCHIVOS)
--- ==============================================================================
+DROP POLICY IF EXISTS "Administracion gestiona recibos de sueldo" ON public.recibos_sueldo;
+CREATE POLICY "Administracion gestiona recibos de sueldo" ON public.recibos_sueldo FOR ALL TO authenticated USING (public.es_personal_administrativo());
 
--- 1. Bucket Fotos de Campo (Lotes, Pluviómetro, Notas)
-INSERT INTO storage.buckets (id, name, public) 
-VALUES ('fotos-campo', 'fotos-campo', true)
-ON CONFLICT (id) DO NOTHING;
+-- POLÍTICAS OTROS MÓDULOS
+DROP POLICY IF EXISTS "Lectura de pluviometro por autenticados" ON public.registros_pluviometro;
+CREATE POLICY "Lectura de pluviometro por autenticados" ON public.registros_pluviometro FOR SELECT TO authenticated USING (true);
 
--- 2. Bucket Facturas y Comprobantes Financieros
-INSERT INTO storage.buckets (id, name, public) 
-VALUES ('facturas-comprobantes', 'facturas-comprobantes', false)
-ON CONFLICT (id) DO NOTHING;
+DROP POLICY IF EXISTS "Insercion de pluviometro por usuarios" ON public.registros_pluviometro;
+CREATE POLICY "Insercion de pluviometro por usuarios" ON public.registros_pluviometro FOR INSERT TO authenticated WITH CHECK (true);
 
--- 3. Bucket Privado Recibos de Sueldo del Personal
-INSERT INTO storage.buckets (id, name, public) 
-VALUES ('recibos-sueldo', 'recibos-sueldo', false)
-ON CONFLICT (id) DO NOTHING;
+DROP POLICY IF EXISTS "Lectura de notas de campo por autenticados" ON public.notas_campo;
+CREATE POLICY "Lectura de notas de campo por autenticados" ON public.notas_campo FOR SELECT TO authenticated USING (true);
 
--- ==============================================================================
--- DATOS PRECARGADOS (SEED DATA / INSERCIONES INICIALES PLAN AGROPECUARIO)
--- ==============================================================================
+DROP POLICY IF EXISTS "Insercion de notas de campo por usuarios" ON public.notas_campo;
+CREATE POLICY "Insercion de notas de campo por usuarios" ON public.notas_campo FOR INSERT TO authenticated WITH CHECK (true);
 
--- 1. INSERCIÓN DE CONCEPTOS FINANCIEROS DEL PLAN AGROPECUARIO URUGUAY
+DROP POLICY IF EXISTS "Lectura de catálogo de conceptos por autenticados" ON public.conceptos_financieros;
+CREATE POLICY "Lectura de catálogo de conceptos por autenticados" ON public.conceptos_financieros FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Lectura de conceptos activos por autenticados" ON public.conceptos_activos_empresa;
+CREATE POLICY "Lectura de conceptos activos por autenticados" ON public.conceptos_activos_empresa FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Lectura de movimientos de ganado por autenticados" ON public.movimientos_ganado;
+CREATE POLICY "Lectura de movimientos de ganado por autenticados" ON public.movimientos_ganado FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Escritura de movimientos de ganado por capataz o admin" ON public.movimientos_ganado;
+CREATE POLICY "Escritura de movimientos de ganado por capataz o admin" ON public.movimientos_ganado FOR INSERT TO authenticated WITH CHECK (true);
+
+-- POLÍTICAS SOLICITUDES DE REGISTRO
+DROP POLICY IF EXISTS "Permitir insercion solicitudes publica" ON public.solicitudes_registro;
+DROP POLICY IF EXISTS "Permitir insercion solicitudes a anonimos y autenticados" ON public.solicitudes_registro;
+CREATE POLICY "Permitir insercion solicitudes publica" ON public.solicitudes_registro FOR INSERT TO public WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Permitir lectura solicitudes a autenticados" ON public.solicitudes_registro;
+CREATE POLICY "Permitir lectura solicitudes a autenticados" ON public.solicitudes_registro FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Permitir actualizacion solicitudes a autenticados" ON public.solicitudes_registro;
+CREATE POLICY "Permitir actualizacion solicitudes a autenticados" ON public.solicitudes_registro FOR UPDATE TO authenticated USING (true);
+
+-- 5. STORAGE BUCKETS (FOTOS, FACTURAS Y RECIBOS DE SUELDO)
+INSERT INTO storage.buckets (id, name, public) VALUES ('fotos-campo', 'fotos-campo', true) ON CONFLICT (id) DO NOTHING;
+INSERT INTO storage.buckets (id, name, public) VALUES ('facturas-comprobantes', 'facturas-comprobantes', false) ON CONFLICT (id) DO NOTHING;
+INSERT INTO storage.buckets (id, name, public) VALUES ('recibos-sueldo', 'recibos-sueldo', false) ON CONFLICT (id) DO NOTHING;
+
+-- 6. DATOS DE SEMILLA (PLAN AGROPECUARIO URUGUAY)
 INSERT INTO public.conceptos_financieros (id, tipo, grupo, nombre, icono, es_estandar, naturaleza_costo, es_recurrente_mensual) VALUES
   ('ing-vacunos', 'INGRESO', 'Ventas de Hacienda', 'Vacunos', '🐮', true, NULL, false),
   ('ing-lanares', 'INGRESO', 'Ventas de Hacienda', 'Lanares', '🐑', true, NULL, false),
@@ -368,8 +429,6 @@ INSERT INTO public.conceptos_financieros (id, tipo, grupo, nombre, icono, es_est
   ('egr-est-seguros-bse', 'EGRESO', 'Otros Gastos de Estructura', 'Seguros (BSE / Patente)', '🛡️', true, 'FIJO', false)
 ON CONFLICT (id) DO NOTHING;
 
--- 2. INSERCIÓN DE CONCEPTOS ACTIVOS POR DEFECTO PARA LA EMPRESA
 INSERT INTO public.conceptos_activos_empresa (concepto_id, activo)
 SELECT id, true FROM public.conceptos_financieros
 ON CONFLICT (concepto_id) DO NOTHING;
-
