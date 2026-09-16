@@ -90,10 +90,17 @@ CREATE TABLE IF NOT EXISTS public.perfiles (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Asignar FK de propietario a empresa
-ALTER TABLE public.empresas 
-ADD CONSTRAINT fk_empresa_propietario 
-FOREIGN KEY (propietario_usuario_id) REFERENCES public.perfiles(id) ON DELETE SET NULL;
+-- Asignar FK de propietario a empresa de forma defensiva
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fk_empresa_propietario'
+  ) THEN
+    ALTER TABLE public.empresas 
+    ADD CONSTRAINT fk_empresa_propietario 
+    FOREIGN KEY (propietario_usuario_id) REFERENCES public.perfiles(id) ON DELETE SET NULL;
+  END IF;
+END $$;
 
 -- 5. TABLA INTERMEDIA: ASIGNACIÓN DE EMPLEADOS A MÚLTIPLES ESTANCIAS
 CREATE TABLE IF NOT EXISTS public.establecimiento_usuarios (
@@ -252,32 +259,41 @@ ALTER TABLE public.conceptos_financieros ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.conceptos_activos_empresa ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.movimientos_ganado ENABLE ROW LEVEL SECURITY;
 
--- POLÍTICAS GENERALES DE LECTURA POR AUTENTICADOS
+-- POLÍTICAS GENERALES DE LECTURA POR AUTENTICADOS (DEFENSIVAS)
+DROP POLICY IF EXISTS "Lectura de empresas por autenticados" ON public.empresas;
 CREATE POLICY "Lectura de empresas por autenticados" 
   ON public.empresas FOR SELECT TO authenticated USING (true);
 
+DROP POLICY IF EXISTS "Lectura de establecimientos por autenticados" ON public.establecimientos;
 CREATE POLICY "Lectura de establecimientos por autenticados" 
   ON public.establecimientos FOR SELECT TO authenticated USING (true);
 
+DROP POLICY IF EXISTS "Lectura de perfiles por autenticados" ON public.perfiles;
 CREATE POLICY "Lectura de perfiles por autenticados" 
   ON public.perfiles FOR SELECT TO authenticated USING (true);
 
+DROP POLICY IF EXISTS "Lectura de stock por autenticados" ON public.stock_ganadero;
 CREATE POLICY "Lectura de stock por autenticados" 
   ON public.stock_ganadero FOR SELECT TO authenticated USING (true);
 
+DROP POLICY IF EXISTS "Lectura de pluviometro por autenticados" ON public.registros_pluviometro;
 CREATE POLICY "Lectura de pluviometro por autenticados" 
   ON public.registros_pluviometro FOR SELECT TO authenticated USING (true);
 
+DROP POLICY IF EXISTS "Lectura de notas de campo por autenticados" ON public.notas_campo;
 CREATE POLICY "Lectura de notas de campo por autenticados" 
   ON public.notas_campo FOR SELECT TO authenticated USING (true);
 
+DROP POLICY IF EXISTS "Lectura de catálogo de conceptos por autenticados" ON public.conceptos_financieros;
 CREATE POLICY "Lectura de catálogo de conceptos por autenticados" 
   ON public.conceptos_financieros FOR SELECT TO authenticated USING (true);
 
+DROP POLICY IF EXISTS "Lectura de conceptos activos por autenticados" ON public.conceptos_activos_empresa;
 CREATE POLICY "Lectura de conceptos activos por autenticados" 
   ON public.conceptos_activos_empresa FOR SELECT TO authenticated USING (true);
 
 -- POLÍTICA DE FINANZAS GENERALES: PROPIETARIO, ADMIN, CONTADOR Y SUPERADMIN
+DROP POLICY IF EXISTS "Lectura de finanzas restringida por rol" ON public.transacciones_financieras;
 CREATE POLICY "Lectura de finanzas restringida por rol" 
   ON public.transacciones_financieras FOR SELECT TO authenticated 
   USING (
@@ -288,6 +304,7 @@ CREATE POLICY "Lectura de finanzas restringida por rol"
     )
   );
 
+DROP POLICY IF EXISTS "Inserción de finanzas por roles autorizados" ON public.transacciones_financieras;
 CREATE POLICY "Inserción de finanzas por roles autorizados" 
   ON public.transacciones_financieras FOR INSERT TO authenticated 
   WITH CHECK (
@@ -299,6 +316,7 @@ CREATE POLICY "Inserción de finanzas por roles autorizados"
   );
 
 -- POLÍTICA EXCLUSIVA DE RECIBOS DE SUELDO: El Empleado ve SUS recibos; la Administración ve todos
+DROP POLICY IF EXISTS "Empleados leen exclusivamente sus propios recibos de sueldo" ON public.recibos_sueldo;
 CREATE POLICY "Empleados leen exclusivamente sus propios recibos de sueldo" 
   ON public.recibos_sueldo FOR SELECT TO authenticated 
   USING (
@@ -310,6 +328,7 @@ CREATE POLICY "Empleados leen exclusivamente sus propios recibos de sueldo"
     )
   );
 
+DROP POLICY IF EXISTS "Administracion gestiona recibos de sueldo" ON public.recibos_sueldo;
 CREATE POLICY "Administracion gestiona recibos de sueldo" 
   ON public.recibos_sueldo FOR ALL TO authenticated 
   USING (
@@ -321,15 +340,19 @@ CREATE POLICY "Administracion gestiona recibos de sueldo"
   );
 
 -- POLÍTICAS DE ESCRITURA EN PLUVIÓMETRO, NOTAS Y MOVIMIENTOS
+DROP POLICY IF EXISTS "Insercion de pluviometro por usuarios" ON public.registros_pluviometro;
 CREATE POLICY "Insercion de pluviometro por usuarios" 
   ON public.registros_pluviometro FOR INSERT TO authenticated WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Insercion de notas de campo por usuarios" ON public.notas_campo;
 CREATE POLICY "Insercion de notas de campo por usuarios" 
   ON public.notas_campo FOR INSERT TO authenticated WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Lectura de movimientos de ganado por autenticados" ON public.movimientos_ganado;
 CREATE POLICY "Lectura de movimientos de ganado por autenticados" 
   ON public.movimientos_ganado FOR SELECT TO authenticated USING (true);
 
+DROP POLICY IF EXISTS "Escritura de movimientos de ganado por capataz o admin" ON public.movimientos_ganado;
 CREATE POLICY "Escritura de movimientos de ganado por capataz o admin" 
   ON public.movimientos_ganado FOR INSERT TO authenticated WITH CHECK (true);
 
