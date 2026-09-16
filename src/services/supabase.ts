@@ -370,26 +370,52 @@ export async function obtenerNotasCampoBD(): Promise<any[]> {
  */
 export async function registrarClienteAutonomoSupabase(params: {
   nombreEmpresa: string;
-  rut: string;
   nombreContacto: string;
-  apellidoContacto: string;
+  apellidoContacto?: string;
   email: string;
   password: string;
-  departamento: string;
-  nombreCampoInicial: string;
-  hectareas: number;
+  rut?: string;
+  departamento?: string;
+  nombreCampoInicial?: string;
+  hectareas?: number;
 }): Promise<{ exito: boolean; error?: string }> {
   try {
-    // 1. Crear Empresa
+    const emailNormalizado = params.email.trim().toLowerCase();
+    const depto = params.departamento || 'Soriano';
+    const rutFinal = params.rut?.trim() || '210000000000';
+    const campoNombre = params.nombreCampoInicial?.trim() || 'Estancia Por Defecto';
+    const totalHa = params.hectareas || 500;
+
+    // 1. Crear Usuario en Supabase Auth primero (obtiene la identidad autenticada auth.uid())
+    const { data: authData, error: errAuth } = await supabase.auth.signUp({
+      email: emailNormalizado,
+      password: params.password,
+    });
+
+    if (errAuth) {
+      let mensajeError = errAuth.message;
+      if (errAuth.message.includes('already registered') || errAuth.status === 400) {
+        mensajeError = 'El correo electrónico ya se encuentra registrado en la plataforma.';
+      }
+      return { exito: false, error: mensajeError };
+    }
+
+    const userId = authData.user?.id;
+    if (!userId) {
+      return { exito: false, error: 'No se pudo generar el usuario en el servicio de autenticación.' };
+    }
+
+    // 2. Crear Empresa (Asignando propietario_usuario_id = userId)
     const { data: empresaRes, error: errEmpresa } = await supabase
       .from('empresas')
       .insert([{
         razon_social: params.nombreEmpresa,
         nombre_fantasia: params.nombreEmpresa,
-        rut: params.rut,
-        email_contacto: params.email,
-        departamento_sede: params.departamento,
-        hectareas_totales_grupo: params.hectareas,
+        rut: rutFinal,
+        email_contacto: emailNormalizado,
+        departamento_sede: depto,
+        propietario_usuario_id: userId,
+        hectareas_totales_grupo: totalHa,
         plan: 'PRO',
         activa: true,
       }])
@@ -397,43 +423,37 @@ export async function registrarClienteAutonomoSupabase(params: {
       .single();
 
     if (errEmpresa || !empresaRes) {
-      return { exito: false, error: errEmpresa?.message || 'Error creando la empresa' };
+      let msg = errEmpresa?.message || 'Error creando la empresa en la base de datos';
+      if (errEmpresa?.code === '42501') {
+        msg = 'Error de permisos en la base de datos (RLS). Revisa las políticas de RLS en Supabase para la tabla empresas.';
+      }
+      return { exito: false, error: msg };
     }
 
     const empresaId = empresaRes.id;
 
-    // 2. Crear Campo / Establecimiento Inicial
+    // 3. Crear Campo / Establecimiento Inicial ("Estancia Por Defecto")
     const { error: errCampo } = await supabase
       .from('establecimientos')
       .insert([{
         empresa_id: empresaId,
-        nombre: params.nombreCampoInicial,
-        dicose: `${params.departamento.substring(0, 2).toUpperCase()}-${Math.floor(100000 + Math.random() * 900000)}-1`,
-        hectareas_totales: params.hectareas,
-        hectareas_pastoreables: Math.round(params.hectareas * 0.9),
-        departamento: params.departamento,
+        nombre: campoNombre,
+        dicose: `00-000000-0`,
+        hectareas_totales: totalHa,
+        hectareas_pastoreables: Math.round(totalHa * 0.9),
+        departamento: depto,
         tipo_tenencia: 'PROPIO',
         activa: true,
       }]);
 
     if (errCampo) {
-      console.warn('Aviso: No se pudo crear el campo inicial automáticamente:', errCampo.message);
+      console.warn('Aviso: No se pudo crear la estancia por defecto automáticamente:', errCampo.message);
     }
-
-    // 3. Crear Usuario en Supabase Auth
-    const { data: authData, error: errAuth } = await supabase.auth.signUp({
-      email: params.email,
-      password: params.password,
-    });
-
-    if (errAuth || !authData.user) {
-      return { exito: false, error: errAuth?.message || 'Error registrando usuario en Auth' };
-    }
-
-    const userId = authData.user.id;
-    const username = `${params.nombreContacto.toLowerCase()}.${params.apellidoContacto.toLowerCase()}`;
 
     // 4. Crear Perfil en public.perfiles con rol PROPIETARIO
+    const ape = params.apellidoContacto?.trim() || 'Propietario';
+    const username = `${params.nombreContacto.toLowerCase().replace(/\s+/g, '')}.${ape.toLowerCase().replace(/\s+/g, '')}`;
+
     const { error: errPerfil } = await supabase
       .from('perfiles')
       .insert([{
@@ -441,8 +461,8 @@ export async function registrarClienteAutonomoSupabase(params: {
         empresa_id: empresaId,
         username: username,
         nombre: params.nombreContacto,
-        apellido: params.apellidoContacto,
-        email: params.email,
+        apellido: ape,
+        email: emailNormalizado,
         rol: 'PROPIETARIO',
         activo: true,
       }]);
@@ -451,14 +471,8 @@ export async function registrarClienteAutonomoSupabase(params: {
       console.warn('Aviso al crear perfil:', errPerfil.message);
     }
 
-    // 5. Vincular Propietario a la Empresa
-    await supabase
-      .from('empresas')
-      .update({ propietario_usuario_id: userId })
-      .eq('id', empresaId);
-
     return { exito: true };
   } catch (err: any) {
-    return { exito: false, error: err?.message || 'Excepción en el alta autónoma' };
+    return { exito: false, error: err?.message || 'Excepción imprevista en el alta de la empresa.' };
   }
 }
