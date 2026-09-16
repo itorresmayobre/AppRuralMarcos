@@ -598,7 +598,12 @@ export async function enviarSolicitudRegistroBD(data: {
       estado: 'PENDIENTE',
     };
 
-    const { data: res, error } = await supabase
+    // Crear cliente público anónimo sin tokens de sesiones previas para evitar HTTP 401 por tokens vencidos
+    const clientePublico = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: { persistSession: false },
+    });
+
+    const { data: res, error } = await clientePublico
       .from('solicitudes_registro')
       .insert([payload])
       .select('id')

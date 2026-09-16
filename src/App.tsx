@@ -22,12 +22,16 @@ import { useConceptosFinancierosStore } from './stores/useConceptosFinancierosSt
 import { useEmpresasStore } from './stores/useEmpresasStore';
 import { useCampoNotasStore } from './stores/useCampoNotasStore';
 import { useUsuariosStore } from './stores/useUsuariosStore';
+import { validarSesionActivaSupabase } from './stores/useAuthStore';
 
 function MainLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    // Carga inicial automatica de datos desde Supabase PostgreSQL
+    // 1. Validar si el token venció para purgar localStorage automáticamente
+    validarSesionActivaSupabase();
+
+    // 2. Carga inicial de datos desde Supabase PostgreSQL
     useEmpresasStore.getState().cargarEmpresasDesdeSupabase();
     useEstanciasStore.getState().cargarEstanciasDesdeSupabase();
     useGanadoStore.getState().cargarGanadoDesdeSupabase();

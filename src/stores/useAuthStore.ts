@@ -111,3 +111,46 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
+
+/**
+ * Escuchar cambios en la sesión de Supabase Auth en tiempo real.
+ * Si el token expira o se cierra la sesión en el servidor, purgar automáticamente el localStorage.
+ */
+supabase.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_OUT' || !session) {
+    try {
+      localStorage.removeItem('agrouy-auth-session');
+    } catch {}
+    useAuthStore.setState({ usuario: null, estaAutenticado: false, cargando: false });
+  } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+    // Si el token fue renovado exitosamente, actualizar datos del usuario
+    const perfil = await obtenerPerfilUsuarioBD(session.user.id);
+    if (perfil) {
+      useAuthStore.setState({ usuario: perfil, estaAutenticado: true });
+    }
+  }
+});
+
+/**
+ * Validar la validez del token en el arranque de la aplicación.
+ * Si el token en localStorage venció, purgar el almacenamiento inmediatamente.
+ */
+export async function validarSesionActivaSupabase(): Promise<boolean> {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+
+    if (error || !session || (session.expires_at && session.expires_at * 1000 <= Date.now())) {
+      // Token inexistente o vencido: Purgar localStorage
+      localStorage.removeItem('agrouy-auth-session');
+      useAuthStore.setState({ usuario: null, estaAutenticado: false, cargando: false });
+      return false;
+    }
+
+    return true;
+  } catch {
+    localStorage.removeItem('agrouy-auth-session');
+    useAuthStore.setState({ usuario: null, estaAutenticado: false, cargando: false });
+    return false;
+  }
+}
+
