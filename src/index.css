@@ -19,6 +19,17 @@
   --color-primary: #059669; /* Emerald 600 */
   --color-primary-dark: #064e3b; /* Emerald 950 */
   --color-accent: #10b981; /* Emerald 500 */
+
+  /* Tokens de densidad y layout */
+  --card-padding-mobile: 0.75rem; /* 12px */
+  --card-padding-desktop: 1rem;    /* 16px */
+  --card-radius: 0.75rem;          /* rounded-xl */
+  --card-bg: #ffffff;
+  --card-border: #cbd5e1;          /* slate-300 */
+  --card-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+
+  /* Tokens de datos y tipografía */
+  --font-data-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 body {
@@ -27,3 +38,112 @@ body {
   min-height: 100vh;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
+
+/* Clases de Utilidad de Diseño Centralizadas */
+@layer utilities {
+  /* Contenedor de tarjeta estándar optimizada en densidad */
+  .app-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--card-radius);
+    padding: var(--card-padding-mobile);
+    box-shadow: var(--card-shadow);
+  }
+
+  @media (min-width: 640px) {
+    .app-card {
+      padding: var(--card-padding-desktop);
+    }
+  }
+
+  /* Tarjeta ultra compacta para estadísticas rápidas */
+  .app-card-compact {
+    background-color: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--card-radius);
+    padding: 0.625rem; /* 10px */
+    box-shadow: var(--card-shadow);
+  }
+
+  /* Jerarquía de texto para datos y métricas */
+  .app-metric-label {
+    font-size: 0.75rem; /* text-xs */
+    font-weight: 500;
+    color: #64748b; /* slate-500 */
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+
+  .app-metric-value {
+    font-size: 1.125rem; /* text-lg */
+    font-weight: 700;
+    color: #0f172a; /* slate-900 */
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Encabezados de sección compactos */
+  .app-section-title {
+    font-size: 0.875rem; /* text-sm */
+    font-weight: 600;
+    color: #1e293b; /* slate-800 */
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Tablas de alta densidad */
+  .app-table-container {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 0.5rem;
+    border: 1px solid #e2e8f0;
+  }
+
+  .app-table {
+    width: 100%;
+    text-align: left;
+    border-collapse: collapse;
+    font-size: 0.8125rem; /* 13px */
+  }
+
+  .app-table th {
+    padding: 0.5rem 0.75rem;
+    background-color: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    border-bottom: 1px solid #e2e8f0;
+    white-space: nowrap;
+  }
+
+  .app-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid #f1f5f9;
+    color: #1e293b;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .app-table tr:hover td {
+    background-color: #f8fafc;
+  }
+}
+
+/* Scrollbar Delgado y Elegante Global */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+

@@ -20,13 +20,13 @@ export const EstructuraCostosCard: React.FC<EstructuraCostosCardProps> = ({
   monedaFiltro,
 }) => {
   return (
-    <section aria-label="Estructura Costos Fijos y Variables" className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-        <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+    <section aria-label="Estructura Costos Fijos y Variables" className="app-card space-y-3">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+        <h3 className="app-section-title">
           <Tag className="w-4 h-4 text-emerald-600" />
           <span>Estructura de Costos (Fijos vs. Variables)</span>
         </h3>
-        <span className="text-[11px] font-extrabold text-slate-500">
+        <span className="text-xs font-bold text-slate-500">
           Total: {monedaFiltro} {totalEgresos.toLocaleString('es-UY')}
         </span>
       </div>

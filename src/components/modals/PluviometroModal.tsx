@@ -4,7 +4,7 @@ import { useEstanciasStore } from '../../stores/useEstanciasStore';
 import { useCampoNotasStore } from '../../stores/useCampoNotasStore';
 import { useToastStore } from '../../stores/useToastStore';
 import { hoyISO } from '../../utils/fechas';
-import { X, CloudDrizzle, Check, MapPin, Calendar, Droplets } from 'lucide-react';
+import { X, CloudDrizzle, Check, MapPin, Calendar, Droplets, AlertTriangle } from 'lucide-react';
 
 interface PluviometroModalProps {
   isOpen: boolean;
@@ -19,8 +19,9 @@ export const PluviometroModal: React.FC<PluviometroModalProps> = ({ isOpen, onCl
 
   const estanciaActual = obtenerEstanciaActual();
   const [estanciaFormId, setEstanciaFormId] = useState<string>(
-    estanciaActual?.id || (estancias[0]?.id ?? 'est-1')
+    estanciaActual?.id || (estancias[0]?.id ?? '')
   );
+  const targetEstanciaId = estanciaFormId || estanciaActual?.id || estancias[0]?.id || '';
 
   const [milimetros, setMilimetros] = useState<string>('');
   const [fecha, setFecha] = useState<string>(hoyISO());
@@ -34,6 +35,11 @@ export const PluviometroModal: React.FC<PluviometroModalProps> = ({ isOpen, onCl
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!estancias || estancias.length === 0 || !targetEstanciaId) {
+      mostrarToast('Sin Campo Seleccionado', 'Debes crear primero al menos un establecimiento antes de registrar mediciones de lluvia.', 'ADVERTENCIA');
+      return;
+    }
+
     const valMm = parseFloat(milimetros);
 
     if (isNaN(valMm) || valMm < 0) {
@@ -42,14 +48,14 @@ export const PluviometroModal: React.FC<PluviometroModalProps> = ({ isOpen, onCl
     }
 
     agregarPluviometro({
-      estancia_id: estanciaFormId,
+      estancia_id: targetEstanciaId,
       fecha,
       milimetros: valMm,
       observacion,
       registrado_por: usuario?.username || usuario?.nombre || 'operario',
     });
 
-    const nombreEstablecimiento = estancias.find(e => e.id === estanciaFormId)?.nombre || 'Establecimiento';
+    const nombreEstablecimiento = estancias.find(e => e.id === targetEstanciaId)?.nombre || 'Establecimiento';
     mostrarToast(
       'Pluviómetro Registrado',
       `🌧️ ${valMm} mm guardados en ${nombreEstablecimiento}`,
@@ -92,30 +98,40 @@ export const PluviometroModal: React.FC<PluviometroModalProps> = ({ isOpen, onCl
         </header>
 
         {/* Custom Selector de Establecimiento Destino */}
-        <div className="p-3 bg-slate-50 border-b border-slate-200/80 space-y-1.5 flex-shrink-0">
-          <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block">Establecimiento Destino:</label>
-          <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1">
-            {estancias.map((est) => {
-              const esSeleccionado = estanciaFormId === est.id;
-              return (
-                <button
-                  key={est.id}
-                  type="button"
-                  onClick={() => setEstanciaFormId(est.id)}
-                  className={`px-3 py-2 rounded-xl text-xs font-extrabold flex items-center space-x-1.5 transition-all cursor-pointer flex-shrink-0 border ${
-                    esSeleccionado
-                      ? 'bg-blue-700 text-white border-blue-600 shadow-sm'
-                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
-                  }`}
-                >
-                  <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span className="truncate">{est.nombre}</span>
-                  {esSeleccionado && <Check className="w-3.5 h-3.5 ml-1 text-blue-200 flex-shrink-0" />}
-                </button>
-              );
-            })}
+        {estancias.length === 0 ? (
+          <div className="p-3 bg-amber-50 border-b border-amber-200 text-amber-900 text-xs flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <div>
+              <p className="font-bold">No tienes establecimientos creados aún</p>
+              <p className="text-[11px] text-amber-800">Primero debes agregar un campo o estancia en la sección <strong>Establecimientos</strong>.</p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="p-3 bg-slate-50 border-b border-slate-200/80 space-y-1.5 flex-shrink-0">
+            <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block">Establecimiento Destino:</label>
+            <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1">
+              {estancias.map((est) => {
+                const esSeleccionado = targetEstanciaId === est.id;
+                return (
+                  <button
+                    key={est.id}
+                    type="button"
+                    onClick={() => setEstanciaFormId(est.id)}
+                    className={`px-3 py-2 rounded-xl text-xs font-extrabold flex items-center space-x-1.5 transition-all cursor-pointer flex-shrink-0 border ${
+                      esSeleccionado
+                        ? 'bg-blue-700 text-white border-blue-600 shadow-sm'
+                        : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                    }`}
+                  >
+                    <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="truncate">{est.nombre}</span>
+                    {esSeleccionado && <Check className="w-3.5 h-3.5 ml-1 text-blue-200 flex-shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Formulario Exclusivo de Pluviómetro */}
         <form onSubmit={handleSubmit} className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1 text-xs">

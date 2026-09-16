@@ -42,16 +42,16 @@ export const EstanciasPage: React.FC = () => {
   };
 
   return (
-    <section aria-label="Gestión de Establecimientos y Campos" className="space-y-6">
+    <section aria-label="Gestión de Establecimientos y Campos" className="space-y-3">
       
       {/* Encabezado */}
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+      <header className="app-card flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 flex items-center gap-2">
-            <Building2 className="w-6 h-6 text-emerald-600 flex-shrink-0" />
+          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
             <span>Establecimientos y Campos de la Empresa</span>
           </h2>
-          <p className="text-xs text-slate-500 font-medium mt-1">
+          <p className="text-xs text-slate-500 font-medium">
             Administración de propiedades rurales, DICOSE predial y superficie pastoreable.
           </p>
         </div>

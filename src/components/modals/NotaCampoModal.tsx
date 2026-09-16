@@ -19,8 +19,9 @@ export const NotaCampoModal: React.FC<NotaCampoModalProps> = ({ isOpen, onClose 
 
   const estanciaActual = obtenerEstanciaActual();
   const [estanciaFormId, setEstanciaFormId] = useState<string>(
-    estanciaActual?.id || (estancias[0]?.id ?? 'est-1')
+    estanciaActual?.id || (estancias[0]?.id ?? '')
   );
+  const targetEstanciaId = estanciaFormId || estanciaActual?.id || estancias[0]?.id || '';
 
   const [tituloNota, setTituloNota] = useState<string>('');
   const [descripcionNota, setDescripcionNota] = useState<string>('');
@@ -31,13 +32,18 @@ export const NotaCampoModal: React.FC<NotaCampoModalProps> = ({ isOpen, onClose 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!estancias || estancias.length === 0 || !targetEstanciaId) {
+      mostrarToast('Sin Campo Seleccionado', 'Debes crear primero al menos un establecimiento antes de registrar notas de campo.', 'ADVERTENCIA');
+      return;
+    }
+
     if (!tituloNota.trim()) {
       mostrarToast('Error de Nota', 'El título de la nota no puede estar vacío', 'ERROR');
       return;
     }
 
     agregarNotaCampo({
-      estancia_id: estanciaFormId,
+      estancia_id: targetEstanciaId,
       fecha,
       titulo: tituloNota.trim(),
       descripcion: descripcionNota.trim(),
@@ -45,7 +51,7 @@ export const NotaCampoModal: React.FC<NotaCampoModalProps> = ({ isOpen, onClose 
       creado_por: usuario?.username || usuario?.nombre || 'operario',
     });
 
-    const nombreEstablecimiento = estancias.find(e => e.id === estanciaFormId)?.nombre || 'Establecimiento';
+    const nombreEstablecimiento = estancias.find(e => e.id === targetEstanciaId)?.nombre || 'Establecimiento';
     mostrarToast(
       'Nota de Campo Guardada',
       `📋 "${tituloNota}" registrada en ${nombreEstablecimiento}`,
@@ -69,10 +75,10 @@ export const NotaCampoModal: React.FC<NotaCampoModalProps> = ({ isOpen, onClose 
             </div>
             <div>
               <h3 className="text-base font-extrabold text-white flex items-center gap-1.5">
-                <span>Nueva Nota de Campo / Alerta</span>
+                <span>Registrar Nota de Campo</span>
               </h3>
               <p className="text-xs text-purple-200 mt-0.5 font-medium">
-                Observación u orden de trabajo para el personal
+                Bitácora de observaciones, sanidad y mantenimientos
               </p>
             </div>
           </div>
@@ -87,30 +93,40 @@ export const NotaCampoModal: React.FC<NotaCampoModalProps> = ({ isOpen, onClose 
         </header>
 
         {/* Custom Selector de Establecimiento Destino */}
-        <div className="p-3 bg-slate-50 border-b border-slate-200/80 space-y-1.5 flex-shrink-0">
-          <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block">Establecimiento Destino:</label>
-          <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1">
-            {estancias.map((est) => {
-              const esSeleccionado = estanciaFormId === est.id;
-              return (
-                <button
-                  key={est.id}
-                  type="button"
-                  onClick={() => setEstanciaFormId(est.id)}
-                  className={`px-3 py-2 rounded-xl text-xs font-extrabold flex items-center space-x-1.5 transition-all cursor-pointer flex-shrink-0 border ${
-                    esSeleccionado
-                      ? 'bg-purple-700 text-white border-purple-600 shadow-sm'
-                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
-                  }`}
-                >
-                  <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span className="truncate">{est.nombre}</span>
-                  {esSeleccionado && <Check className="w-3.5 h-3.5 ml-1 text-purple-200 flex-shrink-0" />}
-                </button>
-              );
-            })}
+        {estancias.length === 0 ? (
+          <div className="p-3 bg-amber-50 border-b border-amber-200 text-amber-900 text-xs flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <div>
+              <p className="font-bold">No tienes establecimientos creados aún</p>
+              <p className="text-[11px] text-amber-800">Primero debes agregar un campo o estancia en la sección <strong>Establecimientos</strong>.</p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="p-3 bg-slate-50 border-b border-slate-200/80 space-y-1.5 flex-shrink-0">
+            <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block">Establecimiento Destino:</label>
+            <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1">
+              {estancias.map((est) => {
+                const esSeleccionado = targetEstanciaId === est.id;
+                return (
+                  <button
+                    key={est.id}
+                    type="button"
+                    onClick={() => setEstanciaFormId(est.id)}
+                    className={`px-3 py-2 rounded-xl text-xs font-extrabold flex items-center space-x-1.5 transition-all cursor-pointer flex-shrink-0 border ${
+                      esSeleccionado
+                        ? 'bg-purple-700 text-white border-purple-600 shadow-sm'
+                        : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                    }`}
+                  >
+                    <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="truncate">{est.nombre}</span>
+                    {esSeleccionado && <Check className="w-3.5 h-3.5 ml-1 text-purple-200 flex-shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Formulario Exclusivo de Nota de Campo */}
         <form onSubmit={handleSubmit} className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1 text-xs">

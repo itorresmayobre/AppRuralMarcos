@@ -32,10 +32,10 @@ export const useTrasladoGanadoForm = (onClose: () => void) => {
   const estanciaActual = obtenerEstanciaActual();
 
   const [origenId, setOrigenId] = useState<string>(
-    estanciaActual?.id || (estancias[0]?.id ?? 'est-1')
+    estanciaActual?.id || (estancias[0]?.id ?? '')
   );
   const [destinoId, setDestinoId] = useState<string>(
-    estancias.find((e) => e.id !== origenId)?.id || 'est-2'
+    estancias.find((e) => e.id !== origenId)?.id || (estancias[1]?.id ?? '')
   );
 
   const [especie, setEspecie] = useState<EspecieGanado>('VACUNO');
@@ -57,6 +57,15 @@ export const useTrasladoGanadoForm = (onClose: () => void) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!estancias || estancias.length < 2 || !origenId || !destinoId) {
+      mostrarToast(
+        'Campos Insuficientes',
+        'Necesitas al menos 2 establecimientos registrados para poder realizar un traslado de ganado.',
+        'ADVERTENCIA'
+      );
+      return;
+    }
 
     if (origenId === destinoId) {
       mostrarToast('Error de Validación', 'El establecimiento de origen y destino deben ser distintos.', 'ERROR');

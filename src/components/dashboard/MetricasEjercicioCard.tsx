@@ -66,21 +66,21 @@ export const MetricasEjercicioCard: React.FC = () => {
     .slice(0, 3);
 
   return (
-    <section aria-label="Métricas del Ejercicio Agrícola" className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 space-y-4">
+    <section aria-label="Métricas del Ejercicio Agrícola" className="app-card space-y-3">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-        <div className="flex items-center space-x-2.5">
-          <div className="p-2 bg-emerald-100 text-emerald-900 rounded-xl">
-            <BarChart3 className="w-5 h-5 text-emerald-700" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-100 pb-2.5">
+        <div className="flex items-center space-x-2">
+          <div className="p-1.5 bg-emerald-100 text-emerald-900 rounded-lg">
+            <BarChart3 className="w-4 h-4 text-emerald-700" />
           </div>
           <div>
-            <h3 className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-2">
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
               <span>Métricas del Ejercicio Agrícola ({ejercicioActual})</span>
-              <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-full border border-emerald-200">
+              <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-900 px-1.5 py-0.2 rounded border border-emerald-200">
                 USD
               </span>
             </h3>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
+            <p className="text-[11px] text-slate-500 font-medium">
               Resumen en tiempo real del flujo de caja y estructura de costos en curso
             </p>
           </div>
@@ -89,18 +89,18 @@ export const MetricasEjercicioCard: React.FC = () => {
         <button
           type="button"
           onClick={() => navigate('/estadisticas')}
-          className="inline-flex items-center space-x-1.5 text-xs font-black text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-3.5 py-2 rounded-xl border border-emerald-200 transition-all cursor-pointer active:scale-95 self-start sm:self-auto min-h-[38px]"
+          className="inline-flex items-center space-x-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-200 transition-all cursor-pointer active:scale-95 self-start sm:self-auto min-h-[34px]"
         >
           <span>Ver Análisis Completo</span>
-          <ArrowRight className="w-4 h-4" />
+          <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>
 
       {/* Grid Resumen del Ejercicio */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {/* KPI 1: Ingresos vs Egresos */}
-        <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/70 space-y-2">
-          <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block">Flujo de Caja Ejercicio</span>
+        <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-1.5">
+          <span className="app-metric-label block">Flujo de Caja Ejercicio</span>
           <div className="space-y-1 text-xs">
             <div className="flex justify-between items-center text-emerald-800 font-black">
               <span className="flex items-center gap-1"><TrendingUp className="w-3.5 h-3.5" /> Ingresos</span>

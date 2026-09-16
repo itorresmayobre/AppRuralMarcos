@@ -12,7 +12,7 @@ import type { Moneda, TipoTransaccion } from '../../types';
 
 export const useTransaccionForm = (onClose: () => void) => {
   const { usuario } = useAuthStore();
-  const { obtenerEstanciaActual } = useEstanciasStore();
+  const { estancias, obtenerEstanciaActual } = useEstanciasStore();
   const { agregarTransaccion } = useFinanzasStore();
   const { catalog, obtenerConceptosActivosPorTipo } = useConceptosFinancierosStore();
   const { mostrarToast } = useToastStore();
@@ -22,7 +22,7 @@ export const useTransaccionForm = (onClose: () => void) => {
 
   const estanciaActual = obtenerEstanciaActual();
   const [estanciaFormId, setEstanciaFormId] = useState<string>(
-    estanciaActual?.id || 'est-1'
+    estanciaActual?.id || (estancias[0]?.id ?? '')
   );
 
   const [tipoFinanciero, setTipoFinanciero] = useState<TipoTransaccion>('INGRESO');

@@ -28,21 +28,19 @@ export const AccionesRapidasBar: React.FC = () => {
 
   const lecturasPluviometro = obtenerPluviometroEstancia(estanciaSeleccionadaId);
   const notasCampo = obtenerNotasEstancia(estanciaSeleccionadaId);
-  const ultimaLluvia = lecturasPluviometro[0];
 
   return (
-    <section aria-label="Acciones Rápidas y Bitácora del Campo" className="space-y-4">
+    <section aria-label="Acciones Rápidas y Bitácora del Campo" className="space-y-3">
 
       {/* Botonera de Acciones Rápidas */}
-      {/* Botonera de Acciones Rápidas */}
-      <div className="bg-white p-3 rounded-xl border border-slate-200/90 shadow-2xs space-y-2">
-        <h3 className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Acciones Rápidas</h3>
+      <div className="app-card space-y-2">
+        <h3 className="app-metric-label">Acciones Rápidas</h3>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {puedeVerFinanzas && (
             <button
               onClick={() => setModalTransaccionAbierto(true)}
-              className="p-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs text-center transition-all cursor-pointer min-h-[38px]"
+              className="p-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs text-center transition-all cursor-pointer min-h-[36px]"
             >
               + Transacción
             </button>
@@ -50,21 +48,21 @@ export const AccionesRapidasBar: React.FC = () => {
 
           <button
             onClick={() => setModalPluviometroAbierto(true)}
-            className="p-2.5 rounded-lg bg-blue-700 hover:bg-blue-800 text-white font-black text-xs text-center transition-all cursor-pointer min-h-[38px]"
+            className="p-2.5 rounded-lg bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs text-center transition-all cursor-pointer min-h-[36px]"
           >
             + Pluviómetro
           </button>
 
           <button
             onClick={() => setModalNotaAbierto(true)}
-            className="p-2.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white font-black text-xs text-center transition-all cursor-pointer min-h-[38px]"
+            className="p-2.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs text-center transition-all cursor-pointer min-h-[36px]"
           >
             + Nota de Campo
           </button>
 
           <button
             onClick={() => setModalTrasladoAbierto(true)}
-            className="p-2.5 rounded-lg bg-amber-700 hover:bg-amber-800 text-white font-black text-xs text-center transition-all cursor-pointer min-h-[38px]"
+            className="p-2.5 rounded-lg bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs text-center transition-all cursor-pointer min-h-[36px]"
           >
             + Traslado Ganado
           </button>
@@ -72,12 +70,12 @@ export const AccionesRapidasBar: React.FC = () => {
       </div>
 
       {/* Bitácora Reciente: Pluviómetro y Notas del Establecimiento */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 
         {/* Pluviómetro Reciente */}
-        <article className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-            <h4 className="text-xs font-black text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
+        <article className="app-card space-y-2.5">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <h4 className="app-metric-label flex items-center gap-1.5">
               <CloudDrizzle className="w-4 h-4 text-blue-600" />
               <span>Últimas Precipitaciones (Pluviómetro)</span>
             </h4>
@@ -90,26 +88,30 @@ export const AccionesRapidasBar: React.FC = () => {
             </button>
           </div>
 
-          {ultimaLluvia ? (
-            <div className="bg-blue-50/70 border border-blue-200/80 rounded-xl p-3 flex items-center justify-between">
-              <div className="space-y-0.5">
-                <div className="flex items-center space-x-2">
-                  <span className="text-xl font-black text-blue-900">{ultimaLluvia.milimetros} mm</span>
-                  <span className="text-[10px] text-blue-800 font-black bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200">
-                    {formatearFechaUY(ultimaLluvia.fecha)}
-                  </span>
+          {lecturasPluviometro.length > 0 ? (
+            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+              {lecturasPluviometro.slice(0, 5).map((lluvia) => (
+                <div key={lluvia.id} className="bg-blue-50/70 border border-blue-200/80 rounded-lg p-2 flex items-center justify-between">
+                  <div className="space-y-0.5 min-w-0 flex-1">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-bold text-blue-900">{lluvia.milimetros} mm</span>
+                      <span className="text-[10px] text-blue-800 font-bold bg-blue-100 px-1.5 py-0.2 rounded border border-blue-200">
+                        {formatearFechaUY(lluvia.fecha)}
+                      </span>
+                    </div>
+                    {lluvia.observacion && (
+                      <p className="text-[11px] text-slate-600 italic font-medium truncate">{lluvia.observacion}</p>
+                    )}
+                  </div>
                 </div>
-                {ultimaLluvia.observacion && (
-                  <p className="text-xs text-slate-600 italic font-medium">{ultimaLluvia.observacion}</p>
-                )}
-              </div>
+              ))}
             </div>
           ) : (
             <div className="text-center py-3 space-y-2">
               <p className="text-xs text-slate-400 italic">Sin registros recientes de pluviómetro</p>
               <button
                 onClick={() => setModalPluviometroAbierto(true)}
-                className="inline-flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs px-3 py-1.5 rounded-xl shadow-sm cursor-pointer transition-all active:scale-95"
+                className="inline-flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg shadow-sm cursor-pointer transition-all active:scale-95"
               >
                 <CloudDrizzle className="w-3.5 h-3.5" />
                 <span>+ Registrar Lluvia Caída</span>
@@ -119,9 +121,9 @@ export const AccionesRapidasBar: React.FC = () => {
         </article>
 
         {/* Notas / Alertas del Campo */}
-        <article className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-            <h4 className="text-xs font-black text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
+        <article className="app-card space-y-2.5">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <h4 className="app-metric-label flex items-center gap-1.5">
               <FileText className="w-4 h-4 text-purple-600" />
               <span>Observaciones del Campo</span>
             </h4>
@@ -135,17 +137,17 @@ export const AccionesRapidasBar: React.FC = () => {
           </div>
 
           {notasCampo.length > 0 ? (
-            <div className="space-y-2 max-h-36 overflow-y-auto">
-              {notasCampo.slice(0, 2).map((nota) => (
-                <div key={nota.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-start justify-between">
-                  <div className="space-y-0.5">
+            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+              {notasCampo.slice(0, 5).map((nota) => (
+                <div key={nota.id} className="p-2 rounded-lg bg-slate-50 border border-slate-200/80 flex items-start justify-between">
+                  <div className="space-y-0.5 min-w-0 flex-1">
                     <div className="flex items-center space-x-2">
-                      <span className="text-xs font-bold text-slate-900">{nota.titulo}</span>
-                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${
+                      <span className="text-xs font-bold text-slate-900 truncate">{nota.titulo}</span>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded flex-shrink-0 ${
                         nota.prioridad === 'ALTA'
-                          ? 'bg-rose-100 text-rose-800'
+                          ? 'bg-rose-100 text-rose-800 border border-rose-200'
                           : nota.prioridad === 'MEDIA'
-                            ? 'bg-amber-100 text-amber-800'
+                            ? 'bg-amber-100 text-amber-800 border border-amber-200'
                             : 'bg-slate-200 text-slate-700'
                       }`}>
                         {nota.prioridad}

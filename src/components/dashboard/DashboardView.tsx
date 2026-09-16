@@ -62,7 +62,7 @@ export const DashboardView: React.FC = () => {
       <FiltroEstablecimientosRapido />
 
       {/* 2. DATOS DE ALTA PRIORIDAD: Tarjetas KPIs (Stock, Carga UG/ha, Ventas, Egresos) */}
-      <section aria-label="Indicadores Clave de Desempeño (KPIs)" className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+      <section aria-label="Indicadores Clave de Desempeño (KPIs)" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
         <StatCard
           title="Stock Vacunos"
           value={`${totalVacunos.toLocaleString('es-UY')} Cab`}
