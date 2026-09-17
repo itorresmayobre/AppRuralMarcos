@@ -192,6 +192,7 @@ export const useUsuariosStore = create<UsuariosState>((set, get) => ({
           apellido,
           rol: 'ADMIN',
           empresa_id: empresaId,
+          empresa_ids: [empresaId],
           empresas_asignadas_ids: [empresaId],
           estancias_asignadas_ids: ['TODAS'],
           fecha_alta: hoyISO(),

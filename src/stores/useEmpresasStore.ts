@@ -55,13 +55,9 @@ export const useEmpresasStore = create<EmpresasState>((set, get) => ({
 
     try {
       const payload = {
-        nombre_solicitante: data.solicitante_nombre,
-        email: data.solicitante_email,
-        telefono: data.solicitante_telefono,
-        nombre_empresa: data.nombre_empresa,
-        rut: data.rut,
-        departamento: data.departamento,
-        hectareas_estimadas: data.hectareas_estimadas,
+        nombre_solicitante: data.nombre_solicitante || data.solicitante_nombre || 'Solicitante',
+        email: data.email || data.solicitante_email || '',
+        telefono: data.telefono || data.solicitante_telefono || '',
         estado: 'PENDIENTE',
       };
 
@@ -99,14 +95,12 @@ export const useEmpresasStore = create<EmpresasState>((set, get) => ({
 
     try {
       const payload = {
-        razon_social: solicitud.nombre_empresa,
-        nombre_fantasia: solicitud.nombre_empresa,
-        rut: solicitud.rut,
-        email_contacto: solicitud.solicitante_email,
-        telefono: solicitud.solicitante_telefono,
-        departamento_sede: solicitud.departamento,
-        hectareas_totales_grupo: solicitud.hectareas_estimadas,
-        plan: 'PRO',
+        razon_social: solicitud.nombre_empresa || 'Empresa por defect',
+        nombre_fantasia: solicitud.nombre_empresa || 'Empresa',
+        rut: solicitud.rut || '210000000000',
+        email_contacto: solicitud.solicitante_email || solicitud.email,
+        telefono_contacto: solicitud.solicitante_telefono || solicitud.telefono || '',
+        departamento_sede: solicitud.departamento || 'Soriano',
         activa: true,
       };
 
@@ -130,14 +124,14 @@ export const useEmpresasStore = create<EmpresasState>((set, get) => ({
 
     const nuevaEmpresa: Empresa = {
       id: newEmpresaId,
-      razon_social: solicitud.nombre_empresa,
-      nombre_fantasia: solicitud.nombre_empresa,
-      rut: solicitud.rut,
-      email_contacto: solicitud.solicitante_email,
-      telefono_contacto: solicitud.solicitante_telefono,
-      departamento_sede: solicitud.departamento,
-      hectareas_totales_grupo: solicitud.hectareas_estimadas,
-      plan: 'BASIC',
+      razon_social: solicitud.nombre_empresa || 'Empresa Nueva',
+      nombre_fantasia: solicitud.nombre_empresa || 'Empresa Nueva',
+      rut: solicitud.rut || '210000000000',
+      email_contacto: solicitud.solicitante_email || solicitud.email,
+      telefono_contacto: solicitud.solicitante_telefono || solicitud.telefono || '',
+      departamento_sede: solicitud.departamento || 'Soriano',
+      hectareas_totales_grupo: solicitud.hectareas_estimadas || 0,
+      plan: 'PRO',
       activa: true,
       fecha_registro: formatearFechaUY(hoyISO()),
     };

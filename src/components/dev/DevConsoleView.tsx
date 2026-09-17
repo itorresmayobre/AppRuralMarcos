@@ -295,7 +295,7 @@ export const DevConsoleView: React.FC = () => {
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 font-mono">
-                      RUT: {sol.rut} | Depto: <strong>{sol.departamento}</strong> | Solicitado: {sol.fecha_solicitud}
+                      RUT: {sol.rut || 'Pendiente'} | Depto: <strong>{sol.departamento || 'No especificado'}</strong> | Solicitado: {sol.fecha_solicitud}
                     </p>
                   </div>
 
@@ -303,7 +303,7 @@ export const DevConsoleView: React.FC = () => {
                     <div className="flex items-center space-x-2 self-start sm:self-auto">
                       <button
                         type="button"
-                        onClick={() => handleAprobar(sol.id, sol.nombre_empresa, sol.solicitante_email, sol.solicitante_nombre)}
+                        onClick={() => handleAprobar(sol.id, sol.nombre_empresa || 'Empresa', sol.solicitante_email || sol.email, sol.solicitante_nombre || sol.nombre_solicitante)}
                         className="inline-flex items-center space-x-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs px-3.5 py-2 rounded-xl shadow-sm transition-all cursor-pointer min-h-[38px] active:scale-95"
                       >
                         <Check className="w-4 h-4" />
@@ -312,7 +312,7 @@ export const DevConsoleView: React.FC = () => {
 
                       <button
                         type="button"
-                        onClick={() => handleRechazar(sol.id, sol.nombre_empresa)}
+                        onClick={() => handleRechazar(sol.id, sol.nombre_empresa || 'Empresa')}
                         className="inline-flex items-center space-x-1 text-slate-700 hover:text-rose-700 bg-white hover:bg-rose-50 border border-slate-300 hover:border-rose-300 font-bold text-xs px-3 py-2 rounded-xl transition-all cursor-pointer min-h-[38px]"
                       >
                         <X className="w-4 h-4" />
@@ -323,11 +323,11 @@ export const DevConsoleView: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-medium text-slate-700">
-                  <p><strong className="text-slate-900">Solicitante:</strong> {sol.solicitante_nombre}</p>
-                  <p><strong className="text-slate-900">Email:</strong> {sol.solicitante_email}</p>
-                  <p><strong className="text-slate-900">Teléfono:</strong> {sol.solicitante_telefono}</p>
-                  <p><strong className="text-slate-900">Hectáreas Estimadas:</strong> {sol.hectareas_estimadas.toLocaleString('es-UY')} Ha</p>
-                  <p><strong className="text-slate-900">Estancias Estimadas:</strong> {sol.estancias_estimadas} Campos</p>
+                  <p><strong className="text-slate-900">Solicitante:</strong> {sol.solicitante_nombre || sol.nombre_solicitante}</p>
+                  <p><strong className="text-slate-900">Email:</strong> {sol.solicitante_email || sol.email}</p>
+                  <p><strong className="text-slate-900">Teléfono:</strong> {sol.solicitante_telefono || sol.telefono || 'Sin teléfono'}</p>
+                  <p><strong className="text-slate-900">Hectáreas Estimadas:</strong> {(sol.hectareas_estimadas || 0).toLocaleString('es-UY')} Ha</p>
+                  <p><strong className="text-slate-900">Estancias Estimadas:</strong> {sol.estancias_estimadas || 1} Campos</p>
                 </div>
 
                 {sol.observaciones && (
@@ -378,11 +378,11 @@ export const DevConsoleView: React.FC = () => {
                       <span className="text-[10px] text-indigo-800 font-bold block">{emp.departamento_sede}</span>
                     </td>
                     <td className="py-3.5 px-4 font-bold text-emerald-800">
-                      {emp.hectareas_totales_grupo.toLocaleString('es-UY')} Ha
+                      {(emp.hectareas_totales_grupo || 0).toLocaleString('es-UY')} Ha
                     </td>
                     <td className="py-3.5 px-4">
                       <select
-                        value={emp.plan}
+                        value={emp.plan || 'PRO'}
                         onChange={(e) => cambiarPlanEmpresa(emp.id, e.target.value as PlanSaaS)}
                         className="bg-slate-100 border border-slate-300 rounded-lg text-[11px] font-black p-1 text-slate-800 cursor-pointer"
                       >

@@ -17,7 +17,7 @@ export const useReciboSueldoForm = (onClose: () => void) => {
   const [montoLiquido, setMontoLiquido] = useState<string>('38000');
   const [moneda, setMoneda] = useState<'UYU' | 'USD'>('UYU');
   const [fechaPago, setFechaPago] = useState<string>(hoyISO());
-  const [reciboUrl, setReciboUrl] = useState<string>('https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&q=80');
+  const [reciboUrl, setReciboUrl] = useState<string>('');
   const [observaciones, setObservaciones] = useState<string>('');
 
   const { ejercicio: ejercicioAgricola } = calcularEjercicioYMesAgricola(fechaPago);
@@ -35,7 +35,7 @@ export const useReciboSueldoForm = (onClose: () => void) => {
     const nombreEmpleado = empleadoObj ? `${empleadoObj.nombre} ${empleadoObj.apellido}` : 'Empleado';
 
     agregarRecibo({
-      empresa_id: usuario?.empresa_id || 'emp-1',
+      empresa_id: usuario?.empresa_id || usuario?.empresa_ids?.[0] || 'emp-1',
       usuario_id: usuarioId,
       usuario_nombre: nombreEmpleado,
       periodo_mes: periodoMes,

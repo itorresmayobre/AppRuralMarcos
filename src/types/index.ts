@@ -3,13 +3,14 @@ export type UserRole = 'SUPERADMIN' | 'PROPIETARIO' | 'ADMIN' | 'CAPATAZ' | 'CON
 export interface UserProfile {
   id: string;
   email: string;
-  username: string; // Nombre de usuario para login (ej: "marcos.propietario")
+  username: string;
   nombre: string;
   apellido: string;
   rol: UserRole;
-  empresa_id?: string; // ID de la empresa principal a la que pertenece
-  empresas_asignadas_ids?: string[]; // Lista de IDs de empresas asignadas a las que tiene acceso (ej: ['emp-1', 'emp-2'] o ['TODAS'])
-  estancias_asignadas_ids: string[]; // Lista de IDs de estancias asignadas (ej: ['est-1', 'est-2'] o ['TODAS'])
+  empresa_id?: string;
+  empresa_ids?: string[];
+  empresas_asignadas_ids?: string[];
+  estancias_asignadas_ids: string[];
 }
 
 export interface PermisoRol {
@@ -29,19 +30,30 @@ export interface UsuarioEmpleado extends UserProfile {
   activo: boolean;
 }
 
-export type PlanSaaS = 'BASIC' | 'PRO' | 'ENTERPRISE';
+export type PlanSaaS = 'BASIC' | 'STARTER' | 'PRO' | 'ENTERPRISE';
+
+export interface SuscripcionPropietario {
+  id: string;
+  propietario_usuario_id: string;
+  plan: PlanSaaS;
+  max_empresas: number;
+  max_establecimientos: number;
+  max_usuarios: number;
+  estado: 'ACTIVA' | 'SUSPENDIDA' | 'CANCELADA';
+  created_at?: string;
+}
 
 export interface Empresa {
   id: string;
-  propietario_usuario_id?: string; // ID del usuario Propietario (titular inamovible)
+  propietario_usuario_id?: string;
   razon_social: string;
   nombre_fantasia: string;
   rut: string;
   email_contacto: string;
   telefono_contacto: string;
   departamento_sede: string;
-  hectareas_totales_grupo: number;
-  plan: PlanSaaS;
+  hectareas_totales_grupo?: number;
+  plan?: PlanSaaS;
   activa: boolean;
   fecha_registro: string;
 }
@@ -50,14 +62,17 @@ export type EstadoSolicitud = 'PENDIENTE' | 'APROBADA' | 'RECHAZADA';
 
 export interface SolicitudRegistro {
   id: string;
-  nombre_empresa: string;
-  rut: string;
-  solicitante_nombre: string;
-  solicitante_email: string;
-  solicitante_telefono: string;
-  departamento: string;
-  hectareas_estimadas: number;
-  estancias_estimadas: number;
+  nombre_solicitante: string;
+  email: string;
+  telefono?: string;
+  nombre_empresa?: string;
+  rut?: string;
+  departamento?: string;
+  hectareas_estimadas?: number;
+  estancias_estimadas?: number;
+  solicitante_nombre?: string;
+  solicitante_email?: string;
+  solicitante_telefono?: string;
   estado: EstadoSolicitud;
   fecha_solicitud: string;
   observaciones?: string;
@@ -69,11 +84,11 @@ export interface Estancia {
   id: string;
   empresa_id?: string;
   nombre: string;
-  dicose: string; // Código DICOSE Uruguay (ej: 04-123456-7)
+  dicose: string;
   hectareas_totales: number;
   hectareas_pastoreables: number;
   departamento: string;
-  ubicacion_localidad: string;
+  ubicacion_localidad?: string;
   tipo_tenencia: TipoTenencia;
   activa: boolean;
 }
@@ -146,18 +161,19 @@ export interface TransaccionFinanciera {
   descripcion: string;
   fecha: string;
   creado_por_usuario: string;
-  ejercicio_agricola?: string; // ej: "2025-2026"
-  periodo_mes?: string; // ej: "Julio", "Agosto", ..., "Junio"
+  ejercicio_agricola?: string;
+  periodo_mes?: string;
   naturaleza_costo?: NaturalezaCosto;
-  // Campos de Prorrateo entre Campos
   es_prorrateado?: boolean;
   distribucion_prorrateo?: DistribucionProrrateoItem[];
-  // Campos de Cotización Bimoneda
   moneda_original?: Moneda;
   monto_original?: number;
   tipo_cambio?: number;
   monto_usd?: number;
   monto_uyu?: number;
+  comprobante_url?: string;
+  comprobante_tipo?: 'IMAGE' | 'PDF';
+  nro_factura?: string;
 }
 
 export interface ConceptoFinanciero {
@@ -189,7 +205,7 @@ export interface MovimientoGanado {
   kilos_promedio?: number;
   fecha: string;
   observaciones?: string;
-  valorizar_transferencia: boolean;
+  valorizar_transferencia?: boolean;
   precio_por_cabeza?: number;
   precio_por_kilo?: number;
   monto_total_imputado: number;
@@ -201,15 +217,38 @@ export type EstadoFirmaRecibo = 'PENDIENTE' | 'FIRMADO' | 'CONFORME';
 export interface ReciboSueldo {
   id: string;
   empresa_id: string;
-  usuario_id: string; // Empleado que cobra
+  usuario_id: string;
   usuario_nombre?: string;
   transaccion_id?: string;
-  periodo_mes: string; // ej: "Setiembre 2026"
+  periodo_mes: string;
   ejercicio_agricola: string;
   monto_liquido: number;
   moneda: Moneda;
   fecha_pago: string;
-  recibo_url: string; // PDF o foto del recibo en Storage
+  recibo_url?: string;
+  recibo_tipo?: 'IMAGE' | 'PDF';
+  comprobante_pago_url?: string;
+  comprobante_pago_tipo?: 'IMAGE' | 'PDF';
   estado_firma: EstadoFirmaRecibo;
   observaciones?: string;
+}
+
+export interface RegistroPluviometro {
+  id: string;
+  estancia_id: string;
+  fecha: string;
+  milimetros: number;
+  observacion?: string;
+  registrado_por: string;
+}
+
+export interface NotaCampo {
+  id: string;
+  estancia_id: string;
+  fecha: string;
+  titulo: string;
+  descripcion?: string;
+  prioridad: 'BAJA' | 'MEDIA' | 'ALTA';
+  imagen_url?: string;
+  creado_por: string;
 }

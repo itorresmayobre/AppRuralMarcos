@@ -21,7 +21,7 @@ export const FiltroEstablecimientosRapido: React.FC = () => {
   const empresaOptions: SelectOption[] = empresas.map((emp) => ({
     value: emp.id,
     label: emp.razon_social,
-    badge: `${emp.hectareas_totales_grupo.toLocaleString('es-UY')} Ha`,
+    badge: `${(emp.hectareas_totales_grupo || 0).toLocaleString('es-UY')} Ha`,
   }));
 
   // Opciones de Predio / Campo

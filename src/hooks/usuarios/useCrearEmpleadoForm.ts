@@ -52,6 +52,7 @@ export const useCrearEmpleadoForm = () => {
         apellido,
         email,
         rol: rolForm,
+        empresa_ids: [],
         estancias_asignadas_ids: estanciasSeleccionadasForm,
       });
 
@@ -62,6 +63,7 @@ export const useCrearEmpleadoForm = () => {
           apellido,
           email,
           rol: rolForm,
+          empresa_ids: [],
           estancias_asignadas_ids: estanciasSeleccionadasForm,
         });
 

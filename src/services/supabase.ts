@@ -16,7 +16,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 /**
  * Formatea errores provenientes de Supabase / PostgreSQL en un mensaje claro y legible en español.
- * Extrae message, details y hint del objeto de error de Postgrest.
  */
 export function formatearErrorSupabase(error: any): string {
   if (!error) return 'Ocurrió un error desconocido.';
@@ -88,7 +87,6 @@ export async function subirArchivoStorage(
       const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(data.path);
       return publicData.publicUrl;
     } else {
-      // Buckets privados: generar signed URL por 1 año
       const { data: signedData, error: signedErr } = await supabase.storage
         .from(bucket)
         .createSignedUrl(data.path, 60 * 60 * 24 * 365);
@@ -128,7 +126,7 @@ export async function obtenerPerfilUsuarioBD(userId: string): Promise<UserProfil
     nombre: data.nombre,
     apellido: data.apellido,
     rol: data.rol,
-    empresa_id: data.empresa_id,
+    empresa_ids: data.empresa_ids || [],
     estancias_asignadas_ids: ['TODAS'],
   };
 }
@@ -154,8 +152,7 @@ export async function obtenerUsuariosBD(): Promise<UsuarioEmpleado[]> {
     nombre: item.nombre || 'Usuario',
     apellido: item.apellido || '',
     rol: item.rol || 'OPERARIO',
-    empresa_id: item.empresa_id,
-    empresas_asignadas_ids: item.empresa_id ? [item.empresa_id] : ['TODAS'],
+    empresa_ids: item.empresa_ids || [],
     estancias_asignadas_ids: ['TODAS'],
     fecha_alta: item.created_at ? item.created_at.substring(0, 10) : '2026-01-01',
     activo: item.activo !== false,
@@ -244,6 +241,9 @@ export async function obtenerTransaccionesBD(): Promise<TransaccionFinanciera[]>
     tipo_cambio: item.tipo_cambio,
     monto_usd: item.monto_usd,
     monto_uyu: item.monto_uyu,
+    comprobante_url: item.comprobante_url,
+    comprobante_tipo: item.comprobante_tipo,
+    nro_factura: item.nro_factura,
   }));
 }
 
@@ -269,6 +269,9 @@ export async function guardarTransaccionBD(tx: Omit<TransaccionFinanciera, 'id' 
     tipo_cambio: tx.tipo_cambio,
     monto_usd: tx.monto_usd,
     monto_uyu: tx.monto_uyu,
+    comprobante_url: tx.comprobante_url || null,
+    comprobante_tipo: tx.comprobante_tipo || null,
+    nro_factura: tx.nro_factura || null,
   };
 
   const { data, error } = await supabase
@@ -304,6 +307,9 @@ export async function obtenerRecibosSueldoBD(): Promise<ReciboSueldo[]> {
     moneda: item.moneda,
     fecha_pago: item.fecha_pago,
     recibo_url: item.recibo_url,
+    recibo_tipo: item.recibo_tipo,
+    comprobante_pago_url: item.comprobante_pago_url,
+    comprobante_pago_tipo: item.comprobante_pago_tipo,
     estado_firma: item.estado_firma,
     observaciones: item.observaciones,
   }));
@@ -337,10 +343,8 @@ export async function obtenerEmpresasBD(): Promise<any[]> {
     nombre_fantasia: item.nombre_fantasia || item.razon_social,
     rut: item.rut,
     email_contacto: item.email_contacto,
-    telefono_contacto: item.telefono || '',
+    telefono_contacto: item.telefono_contacto || '',
     departamento_sede: item.departamento_sede,
-    hectareas_totales_grupo: Number(item.hectareas_totales_grupo || 0),
-    plan: item.plan || 'PRO',
     activa: item.activa ?? true,
     fecha_registro: item.created_at,
   }));
@@ -357,17 +361,11 @@ export async function obtenerSolicitudesRegistroBD(): Promise<any[]> {
   }
   return data.map((item) => ({
     id: item.id,
-    nombre_empresa: item.nombre_empresa,
-    rut: item.rut,
     solicitante_nombre: item.nombre_solicitante,
     solicitante_email: item.email,
-    solicitante_telefono: item.telefono,
-    departamento: item.departamento,
-    hectareas_estimadas: Number(item.hectareas_estimadas || 0),
-    estancias_estimadas: 1,
+    solicitante_telefono: item.telefono || '',
     estado: item.estado,
-    fecha_solicitud: item.fecha_solicitud,
-    observaciones: '',
+    fecha_solicitud: item.created_at,
   }));
 }
 
@@ -406,200 +404,27 @@ export async function obtenerNotasCampoBD(): Promise<any[]> {
     titulo: item.titulo,
     descripcion: item.descripcion || '',
     prioridad: item.prioridad || 'MEDIA',
+    imagen_url: item.imagen_url || null,
     creado_por: item.creado_por || 'Sistema',
   }));
 }
 
 /**
- * Flujo Autónomo de Alta de Cliente Completa en Supabase (Empresa + Campo + Auth + Perfil PROPIETARIO)
- */
-export async function registrarClienteAutonomoSupabase(params: {
-  nombreEmpresa: string;
-  nombreContacto: string;
-  apellidoContacto?: string;
-  email: string;
-  password: string;
-  rut?: string;
-  departamento?: string;
-  nombreCampoInicial?: string;
-  hectareas?: number;
-}): Promise<{ exito: boolean; error?: string }> {
-  try {
-    const emailNormalizado = params.email.trim().toLowerCase();
-    const depto = params.departamento || 'Soriano';
-    const rutFinal = params.rut?.trim() || '210000000000';
-    const campoNombre = params.nombreCampoInicial?.trim() || 'Estancia Por Defecto';
-    const totalHa = params.hectareas || 500;
-
-    let userId: string | undefined = undefined;
-
-    // 1. Crear o Autenticar Usuario en Supabase Auth (Auto-recuperación si quedó registrado previamente)
-    const redirectUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
-    const { data: authData, error: errAuth } = await supabase.auth.signUp({
-      email: emailNormalizado,
-      password: params.password,
-      options: {
-        emailRedirectTo: redirectUrl,
-      },
-    });
-
-    if (errAuth) {
-      if (errAuth.message.includes('already registered') || errAuth.status === 400) {
-        // El usuario ya existía en Auth (ej. por intento anterior bloqueado por RLS). Intentamos autenticarlo:
-        const { data: signInData, error: errSignIn } = await supabase.auth.signInWithPassword({
-          email: emailNormalizado,
-          password: params.password,
-        });
-
-        if (!errSignIn && signInData?.user) {
-          userId = signInData.user.id;
-        } else {
-          return {
-            exito: false,
-            error: 'El correo electrónico ya se encuentra registrado. Si es tu cuenta, ingresa tu contraseña correcta en el Login.',
-          };
-        }
-      } else {
-        return { exito: false, error: errAuth.message };
-      }
-    } else {
-      userId = authData.user?.id;
-    }
-
-    if (!userId) {
-      return { exito: false, error: 'No se pudo generar ni autenticar el usuario en Auth.' };
-    }
-
-    // 1.5 Asegurar token JWT activo en la sesión
-    try {
-      await supabase.auth.signInWithPassword({
-        email: emailNormalizado,
-        password: params.password,
-      });
-    } catch {
-      // Ignorar si requiere confirmación por email
-    }
-
-    // 2. Verificar si la Empresa ya existe o debe crearse
-    let empresaId: string | undefined = undefined;
-
-    const { data: empresaExistente } = await supabase
-      .from('empresas')
-      .select('id')
-      .eq('propietario_usuario_id', userId)
-      .maybeSingle();
-
-    if (empresaExistente?.id) {
-      empresaId = empresaExistente.id;
-    } else {
-      const { data: empresaRes, error: errEmpresa } = await supabase
-        .from('empresas')
-        .insert([{
-          razon_social: params.nombreEmpresa,
-          nombre_fantasia: params.nombreEmpresa,
-          rut: rutFinal,
-          email_contacto: emailNormalizado,
-          departamento_sede: depto,
-          propietario_usuario_id: userId,
-          hectareas_totales_grupo: totalHa,
-          plan: 'PRO',
-          activa: true,
-        }])
-        .select('id')
-        .single();
-
-      if (errEmpresa || !empresaRes) {
-        let msg = errEmpresa?.message || 'Error creando la empresa en la base de datos';
-        if (errEmpresa?.code === '42501') {
-          msg = 'Error de permisos RLS en Supabase (42501). Recuerda ejecutar las políticas SQL en el panel de Supabase.';
-        }
-        return { exito: false, error: msg };
-      }
-      empresaId = empresaRes.id;
-    }
-
-    // 3. Crear Campo / Establecimiento Inicial ("Estancia Por Defecto") si no existe
-    const { data: camposExistentes } = await supabase
-      .from('establecimientos')
-      .select('id')
-      .eq('empresa_id', empresaId);
-
-    if (!camposExistentes || camposExistentes.length === 0) {
-      await supabase
-        .from('establecimientos')
-        .insert([{
-          empresa_id: empresaId,
-          nombre: campoNombre,
-          dicose: `00-000000-0`,
-          hectareas_totales: totalHa,
-          hectareas_pastoreables: Math.round(totalHa * 0.9),
-          departamento: depto,
-          tipo_tenencia: 'PROPIO',
-          activa: true,
-        }]);
-    }
-
-    // 4. Crear Perfil en public.perfiles con rol PROPIETARIO si no existe
-    const { data: perfilExistente } = await supabase
-      .from('perfiles')
-      .select('id')
-      .eq('id', userId)
-      .maybeSingle();
-
-    if (!perfilExistente) {
-      const ape = params.apellidoContacto?.trim() || 'Propietario';
-      const username = `${params.nombreContacto.toLowerCase().replace(/\s+/g, '')}.${ape.toLowerCase().replace(/\s+/g, '')}`;
-
-      const { error: errPerfil } = await supabase
-        .from('perfiles')
-        .insert([{
-          id: userId,
-          empresa_id: empresaId,
-          username: username,
-          nombre: params.nombreContacto,
-          apellido: ape,
-          email: emailNormalizado,
-          rol: 'PROPIETARIO',
-          activo: true,
-        }]);
-
-      if (errPerfil) {
-        console.warn('Aviso al crear perfil:', errPerfil.message);
-      }
-    }
-
-    return { exito: true };
-  } catch (err: any) {
-    return { exito: false, error: err?.message || 'Excepción imprevista en el alta de la empresa.' };
-  }
-}
-
-/**
- * Registrar una solicitud de alta pendiente de aprobación por el SuperAdmin
+ * Registrar una solicitud de alta pendiente de aprobación por el SuperAdmin (Formulario Ligero)
  */
 export async function enviarSolicitudRegistroBD(data: {
-  nombreEmpresa: string;
   nombreContacto: string;
   email: string;
   telefono?: string;
-  rut?: string;
-  departamento?: string;
-  hectareasEstimadas?: number;
 }): Promise<{ exito: boolean; id?: string; error?: string }> {
   try {
-    // Payload ultra-limpio: PostgreSQL asigna DEFAULT 'PENDIENTE' automáticamente a la columna estado
     const payload: Record<string, any> = {
-      nombre_empresa: data.nombreEmpresa,
       nombre_solicitante: data.nombreContacto,
       email: data.email.trim().toLowerCase(),
     };
 
     if (data.telefono) payload.telefono = data.telefono;
-    if (data.rut) payload.rut = data.rut;
-    if (data.departamento) payload.departamento = data.departamento;
-    if (data.hectareasEstimadas) payload.hectareas_estimadas = data.hectareasEstimadas;
 
-    // Crear cliente público anónimo sin tokens de sesiones previas para evitar HTTP 401 por tokens vencidos
     const clientePublico = createClient(supabaseUrl, supabaseAnonKey, {
       auth: { persistSession: false },
     });
@@ -619,4 +444,3 @@ export async function enviarSolicitudRegistroBD(data: {
     return { exito: false, error: err?.message || 'Error registrando la solicitud.' };
   }
 }
-
