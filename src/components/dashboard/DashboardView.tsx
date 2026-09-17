@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useEstanciasStore } from '../../stores/useEstanciasStore';
 import { useGanadoStore } from '../../stores/useGanadoStore';
@@ -7,6 +7,8 @@ import { StatCard } from './StatCard';
 import { AccionesRapidasBar } from './AccionesRapidasBar';
 import { FiltroEstablecimientosRapido } from './FiltroEstablecimientosRapido';
 import { MetricasEjercicioCard } from './MetricasEjercicioCard';
+import { BannerOnboardingBienvenida } from '../onboarding/BannerOnboardingBienvenida';
+import { OnboardingEmpresaModal } from '../onboarding/OnboardingEmpresaModal';
 import { Beef, DollarSign, TrendingUp, ShieldAlert } from 'lucide-react';
 
 export const DashboardView: React.FC = () => {
@@ -14,6 +16,8 @@ export const DashboardView: React.FC = () => {
   const { estancias, estanciaSeleccionadaId, obtenerEstanciaActual } = useEstanciasStore();
   const { stockList } = useGanadoStore();
   const { obtenerTransaccionesEstancia } = useFinanzasStore();
+
+  const [mostrarOnboardingModal, setMostrarOnboardingModal] = useState(false);
 
   const currentRole = usuario?.rol || 'OPERARIO';
   const estanciaActual = obtenerEstanciaActual();
@@ -58,6 +62,9 @@ export const DashboardView: React.FC = () => {
 
   return (
     <div className="space-y-3 sm:space-y-4">
+      {/* 0. Banner de Onboarding de Bienvenida */}
+      <BannerOnboardingBienvenida onAbrirWizard={() => setMostrarOnboardingModal(true)} />
+
       {/* 1. Filtros de Empresa & Campo (Barra Novedosa Ultra-Compacta 1-Fila) */}
       <FiltroEstablecimientosRapido />
 
@@ -114,6 +121,12 @@ export const DashboardView: React.FC = () => {
 
       {/* 4. ACCIONES RÁPIDAS OPERATIVAS & BITÁCORA DEL CAMPO (NOTAS AL FINAL) */}
       <AccionesRapidasBar />
+
+      {/* Modal Wizard de Onboarding */}
+      <OnboardingEmpresaModal
+        isOpen={mostrarOnboardingModal}
+        onClose={() => setMostrarOnboardingModal(false)}
+      />
     </div>
   );
 };

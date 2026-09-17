@@ -25,8 +25,8 @@ interface CampoNotasState {
   notasCampo: NotaCampo[];
   cargando: boolean;
   cargarNotasYPluviometroDesdeSupabase: () => Promise<void>;
-  agregarPluviometro: (registro: Omit<RegistroPluviometro, 'id'>) => Promise<void>;
-  agregarNotaCampo: (nota: Omit<NotaCampo, 'id'>) => Promise<void>;
+  agregarPluviometro: (registro: Omit<RegistroPluviometro, 'id'>) => Promise<{ success: boolean; error?: string }>;
+  agregarNotaCampo: (nota: Omit<NotaCampo, 'id'>) => Promise<{ success: boolean; error?: string }>;
   obtenerPluviometroEstancia: (estanciaId: string) => RegistroPluviometro[];
   obtenerNotasEstancia: (estanciaId: string) => NotaCampo[];
 }
@@ -51,7 +51,9 @@ export const useCampoNotasStore = create<CampoNotasState>((set, get) => ({
   },
 
   agregarPluviometro: async (registro) => {
-    let newId = `p-${Date.now()}`;
+    if (!registro.estancia_id) {
+      return { success: false, error: 'Debes seleccionar un establecimiento para registrar la lluvia.' };
+    }
 
     try {
       const payload = {
@@ -67,24 +69,31 @@ export const useCampoNotasStore = create<CampoNotasState>((set, get) => ({
         .select('id')
         .single();
 
-      if (!error && data) {
-        newId = data.id;
+      if (error) {
+        console.error('Error insertando pluviómetro en Supabase:', error.message);
+        return { success: false, error: error.message };
       }
-    } catch (e) {
-      console.warn('Error insertando pluviómetro en Supabase:', e);
-    }
 
-    const nuevo: RegistroPluviometro = {
-      ...registro,
-      id: newId,
-    };
-    set((state) => ({
-      registrosPluviometro: [nuevo, ...state.registrosPluviometro],
-    }));
+      const nuevo: RegistroPluviometro = {
+        ...registro,
+        id: data.id,
+      };
+
+      set((state) => ({
+        registrosPluviometro: [nuevo, ...state.registrosPluviometro],
+      }));
+
+      return { success: true };
+    } catch (e: any) {
+      console.error('Error insertando pluviómetro:', e);
+      return { success: false, error: e?.message || 'Error inesperado al conectar con el servidor.' };
+    }
   },
 
   agregarNotaCampo: async (nota) => {
-    let newId = `n-${Date.now()}`;
+    if (!nota.estancia_id) {
+      return { success: false, error: 'Debes seleccionar un establecimiento para registrar la nota de campo.' };
+    }
 
     try {
       const payload = {
@@ -101,20 +110,25 @@ export const useCampoNotasStore = create<CampoNotasState>((set, get) => ({
         .select('id')
         .single();
 
-      if (!error && data) {
-        newId = data.id;
+      if (error) {
+        console.error('Error insertando nota de campo en Supabase:', error.message);
+        return { success: false, error: error.message };
       }
-    } catch (e) {
-      console.warn('Error insertando nota de campo en Supabase:', e);
-    }
 
-    const nueva: NotaCampo = {
-      ...nota,
-      id: newId,
-    };
-    set((state) => ({
-      notasCampo: [nueva, ...state.notasCampo],
-    }));
+      const nueva: NotaCampo = {
+        ...nota,
+        id: data.id,
+      };
+
+      set((state) => ({
+        notasCampo: [nueva, ...state.notasCampo],
+      }));
+
+      return { success: true };
+    } catch (e: any) {
+      console.error('Error insertando nota de campo:', e);
+      return { success: false, error: e?.message || 'Error inesperado al conectar con el servidor.' };
+    }
   },
 
   obtenerPluviometroEstancia: (estanciaId: string) => {

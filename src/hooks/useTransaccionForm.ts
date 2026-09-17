@@ -35,6 +35,9 @@ export const useTransaccionForm = (onClose: () => void) => {
   );
   const [descripcionFinanciera, setDescripcionFinanciera] = useState<string>('');
   const [fecha, setFecha] = useState<string>(hoyISO());
+  const [comprobanteUrl, setComprobanteUrl] = useState<string>('');
+  const [comprobanteTipo, setComprobanteTipo] = useState<'IMAGE' | 'PDF' | undefined>(undefined);
+  const [nroFactura, setNroFactura] = useState<string>('');
 
   // Cotización Bimoneda y Prorrateo State
   const [tipoCambio, setTipoCambio] = useState<number>(40.50);
@@ -64,6 +67,11 @@ export const useTransaccionForm = (onClose: () => void) => {
 
   const handleProrrateoChange = (estanciaId: string, porcentaje: number) => {
     setCustomProrrateo((prev) => ({ ...prev, [estanciaId]: porcentaje }));
+  };
+
+  const handleComprobanteChange = (url: string, fileType?: 'IMAGE' | 'PDF') => {
+    setComprobanteUrl(url);
+    if (fileType) setComprobanteTipo(fileType);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -108,6 +116,9 @@ export const useTransaccionForm = (onClose: () => void) => {
       monto_uyu: conversion.monto_uyu,
       es_prorrateado: esProrrateado,
       distribucion_prorrateo: distribucion,
+      comprobante_url: comprobanteUrl || undefined,
+      comprobante_tipo: comprobanteTipo,
+      nro_factura: nroFactura || undefined,
     });
 
     mostrarToast(
@@ -116,6 +127,9 @@ export const useTransaccionForm = (onClose: () => void) => {
       'EXITO'
     );
 
+    setComprobanteUrl('');
+    setComprobanteTipo(undefined);
+    setNroFactura('');
     onClose();
   };
 
@@ -138,6 +152,13 @@ export const useTransaccionForm = (onClose: () => void) => {
     setDescripcionFinanciera,
     fecha,
     setFecha,
+    comprobanteUrl,
+    setComprobanteUrl,
+    comprobanteTipo,
+    setComprobanteTipo,
+    nroFactura,
+    setNroFactura,
+    handleComprobanteChange,
     tipoCambio,
     esProrrateado,
     setEsProrrateado,

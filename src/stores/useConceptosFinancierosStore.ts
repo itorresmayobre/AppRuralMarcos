@@ -27,15 +27,11 @@ export const useConceptosFinancierosStore = create<ConceptosStoreState>()(
       cargarConceptosDesdeSupabase: async () => {
         set({ cargando: true });
         const datosBD = await obtenerConceptosFinancierosBD();
-        if (datosBD && datosBD.length > 0) {
-          set({
-            catalog: datosBD,
-            conceptosActivosIds: datosBD.map((c) => c.id),
-            cargando: false,
-          });
-        } else {
-          set({ cargando: false });
-        }
+        set({
+          catalog: datosBD || [],
+          conceptosActivosIds: (datosBD || []).map((c) => c.id),
+          cargando: false,
+        });
       },
 
       toggleConcepto: (conceptoId) => {

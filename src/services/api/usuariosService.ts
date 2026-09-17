@@ -24,13 +24,13 @@ export const usuariosService = {
       if (authData.user) {
         await supabase.from('perfiles').insert([{
           id: authData.user.id,
-          empresa_id: nuevaData.empresa_id,
+          empresa_ids: nuevaData.empresa_ids || [],
           username: usernameGenerado,
           nombre: nuevaData.nombre,
           apellido: nuevaData.apellido,
           email: nuevaData.email,
           rol: nuevaData.rol,
-          activo: true,
+          activa: true,
         }]);
       }
 

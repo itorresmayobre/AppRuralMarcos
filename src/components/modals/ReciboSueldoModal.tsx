@@ -1,7 +1,8 @@
 import React from 'react';
 import { useReciboSueldoForm } from '../../hooks/useReciboSueldoForm';
 import { CustomSelect } from '../ui/CustomSelect';
-import { X, FileText, Check, Calendar, DollarSign, Upload, User } from 'lucide-react';
+import { FileUploadInput } from '../ui/FileUploadInput';
+import { X, FileText, Check, Calendar, DollarSign, User } from 'lucide-react';
 
 interface ReciboSueldoModalProps {
   isOpen: boolean;
@@ -108,20 +109,14 @@ export const ReciboSueldoModal: React.FC<ReciboSueldoModalProps> = ({ isOpen, on
             />
           </fieldset>
 
-          {/* Adjuntar Archivo / Foto del Recibo */}
-          <fieldset className="space-y-1.5 bg-slate-50 p-3 rounded-2xl border border-slate-200/80 m-0">
-            <label htmlFor="recibo-url" className="font-bold text-slate-700 block flex items-center gap-1.5">
-              <Upload className="w-4 h-4 text-emerald-600" />
-              <span>URL / Archivo de Recibo Firmado</span>
-            </label>
-            <input
-              id="recibo-url"
-              type="text"
-              required
-              placeholder="URL del PDF o Foto en Storage"
+          {/* Adjuntar Archivo / Foto del Recibo (Opcional) */}
+          <fieldset className="border-0 p-0 m-0">
+            <FileUploadInput
+              label="Foto o PDF del Recibo Firmado"
+              bucket="recibos-sueldo"
               value={form.reciboUrl}
-              onChange={(e) => form.setReciboUrl(e.target.value)}
-              className="w-full bg-white border border-slate-300 text-slate-900 text-xs font-mono rounded-xl p-2.5 focus:ring-2 focus:ring-emerald-500 min-h-[40px]"
+              onChange={(url) => form.setReciboUrl(url)}
+              optional={true}
             />
           </fieldset>
 

@@ -36,6 +36,9 @@ export const useTransaccionForm = (onClose: () => void) => {
   );
   const [descripcionFinanciera, setDescripcionFinanciera] = useState<string>('');
   const [fecha, setFecha] = useState<string>(hoyISO());
+  const [comprobanteUrl, setComprobanteUrl] = useState<string>('');
+  const [comprobanteTipo, setComprobanteTipo] = useState<'IMAGE' | 'PDF' | undefined>(undefined);
+  const [nroFactura, setNroFactura] = useState<string>('');
 
   // Consumir Sub-Hooks
   const cotizacion = useCotizacionDolar(fecha);
@@ -51,6 +54,11 @@ export const useTransaccionForm = (onClose: () => void) => {
     if (conceptoItem.es_recurrente_mensual || conceptoItem.naturaleza_costo === 'FIJO') {
       prorrateo.setEsProrrateado(true);
     }
+  };
+
+  const handleComprobanteChange = (url: string, fileType?: 'IMAGE' | 'PDF') => {
+    setComprobanteUrl(url);
+    if (fileType) setComprobanteTipo(fileType);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -83,6 +91,9 @@ export const useTransaccionForm = (onClose: () => void) => {
       monto_uyu: conversion.monto_uyu,
       es_prorrateado: prorrateo.esProrrateado,
       distribucion_prorrateo: distribucion,
+      comprobante_url: comprobanteUrl || undefined,
+      comprobante_tipo: comprobanteTipo,
+      nro_factura: nroFactura || undefined,
     });
 
     mostrarToast(
@@ -94,6 +105,9 @@ export const useTransaccionForm = (onClose: () => void) => {
     // Limpiar formulario y cerrar
     setMonto('');
     setDescripcionFinanciera('');
+    setComprobanteUrl('');
+    setComprobanteTipo(undefined);
+    setNroFactura('');
     onClose();
   };
 
@@ -116,6 +130,13 @@ export const useTransaccionForm = (onClose: () => void) => {
     setDescripcionFinanciera,
     fecha,
     setFecha,
+    comprobanteUrl,
+    setComprobanteUrl,
+    comprobanteTipo,
+    setComprobanteTipo,
+    nroFactura,
+    setNroFactura,
+    handleComprobanteChange,
     cotizacion,
     prorrateo,
     handleSeleccionarCategoria,

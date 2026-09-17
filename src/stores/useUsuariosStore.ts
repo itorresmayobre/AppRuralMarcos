@@ -167,14 +167,14 @@ export const useUsuariosStore = create<UsuariosState>((set, get) => ({
       const usuarioExistente = state.usuarios.find((u) => u.email.toLowerCase() === emailNorm);
 
       if (usuarioExistente) {
-        const empresasActuales = usuarioExistente.empresas_asignadas_ids || [usuarioExistente.empresa_id || 'emp-1'];
+        const empresasActuales = usuarioExistente.empresa_ids || [];
         if (!empresasActuales.includes(empresaId)) {
           empresasActuales.push(empresaId);
         }
         return {
           usuarios: state.usuarios.map((u) =>
             u.id === usuarioExistente.id
-              ? { ...u, empresas_asignadas_ids: [...empresasActuales] }
+              ? { ...u, empresa_ids: [...empresasActuales] }
               : u
           ),
         };
@@ -191,9 +191,7 @@ export const useUsuariosStore = create<UsuariosState>((set, get) => ({
           nombre,
           apellido,
           rol: 'ADMIN',
-          empresa_id: empresaId,
           empresa_ids: [empresaId],
-          empresas_asignadas_ids: [empresaId],
           estancias_asignadas_ids: ['TODAS'],
           fecha_alta: hoyISO(),
           activo: true,

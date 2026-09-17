@@ -44,8 +44,13 @@ export const useFinanzasStore = create<FinanzasState>((set, get) => ({
       transacciones: state.transacciones.map((t) => (t.id === id ? { ...t, ...datos } : t)),
     }));
 
+    // Solo consultar Supabase si el ID es un UUID válido
+    const esUUIDValido = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id);
+    if (!esUUIDValido) return;
+
     try {
-      await supabase.from('transacciones_financieras').update(datos).eq('id', id);
+      const { error } = await supabase.from('transacciones_financieras').update(datos).eq('id', id);
+      if (error) console.warn('Aviso actualizando transacción en Supabase:', error.message);
     } catch (e) {
       console.warn('Error actualizando en Supabase:', e);
     }
@@ -56,8 +61,13 @@ export const useFinanzasStore = create<FinanzasState>((set, get) => ({
       transacciones: state.transacciones.filter((t) => t.id !== id),
     }));
 
+    // Solo consultar Supabase si el ID es un UUID válido de la base de datos
+    const esUUIDValido = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id);
+    if (!esUUIDValido) return;
+
     try {
-      await supabase.from('transacciones_financieras').delete().eq('id', id);
+      const { error } = await supabase.from('transacciones_financieras').delete().eq('id', id);
+      if (error) console.warn('Aviso eliminando transacción en Supabase:', error.message);
     } catch (e) {
       console.warn('Error eliminando en Supabase:', e);
     }

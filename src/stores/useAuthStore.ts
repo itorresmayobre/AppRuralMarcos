@@ -11,6 +11,7 @@ interface AuthState {
   iniciarSesion: (email: string, contrasenia: string) => Promise<boolean>;
   cerrarSesion: () => Promise<void>;
   cambiarRolSimulado: (nuevoRol: UserRole) => void;
+  actualizarEmpresasUsuario: (empresaIds: string[]) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -51,19 +52,19 @@ export const useAuthStore = create<AuthState>()(
           if (!authError && authData.user) {
             let perfilBD = await obtenerPerfilUsuarioBD(authData.user.id);
             
-            // Si el perfil no se encontró aún en la tabla perfiles, estructurar objeto de perfil basado en Auth
+            // Si el perfil no existe en la tabla perfiles, rechazar el inicio de sesión y purgar token
             if (!perfilBD) {
-              const correo = authData.user.email || emailParaLogin;
-              const metaNombre = authData.user.user_metadata?.nombre || correo.split('@')[0];
-              perfilBD = {
-                id: authData.user.id,
-                email: correo,
-                username: correo.split('@')[0],
-                nombre: metaNombre,
-                apellido: authData.user.user_metadata?.apellido || '',
-                rol: (authData.user.user_metadata?.rol as UserRole) || 'PROPIETARIO',
-                estancias_asignadas_ids: ['TODAS'],
-              };
+              await supabase.auth.signOut().catch(() => {});
+              try {
+                localStorage.removeItem('agrouy-auth-session');
+              } catch {}
+              set({
+                usuario: null,
+                estaAutenticado: false,
+                errorAutenticacion: 'Tu cuenta no tiene un perfil habilitado en la base de datos. Por favor regístrate o contacta a soporte.',
+                cargando: false,
+              });
+              return false;
             }
 
             set({
@@ -128,6 +129,26 @@ export const useAuthStore = create<AuthState>()(
           };
         });
       },
+
+      actualizarEmpresasUsuario: async (empresaIds: string[]) => {
+        set((state) => {
+          if (!state.usuario) return state;
+          const usuarioActualizado = { ...state.usuario, empresa_ids: empresaIds };
+          
+          // Async update in Supabase perfiles if user has an ID
+          if (state.usuario.id) {
+            supabase
+              .from('perfiles')
+              .update({ empresa_ids: empresaIds })
+              .eq('id', state.usuario.id)
+              .then(({ error }) => {
+                if (error) console.warn('Aviso actualizando empresa_ids en perfil:', error);
+              });
+          }
+
+          return { usuario: usuarioActualizado };
+        });
+      },
     }),
     {
       name: 'agrouy-auth-session',
@@ -141,10 +162,16 @@ supabase.auth.onAuthStateChange(async (event, session) => {
       localStorage.removeItem('agrouy-auth-session');
     } catch {}
     useAuthStore.setState({ usuario: null, estaAutenticado: false, cargando: false });
-  } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+  } else if ((event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') && session?.user) {
     const perfil = await obtenerPerfilUsuarioBD(session.user.id);
     if (perfil) {
       useAuthStore.setState({ usuario: perfil, estaAutenticado: true });
+    } else {
+      await supabase.auth.signOut().catch(() => {});
+      try {
+        localStorage.removeItem('agrouy-auth-session');
+      } catch {}
+      useAuthStore.setState({ usuario: null, estaAutenticado: false, cargando: false });
     }
   }
 });
@@ -159,6 +186,18 @@ export async function validarSesionActivaSupabase(): Promise<boolean> {
       return false;
     }
 
+    // Verificar si el perfil sigue existiendo en la tabla perfiles de PostgreSQL
+    const perfilBD = await obtenerPerfilUsuarioBD(session.user.id);
+    if (!perfilBD) {
+      await supabase.auth.signOut().catch(() => {});
+      try {
+        localStorage.removeItem('agrouy-auth-session');
+      } catch {}
+      useAuthStore.setState({ usuario: null, estaAutenticado: false, cargando: false });
+      return false;
+    }
+
+    useAuthStore.setState({ usuario: perfilBD, estaAutenticado: true });
     return true;
   } catch {
     localStorage.removeItem('agrouy-auth-session');

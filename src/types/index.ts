@@ -7,9 +7,7 @@ export interface UserProfile {
   nombre: string;
   apellido: string;
   rol: UserRole;
-  empresa_id?: string;
   empresa_ids?: string[];
-  empresas_asignadas_ids?: string[];
   estancias_asignadas_ids: string[];
 }
 

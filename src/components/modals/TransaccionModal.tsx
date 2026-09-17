@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTransaccionForm } from '../../hooks/finanzas/useTransaccionForm';
+import { FileUploadInput } from '../ui/FileUploadInput';
 import {
   X,
   DollarSign,
@@ -10,7 +11,8 @@ import {
   Calendar,
   Layers,
   PieChart,
-  RefreshCw
+  RefreshCw,
+  FileText
 } from 'lucide-react';
 
 interface TransaccionModalProps {
@@ -374,6 +376,38 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
               value={form.descripcionFinanciera}
               onChange={(e) => form.setDescripcionFinanciera(e.target.value)}
               className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl p-3 focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
+            />
+          </fieldset>
+
+          {/* Número de Factura / Remito (Opcional) */}
+          <fieldset className="space-y-1 border-0 p-0 m-0">
+            <div className="flex items-center justify-between">
+              <label htmlFor="nro-factura" className="font-bold text-slate-700 flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-slate-500" />
+                <span>Nro. de Factura / Remito</span>
+              </label>
+              <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md">
+                Opcional
+              </span>
+            </div>
+            <input
+              id="nro-factura"
+              type="text"
+              placeholder="ej: A-0004582"
+              value={form.nroFactura}
+              onChange={(e) => form.setNroFactura(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl p-2.5 focus:ring-2 focus:ring-emerald-500 min-h-[40px]"
+            />
+          </fieldset>
+
+          {/* Subida de Foto o PDF del Comprobante (Opcional) */}
+          <fieldset className="border-0 p-0 m-0">
+            <FileUploadInput
+              label="Foto del Comprobante / Factura"
+              bucket="facturas-comprobantes"
+              value={form.comprobanteUrl}
+              onChange={form.handleComprobanteChange}
+              optional={true}
             />
           </fieldset>
 

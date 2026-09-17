@@ -28,9 +28,11 @@ export const NotaCampoModal: React.FC<NotaCampoModalProps> = ({ isOpen, onClose 
   const [prioridadNota, setPrioridadNota] = useState<'ALTA' | 'MEDIA' | 'BAJA'>('MEDIA');
   const [fecha, setFecha] = useState<string>(hoyISO());
 
+  const [guardando, setGuardando] = useState(false);
+
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!estancias || estancias.length === 0 || !targetEstanciaId) {
       mostrarToast('Sin Campo Seleccionado', 'Debes crear primero al menos un establecimiento antes de registrar notas de campo.', 'ADVERTENCIA');
@@ -42,7 +44,9 @@ export const NotaCampoModal: React.FC<NotaCampoModalProps> = ({ isOpen, onClose 
       return;
     }
 
-    agregarNotaCampo({
+    setGuardando(true);
+
+    const res = await agregarNotaCampo({
       estancia_id: targetEstanciaId,
       fecha,
       titulo: tituloNota.trim(),
@@ -50,6 +54,13 @@ export const NotaCampoModal: React.FC<NotaCampoModalProps> = ({ isOpen, onClose 
       prioridad: prioridadNota,
       creado_por: usuario?.username || usuario?.nombre || 'operario',
     });
+
+    setGuardando(false);
+
+    if (!res.success) {
+      mostrarToast('Error al Guardar Nota', res.error || 'No se pudo guardar la nota en la base de datos.', 'ERROR');
+      return;
+    }
 
     const nombreEstablecimiento = estancias.find(e => e.id === targetEstanciaId)?.nombre || 'Establecimiento';
     mostrarToast(
@@ -202,10 +213,11 @@ export const NotaCampoModal: React.FC<NotaCampoModalProps> = ({ isOpen, onClose 
           {/* Botón de Enviar */}
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-extrabold text-xs py-3.5 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 min-h-[46px] cursor-pointer mt-2"
+            disabled={estancias.length === 0 || guardando}
+            className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs py-3.5 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 min-h-[46px] cursor-pointer mt-2"
           >
             <Check className="w-4 h-4 text-white" />
-            <span>Guardar Nota de Campo</span>
+            <span>{guardando ? 'Guardando en Supabase...' : estancias.length === 0 ? 'Debes agregar un Campo primero' : 'Guardar Nota de Campo'}</span>
           </button>
 
         </form>

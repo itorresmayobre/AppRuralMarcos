@@ -26,6 +26,7 @@ export const PluviometroModal: React.FC<PluviometroModalProps> = ({ isOpen, onCl
   const [milimetros, setMilimetros] = useState<string>('');
   const [fecha, setFecha] = useState<string>(hoyISO());
   const [observacion, setObservacion] = useState<string>('');
+  const [guardando, setGuardando] = useState(false);
 
   if (!isOpen) return null;
 
@@ -33,7 +34,7 @@ export const PluviometroModal: React.FC<PluviometroModalProps> = ({ isOpen, onCl
     setMilimetros(val.toString());
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!estancias || estancias.length === 0 || !targetEstanciaId) {
       mostrarToast('Sin Campo Seleccionado', 'Debes crear primero al menos un establecimiento antes de registrar mediciones de lluvia.', 'ADVERTENCIA');
@@ -47,13 +48,22 @@ export const PluviometroModal: React.FC<PluviometroModalProps> = ({ isOpen, onCl
       return;
     }
 
-    agregarPluviometro({
+    setGuardando(true);
+
+    const res = await agregarPluviometro({
       estancia_id: targetEstanciaId,
       fecha,
       milimetros: valMm,
       observacion,
       registrado_por: usuario?.username || usuario?.nombre || 'operario',
     });
+
+    setGuardando(false);
+
+    if (!res.success) {
+      mostrarToast('Error al Guardar Lluvia', res.error || 'No se pudo guardar la medición en la base de datos.', 'ERROR');
+      return;
+    }
 
     const nombreEstablecimiento = estancias.find(e => e.id === targetEstanciaId)?.nombre || 'Establecimiento';
     mostrarToast(
@@ -203,10 +213,11 @@ export const PluviometroModal: React.FC<PluviometroModalProps> = ({ isOpen, onCl
           {/* Botón de Enviar */}
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-extrabold text-xs py-3.5 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 min-h-[46px] cursor-pointer mt-2"
+            disabled={estancias.length === 0 || guardando}
+            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs py-3.5 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 min-h-[46px] cursor-pointer mt-2"
           >
             <Check className="w-4 h-4 text-white" />
-            <span>Guardar Registro de Lluvia (mm)</span>
+            <span>{guardando ? 'Guardando en Supabase...' : estancias.length === 0 ? 'Debes agregar un Campo primero' : 'Guardar Registro de Lluvia (mm)'}</span>
           </button>
 
         </form>

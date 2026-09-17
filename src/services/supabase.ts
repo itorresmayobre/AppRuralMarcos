@@ -127,7 +127,7 @@ export async function obtenerPerfilUsuarioBD(userId: string): Promise<UserProfil
     apellido: data.apellido,
     rol: data.rol,
     empresa_ids: data.empresa_ids || [],
-    estancias_asignadas_ids: ['TODAS'],
+    estancias_asignadas_ids: data.estancias_asignadas_ids || ['TODAS'],
   };
 }
 
@@ -153,9 +153,9 @@ export async function obtenerUsuariosBD(): Promise<UsuarioEmpleado[]> {
     apellido: item.apellido || '',
     rol: item.rol || 'OPERARIO',
     empresa_ids: item.empresa_ids || [],
-    estancias_asignadas_ids: ['TODAS'],
+    estancias_asignadas_ids: item.estancias_asignadas_ids || ['TODAS'],
     fecha_alta: item.created_at ? item.created_at.substring(0, 10) : '2026-01-01',
-    activo: item.activo !== false,
+    activo: item.activa ?? item.activo ?? true,
   }));
 }
 
@@ -233,7 +233,6 @@ export async function obtenerTransaccionesBD(): Promise<TransaccionFinanciera[]>
     creado_por_usuario: item.creado_por || 'Sistema',
     ejercicio_agricola: item.ejercicio_agricola,
     periodo_mes: item.periodo_mes,
-    naturaleza_costo: item.naturaleza_costo,
     es_prorrateado: item.es_prorrateado,
     distribucion_prorrateo: item.distribucion_prorrateo,
     moneda_original: item.moneda_original,
@@ -261,7 +260,6 @@ export async function guardarTransaccionBD(tx: Omit<TransaccionFinanciera, 'id' 
     fecha: tx.fecha,
     ejercicio_agricola: tx.ejercicio_agricola,
     periodo_mes: tx.periodo_mes,
-    naturaleza_costo: tx.naturaleza_costo,
     es_prorrateado: tx.es_prorrateado || false,
     distribucion_prorrateo: tx.distribucion_prorrateo || null,
     moneda_original: tx.moneda_original,

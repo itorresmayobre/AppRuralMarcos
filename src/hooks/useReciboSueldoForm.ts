@@ -35,7 +35,7 @@ export const useReciboSueldoForm = (onClose: () => void) => {
     const nombreEmpleado = empleadoObj ? `${empleadoObj.nombre} ${empleadoObj.apellido}` : 'Empleado';
 
     agregarRecibo({
-      empresa_id: usuario?.empresa_id || usuario?.empresa_ids?.[0] || 'emp-1',
+      empresa_id: usuario?.empresa_ids?.[0] || 'emp-1',
       usuario_id: usuarioId,
       usuario_nombre: nombreEmpleado,
       periodo_mes: periodoMes,
