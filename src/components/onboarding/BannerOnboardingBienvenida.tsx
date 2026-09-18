@@ -26,23 +26,23 @@ export const BannerOnboardingBienvenida: React.FC<Props> = ({ onAbrirWizard }) =
   }
 
   return (
-    <div className="bg-gradient-to-r from-emerald-900 via-emerald-800 to-slate-900 rounded-2xl p-5 text-white shadow-xl border border-emerald-700/50 mb-4 relative overflow-hidden">
-      {/* Background decoration design */}
-      <div className="absolute -right-8 -bottom-8 w-48 h-48 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
-      <div className="absolute right-20 top-0 w-32 h-32 bg-amber-500/10 rounded-full blur-xl pointer-events-none" />
+    <div className="isolate relative bg-gradient-to-r from-emerald-950 via-emerald-900 to-slate-900 rounded-2xl p-4 sm:p-5 text-white shadow-lg border border-emerald-700/40 mb-4 overflow-hidden">
+      {/* Elementos decorativos vectoriales limpios sin blur GPU pesado que causaba pestaneo en celulares */}
+      <div className="absolute right-0 top-0 -mt-6 -mr-6 w-44 h-44 bg-emerald-500/10 rounded-full pointer-events-none" />
+      <div className="absolute right-28 bottom-0 -mb-10 w-32 h-32 bg-amber-500/10 rounded-full pointer-events-none" />
 
       <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="space-y-2 max-w-2xl">
-          <div className="inline-flex items-center space-x-2 bg-emerald-700/60 text-emerald-200 text-xs px-3 py-1 rounded-full font-medium border border-emerald-500/30">
-            <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+          <div className="inline-flex items-center space-x-2 bg-emerald-800/80 text-emerald-200 text-xs px-3 py-1 rounded-full font-medium border border-emerald-500/30">
+            <Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0" />
             <span>Bienvenido a AgroUY</span>
           </div>
 
-          <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+          <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white">
             ¡Comienza a gestionar tu campo de forma profesional!
           </h2>
 
-          <p className="text-emerald-100 text-xs md:text-sm leading-relaxed">
+          <p className="text-emerald-100/90 text-xs sm:text-sm leading-relaxed">
             {sinEmpresa 
               ? 'Aún no registraste tu primera Empresa o Razón Social. Configura tus datos para habilitar la carga de hacienda, lluvias y finanzas.'
               : 'Ya tienes tu empresa registrada, pero aún no agregaste un Establecimiento (Campo) activo.'
@@ -53,15 +53,15 @@ export const BannerOnboardingBienvenida: React.FC<Props> = ({ onAbrirWizard }) =
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto shrink-0">
           <button
             onClick={onAbrirWizard}
-            className="inline-flex items-center justify-center space-x-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl shadow-lg hover:shadow-amber-500/20 transition-all text-xs md:text-sm"
+            className="inline-flex items-center justify-center space-x-2 bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-slate-950 font-bold px-4 py-2.5 rounded-xl shadow-md transition-all text-xs sm:text-sm cursor-pointer"
           >
-            <PlusCircle className="w-4 h-4 text-slate-950" />
+            <PlusCircle className="w-4 h-4 text-slate-950 shrink-0" />
             <span>Configurar Empresa y Campo</span>
           </button>
         </div>
       </div>
 
-      <div className="mt-4 pt-3 border-t border-emerald-700/40 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-emerald-200">
+      <div className="mt-4 pt-3 border-t border-emerald-800/60 grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs text-emerald-200">
         <div className="flex items-center space-x-2">
           <Building2 className="w-4 h-4 text-emerald-400 shrink-0" />
           <span><strong>Paso 1:</strong> Crea la Razón Social y RUT de tu empresa.</span>
