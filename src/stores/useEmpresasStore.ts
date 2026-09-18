@@ -8,6 +8,7 @@ interface EmpresasState {
   solicitudesRegistro: SolicitudRegistro[];
   empresaSeleccionadaId: string;
   cargando: boolean;
+  inicializado: boolean;
   
   // Acciones
   cargarEmpresasDesdeSupabase: () => Promise<void>;
@@ -24,7 +25,8 @@ export const useEmpresasStore = create<EmpresasState>((set, get) => ({
   empresas: [],
   solicitudesRegistro: [],
   empresaSeleccionadaId: '',
-  cargando: false,
+  cargando: true,
+  inicializado: false,
 
   cargarEmpresasDesdeSupabase: async () => {
     set({ cargando: true });
@@ -38,6 +40,7 @@ export const useEmpresasStore = create<EmpresasState>((set, get) => ({
       solicitudesRegistro: solicitudesBD,
       empresaSeleccionadaId: empresasBD.length > 0 ? empresasBD[0].id : '',
       cargando: false,
+      inicializado: true,
     });
   },
 

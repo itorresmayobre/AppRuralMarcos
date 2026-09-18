@@ -7,6 +7,7 @@ interface EstanciasState {
   estanciaSeleccionadaId: string; // 'TODAS' o el id específico de la estancia
   reglasProrrateo: Record<string, number>; // estancia_id -> porcentaje
   cargando: boolean;
+  inicializado: boolean;
   cargarEstanciasDesdeSupabase: () => Promise<void>;
   seleccionarEstancia: (id: string) => void;
   agregarEstancia: (nueva: Omit<Estancia, 'id' | 'activa'>) => Promise<void>;
@@ -29,7 +30,8 @@ export const useEstanciasStore = create<EstanciasState>((set, get) => ({
   estancias: [],
   estanciaSeleccionadaId: 'TODAS',
   reglasProrrateo: {},
-  cargando: false,
+  cargando: true,
+  inicializado: false,
 
   cargarEstanciasDesdeSupabase: async () => {
     set({ cargando: true });
@@ -38,10 +40,11 @@ export const useEstanciasStore = create<EstanciasState>((set, get) => ({
       set({ 
         estancias: datosBD, 
         reglasProrrateo: calcularInicialProrrateo(datosBD),
-        cargando: false 
+        cargando: false,
+        inicializado: true,
       });
     } else {
-      set({ cargando: false });
+      set({ cargando: false, inicializado: true });
     }
   },
 
