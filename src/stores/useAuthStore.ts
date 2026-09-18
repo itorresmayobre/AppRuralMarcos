@@ -100,16 +100,22 @@ export const useAuthStore = create<AuthState>()(
       cerrarSesion: async () => {
         set({ cargando: true });
 
+        // 1. Enviar revocación de sesión a Supabase y esperar confirmación del servidor
         try {
-          await supabase.auth.signOut();
+          const { error } = await supabase.auth.signOut();
+          if (error) {
+            console.warn('Aviso en signOut de Supabase:', error.message);
+          }
         } catch (e) {
-          console.warn('Aviso en signOut de Supabase:', e);
+          console.warn('Excepción en signOut de Supabase:', e);
         }
 
+        // 2. Una vez confirmado por Supabase (o ante cualquier excepción), purgar la caché local
         try {
           localStorage.removeItem('agrouy-auth-session');
         } catch {}
 
+        // 3. Actualizar el estado del cliente a desautenticado
         set({
           usuario: null,
           estaAutenticado: false,

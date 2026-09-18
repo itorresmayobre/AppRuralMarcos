@@ -10,8 +10,13 @@ interface Props {
 
 export const BannerOnboardingBienvenida: React.FC<Props> = ({ onAbrirWizard }) => {
   const { usuario } = useAuthStore();
-  const { empresas } = useEmpresasStore();
-  const { estancias } = useEstanciasStore();
+  const { empresas, cargando: cargandoEmpresas } = useEmpresasStore();
+  const { estancias, cargando: cargandoEstancias } = useEstanciasStore();
+
+  // No renderizar el banner mientras se están cargando los datos iniciales desde Supabase
+  if (cargandoEmpresas || cargandoEstancias) {
+    return null;
+  }
 
   const sinEmpresa = !usuario?.empresa_ids || usuario.empresa_ids.length === 0 || empresas.length === 0;
   const sinEstancias = estancias.length === 0;
