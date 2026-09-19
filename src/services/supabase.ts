@@ -83,26 +83,14 @@ export async function subirArchivoStorage(
       });
 
     if (error) {
-      console.error(`Error subiendo archivo a ${bucket}:`, error.message);
+      console.warn(`Error subiendo archivo a bucket '${bucket}':`, error.message);
       return null;
     }
 
-    if (bucket === 'fotos-campo') {
-      const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(data.path);
-      return publicData.publicUrl;
-    } else {
-      const { data: signedData, error: signedErr } = await supabase.storage
-        .from(bucket)
-        .createSignedUrl(data.path, 60 * 60 * 24 * 365);
-      
-      if (signedErr) {
-        console.error('Error generando signed URL:', signedErr.message);
-        return null;
-      }
-      return signedData.signedUrl;
-    }
+    const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(data.path);
+    return publicData ? publicData.publicUrl : null;
   } catch (err) {
-    console.error('Excepción al subir archivo a Storage:', err);
+    console.warn('Excepción al subir archivo a Storage:', err);
     return null;
   }
 }
