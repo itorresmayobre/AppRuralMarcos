@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import type { ReciboSueldo } from '../types';
 import { obtenerRecibosSueldoBD, supabase } from '../services/supabase';
+import { useEmpresasStore } from './useEmpresasStore';
+import { useAuthStore } from './useAuthStore';
 
 interface RecibosSueldoState {
   recibos: ReciboSueldo[];
@@ -30,10 +32,13 @@ export const useRecibosSueldoStore = create<RecibosSueldoState>((set, get) => ({
 
   agregarRecibo: async (nuevoData) => {
     let newId = `rec-${Date.now()}`;
+    const empresaIdReal = nuevoData.empresa_id 
+      || useEmpresasStore.getState().empresaSeleccionadaId 
+      || useAuthStore.getState().usuario?.empresa_ids?.[0];
 
     try {
       const payload = {
-        empresa_id: nuevoData.empresa_id || 'emp-1',
+        empresa_id: empresaIdReal,
         usuario_id: nuevoData.usuario_id,
         transaccion_id: nuevoData.transaccion_id || null,
         periodo_mes: nuevoData.periodo_mes,

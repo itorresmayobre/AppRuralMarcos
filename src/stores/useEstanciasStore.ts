@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import type { Estancia } from '../types';
 import { obtenerEstablecimientosBD, supabase } from '../services/supabase';
+import { useEmpresasStore } from './useEmpresasStore';
+import { useAuthStore } from './useAuthStore';
 
 interface EstanciasState {
   estancias: Estancia[];
@@ -54,10 +56,18 @@ export const useEstanciasStore = create<EstanciasState>((set, get) => ({
 
   agregarEstancia: async (nuevaData) => {
     let newId = `est-${Date.now()}`;
+    const empresaIdReal = nuevaData.empresa_id 
+      || useEmpresasStore.getState().empresaSeleccionadaId 
+      || useAuthStore.getState().usuario?.empresa_ids?.[0];
+
+    if (!empresaIdReal || empresaIdReal.startsWith('emp-')) {
+      console.warn('No hay una empresa válida con UUID seleccionada.');
+      return;
+    }
 
     try {
       const payload = {
-        empresa_id: nuevaData.empresa_id || 'emp-1',
+        empresa_id: empresaIdReal,
         nombre: nuevaData.nombre,
         dicose: nuevaData.dicose,
         hectareas_totales: nuevaData.hectareas_totales,
