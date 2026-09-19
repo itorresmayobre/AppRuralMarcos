@@ -411,21 +411,6 @@ export const UsuariosPage: React.FC = () => {
           </header>
 
           <form onSubmit={pass.handleCambiarContrasenia} className="space-y-4 text-xs">
-            <fieldset className="space-y-1 border-0 p-0 m-0">
-              <label htmlFor="pass-actual" className="font-bold text-slate-700 block">Contraseña Actual</label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  id="pass-actual"
-                  type="password"
-                  required
-                  value={pass.passActual}
-                  onChange={(e) => pass.setPassActual(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3 py-2.5 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none min-h-[44px]"
-                />
-              </div>
-            </fieldset>
 
             <fieldset className="space-y-1 border-0 p-0 m-0">
               <label htmlFor="pass-nueva" className="font-bold text-slate-700 block">Nueva Contraseña</label>
