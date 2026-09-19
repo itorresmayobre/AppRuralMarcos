@@ -6,6 +6,7 @@ import { useRecibosSueldoStore } from '../../stores/useRecibosSueldoStore';
 import { useToastStore } from '../../stores/useToastStore';
 import { TransaccionModal } from '../modals/TransaccionModal';
 import { ReciboSueldoModal } from '../modals/ReciboSueldoModal';
+import { VisorComprobanteModal } from '../modals/VisorComprobanteModal';
 import { ConfiguracionConceptosView } from './ConfiguracionConceptosView';
 import { calcularEjercicioYMesAgricola } from '../../utils/periodoAgricola';
 import { formatearFechaUY } from '../../utils/fechas';
@@ -19,6 +20,7 @@ export const FinanzasView: React.FC = () => {
 
   const [modalReciboAbierto, setModalReciboAbierto] = useState(false);
   const [transaccionAEditar, setTransaccionAEditar] = useState<TransaccionFinanciera | null>(null);
+  const [comprobanteAVisitar, setComprobanteAVisitar] = useState<{ url: string; titulo?: string } | null>(null);
 
   useEffect(() => {
     if (!useFinanzasStore.getState().inicializado) {
@@ -160,6 +162,8 @@ export const FinanzasView: React.FC = () => {
                   {finanzas.transacciones.length > 0 ? (
                     finanzas.transacciones.map((t) => {
                       const { ejercicio, mes } = calcularEjercicioYMesAgricola(t.fecha);
+                      const tieneFoto = Boolean(t.comprobante_url && t.comprobante_url.trim().length > 5);
+
                       return (
                         <tr key={t.id}>
                           <td>
@@ -198,19 +202,20 @@ export const FinanzasView: React.FC = () => {
                             {t.monto.toLocaleString('es-UY')}
                           </td>
                           <td className="text-center">
-                            {t.comprobante_url ? (
-                              <a
-                                href={t.comprobante_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2 py-1 rounded-lg transition-all"
-                                title="Ver foto o factura adjunta"
+                            {tieneFoto ? (
+                              <button
+                                type="button"
+                                onClick={() => setComprobanteAVisitar({ url: t.comprobante_url!, titulo: `Comprobante: ${t.descripcion}` })}
+                                className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2 py-1 rounded-lg transition-all cursor-pointer active:scale-95"
+                                title="Ver comprobante en pantalla"
                               >
                                 <Eye className="w-3.5 h-3.5 text-emerald-600" />
                                 <span>Ver</span>
-                              </a>
+                              </button>
                             ) : (
-                              <span className="text-[10px] font-medium text-slate-400">—</span>
+                              <span className="text-[10px] font-medium text-slate-400 opacity-60">
+                                —
+                              </span>
                             )}
                           </td>
                           <td className="text-center">
@@ -265,6 +270,14 @@ export const FinanzasView: React.FC = () => {
         isOpen={modalReciboAbierto}
         onClose={() => setModalReciboAbierto(false)}
       />
+
+      <VisorComprobanteModal
+        isOpen={Boolean(comprobanteAVisitar)}
+        url={comprobanteAVisitar?.url || null}
+        titulo={comprobanteAVisitar?.titulo}
+        onClose={() => setComprobanteAVisitar(null)}
+      />
     </section>
   );
 };
+
