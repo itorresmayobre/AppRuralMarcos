@@ -69,6 +69,11 @@ export const RoleSelector: React.FC = () => {
   const rolActivo = usuario?.rol || 'OPERARIO';
   const detalleActivo = rolesDetalle.find((r) => r.rol === rolActivo) || rolesDetalle[0];
 
+  // Si el usuario no es SUPERADMIN, ocultar el selector de simulación de rol
+  if (usuario?.rol !== 'SUPERADMIN') {
+    return null;
+  }
+
   // Cerrar el dropdown al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

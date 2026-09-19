@@ -5,11 +5,10 @@ import { useRecibosSueldoStore } from '../stores/useRecibosSueldoStore';
 import { useUsuariosStore } from '../stores/useUsuariosStore';
 import { useUsuariosLista } from '../hooks/usuarios/useUsuariosLista';
 import { useCrearEmpleadoForm } from '../hooks/usuarios/useCrearEmpleadoForm';
-import { useCambiarPasswordForm } from '../hooks/usuarios/useCambiarPasswordForm';
 import { CustomSelect } from '../components/ui/CustomSelect';
 import type { UserRole } from '../types';
 import { 
-  Users, ShieldCheck, KeyRound, UserPlus, Lock, X, 
+  Users, ShieldCheck, UserPlus, X, 
   Sparkles, Loader2, RefreshCw, AlertTriangle, User, MapPin, Check, 
   Building2, Crown, ShieldAlert, ToggleLeft, ToggleRight, FileText, ExternalLink
 } from 'lucide-react';
@@ -31,16 +30,30 @@ export const UsuariosPage: React.FC = () => {
   // 2. Hook exclusivo para el modal de alta de empleados
   const alta = useCrearEmpleadoForm();
 
-  // 3. Hook exclusivo para la pestaña de cambio de contraseña
-  const pass = useCambiarPasswordForm();
-
-  // Estado local para pestaña activa
-  const [pestanaActiva, setPestanaActiva] = useState<'MI_CUENTA' | 'EMPLEADOS' | 'PERMISOS_MATRIZ' | 'RECIBOS'>('EMPLEADOS');
+  const isSuperAdmin = usuario?.rol === 'SUPERADMIN';
+  const [pestanaActiva, setPestanaActiva] = useState<'EMPLEADOS' | 'PERMISOS_MATRIZ' | 'RECIBOS'>('EMPLEADOS');
 
   // Filtrar recibos según el rol del usuario conectado
   const misRecibos = lista.esAdmin
     ? recibos
     : recibos.filter((r) => r.usuario_id === usuario?.id || r.usuario_nombre?.includes(usuario?.nombre || ''));
+
+  if (!isSuperAdmin) {
+    return (
+      <main className="p-4 sm:p-6 max-w-lg mx-auto mt-6">
+        <section aria-label="Acceso restringido a administración de usuarios" className="bg-amber-50 border border-amber-200/90 rounded-2xl p-6 sm:p-8 text-center space-y-4 shadow-sm">
+          <ShieldAlert className="w-12 h-12 text-amber-600 mx-auto" />
+          <h2 className="text-lg font-extrabold text-amber-950">Acceso Restringido a Administración de Roles</h2>
+          <p className="text-xs text-amber-800 leading-relaxed">
+            La gestión global de usuarios, roles y matriz de permisos está reservada exclusivamente para el rol de <strong>SuperAdmin</strong>.
+          </p>
+          <p className="text-xs text-amber-700 font-medium">
+            Para cambiar tu clave o editar tu perfil personal, haz clic en tu nombre en la barra superior (Navbar) o menú lateral.
+          </p>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <section aria-label="Administración de Usuarios y Permisos" className="space-y-3">
@@ -104,17 +117,6 @@ export const UsuariosPage: React.FC = () => {
           🛡️ Matriz de Permisos por Rol
         </button>
         )}
-
-        <button
-          onClick={() => setPestanaActiva('MI_CUENTA')}
-          className={`whitespace-nowrap px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all duration-200 min-h-[40px] cursor-pointer hover:shadow-sm ${
-            pestanaActiva === 'MI_CUENTA'
-              ? 'bg-emerald-700 text-white shadow-md shadow-emerald-950/20'
-              : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
-          }`}
-        >
-          🔐 Mi Cuenta & Contraseña
-        </button>
       </nav>
 
       {/* MANEJO DE ERRORES API Y REINTENTO */}
@@ -394,71 +396,6 @@ export const UsuariosPage: React.FC = () => {
               </tbody>
             </table>
           </div>
-        </article>
-      )}
-
-      {/* TAB 4: MI CUENTA Y CAMBIO DE CONTRASEÑA */}
-      {pestanaActiva === 'MI_CUENTA' && (
-        <article className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 max-w-lg shadow-sm space-y-6">
-          <header className="border-b border-slate-100 pb-3">
-            <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
-              <KeyRound className="w-5 h-5 text-emerald-600" />
-              <span>Cambiar Mi Contraseña</span>
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Actualiza tu clave de acceso para mayor seguridad.
-            </p>
-          </header>
-
-          <form onSubmit={pass.handleCambiarContrasenia} className="space-y-4 text-xs">
-
-            <fieldset className="space-y-1 border-0 p-0 m-0">
-              <label htmlFor="pass-nueva" className="font-bold text-slate-700 block">Nueva Contraseña</label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  id="pass-nueva"
-                  type="password"
-                  required
-                  value={pass.passNueva}
-                  onChange={(e) => pass.setPassNueva(e.target.value)}
-                  placeholder="Nueva clave secreta"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3 py-2.5 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none min-h-[44px]"
-                />
-              </div>
-            </fieldset>
-
-            <fieldset className="space-y-1 border-0 p-0 m-0">
-              <label htmlFor="pass-confirmar" className="font-bold text-slate-700 block">Confirmar Nueva Contraseña</label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  id="pass-confirmar"
-                  type="password"
-                  required
-                  value={pass.passConfirmar}
-                  onChange={(e) => pass.setPassConfirmar(e.target.value)}
-                  placeholder="Repetir nueva clave"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3 py-2.5 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none min-h-[44px]"
-                />
-              </div>
-            </fieldset>
-
-            <button
-              type="submit"
-              disabled={pass.cargandoPass}
-              className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold py-3.5 rounded-xl shadow-md hover:shadow-lg active:scale-98 transition-all duration-200 text-xs min-h-[44px] flex items-center justify-center space-x-2 cursor-pointer"
-            >
-              {pass.cargandoPass ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Sincronizando contraseña...</span>
-                </>
-              ) : (
-                <span>Actualizar Contraseña</span>
-              )}
-            </button>
-          </form>
         </article>
       )}
 

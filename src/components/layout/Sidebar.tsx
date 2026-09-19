@@ -64,7 +64,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { path: '/historico', label: 'Histórico Completo', icon: History, allowed: canViewFinances },
     { path: '/parametros', label: 'Parámetros Ganaderos (INIA)', icon: Scale, allowed: isOwnerOrAdmin },
     { path: '/dev', label: 'Consola Desarrollador', icon: Code, allowed: currentRole === 'SUPERADMIN' },
-    { path: '/usuarios', label: 'Roles y Permisos', icon: Users, allowed: isOwnerOrAdmin },
+    { path: '/usuarios', label: 'Roles y Permisos', icon: Users, allowed: currentRole === 'SUPERADMIN' },
   ];
 
   const navContent = (
@@ -83,38 +83,40 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
 
-        {/* Selector de Rol Inline en Móvil */}
-        <div className="lg:hidden bg-slate-950/90 p-3 rounded-2xl border border-slate-800 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-              <Shield className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Simular Rol:</span>
-            </span>
-            <span className="text-[10px] font-black text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-800/80">
-              {usuario?.rol}
-            </span>
-          </div>
+        {/* Selector de Rol Inline en Móvil (Exclusivo SuperAdmin) */}
+        {usuario?.rol === 'SUPERADMIN' && (
+          <div className="lg:hidden bg-slate-950/90 p-3 rounded-2xl border border-slate-800 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Simular Rol:</span>
+              </span>
+              <span className="text-[10px] font-black text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-800/80">
+                {usuario?.rol}
+              </span>
+            </div>
 
-          <div className="grid grid-cols-2 gap-1.5">
-            {rolesDisponibles.map((r) => {
-              const esActivo = currentRole === r.value;
-              return (
-                <button
-                  key={r.value}
-                  type="button"
-                  onClick={() => cambiarRolSimulado(r.value)}
-                  className={`text-[11px] font-bold px-2 py-1.5 rounded-xl border transition-all text-left truncate cursor-pointer ${
-                    esActivo
-                      ? 'bg-emerald-900 text-white border-emerald-500/80 shadow-sm'
-                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
-                  }`}
-                >
-                  {r.label}
-                </button>
-              );
-            })}
+            <div className="grid grid-cols-2 gap-1.5">
+              {rolesDisponibles.map((r) => {
+                const esActivo = currentRole === r.value;
+                return (
+                  <button
+                    key={r.value}
+                    type="button"
+                    onClick={() => cambiarRolSimulado(r.value)}
+                    className={`text-[11px] font-bold px-2 py-1.5 rounded-xl border transition-all text-left truncate cursor-pointer ${
+                      esActivo
+                        ? 'bg-emerald-900 text-white border-emerald-500/80 shadow-sm'
+                        : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                    }`}
+                  >
+                    {r.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
         <header className="px-3 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-800/50 pb-2 mb-3 hidden lg:block">
           Navegación de Campo
@@ -175,10 +177,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
           }}
           className="w-full bg-slate-950 hover:bg-slate-850 text-slate-200 font-bold text-xs py-2.5 px-3 rounded-xl border border-slate-800 hover:border-emerald-500/50 shadow-sm flex items-center justify-between transition-all min-h-[40px] cursor-pointer"
         >
-          <span className="flex items-center gap-2 truncate">
-            <User className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <span className="truncate">{usuario?.nombre} {usuario?.apellido || ''}</span>
-          </span>
+          <div className="flex items-center gap-2 truncate">
+            <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-emerald-800 to-emerald-600 flex items-center justify-center text-[10px] font-bold text-white shadow-sm border border-emerald-400/20 shrink-0">
+              <User className="w-3.5 h-3.5" />
+            </div>
+            <div className="text-left truncate leading-tight">
+              <p className="text-xs font-bold text-slate-200 truncate">{usuario?.nombre} {usuario?.apellido || ''}</p>
+              <p className="text-[9px] text-emerald-400 font-extrabold uppercase tracking-wider">{usuario?.rol}</p>
+            </div>
+          </div>
           <Settings className="w-3.5 h-3.5 text-slate-400 shrink-0" />
         </button>
 

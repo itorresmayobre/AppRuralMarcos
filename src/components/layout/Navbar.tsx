@@ -66,20 +66,25 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <RoleSelector />
               </div>
 
-              {/* Tarjeta de Perfil interactiva */}
+              {/* Tarjeta de Perfil interactiva con Nombre y Rol */}
               <button
                 onClick={() => setModalPerfilAbierto(true)}
                 title="Ver perfil y cambiar contraseña"
                 aria-label="Abrir Perfil y Seguridad"
                 className="flex items-center space-x-2 bg-slate-900 hover:bg-slate-850 px-2.5 py-1.5 rounded-xl border border-slate-800 hover:border-emerald-500/60 transition-all cursor-pointer shadow-sm active:scale-95 min-h-[38px]"
               >
-                <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-emerald-800 to-emerald-600 flex items-center justify-center text-[10px] font-bold text-white shadow-sm border border-emerald-400/20">
+                <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-emerald-800 to-emerald-600 flex items-center justify-center text-[10px] font-bold text-white shadow-sm border border-emerald-400/20 shrink-0">
                   <User className="w-3.5 h-3.5" />
                 </div>
-                <span className="text-xs font-bold text-slate-200 hidden md:inline">
-                  {usuario.nombre} {usuario.apellido || ''}
-                </span>
-                <Settings className="w-3.5 h-3.5 text-slate-400" />
+                <div className="text-left hidden md:block leading-tight">
+                  <p className="text-xs font-bold text-slate-200">
+                    {usuario.nombre} {usuario.apellido || ''}
+                  </p>
+                  <p className="text-[9px] text-emerald-400 font-extrabold uppercase tracking-wider">
+                    {usuario.rol}
+                  </p>
+                </div>
+                <Settings className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               </button>
 
               {/* Botón de Acción de Salir / Cerrar Sesión */}
