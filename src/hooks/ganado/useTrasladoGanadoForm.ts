@@ -26,7 +26,7 @@ const CATEGORIAS_OVINAS: CategoriaOvino[] = [
 
 export const useTrasladoGanadoForm = (onClose: () => void) => {
   const { estancias, obtenerEstanciaActual } = useEstanciasStore();
-  const { registrarMovimiento } = useGanadoStore();
+  const { stockList, registrarMovimiento } = useGanadoStore();
   const { mostrarToast } = useToastStore();
 
   const estanciaActual = obtenerEstanciaActual();
@@ -48,6 +48,12 @@ export const useTrasladoGanadoForm = (onClose: () => void) => {
   // Imputación económica
   const [valorizar, setValorizar] = useState<boolean>(true);
   const [precioCabeza, setPrecioCabeza] = useState<string>('350');
+
+  // Stock disponible en la estancia de origen seleccionada
+  const stockOrigenItem = stockList.find(
+    (s) => s.estancia_id === origenId && s.especie === especie && s.categoria === categoria
+  );
+  const stockDisponible = stockOrigenItem ? stockOrigenItem.cabezas : 0;
 
   const numCabezas = parseInt(cabezas, 10) || 0;
   const numKilosProm = parseFloat(kilosPromedio) || 0;
@@ -74,6 +80,24 @@ export const useTrasladoGanadoForm = (onClose: () => void) => {
 
     if (numCabezas <= 0) {
       mostrarToast('Error de Validación', 'Ingresa una cantidad de cabezas válida mayor a 0.', 'ERROR');
+      return;
+    }
+
+    if (stockDisponible <= 0) {
+      mostrarToast(
+        'Sin Stock Disponible',
+        `El establecimiento de origen no cuenta con stock disponible de ${categoria.replace(/_/g, ' ')}.`,
+        'ERROR'
+      );
+      return;
+    }
+
+    if (numCabezas > stockDisponible) {
+      mostrarToast(
+        'Stock Insuficiente',
+        `No puedes trasladar ${numCabezas} cabezas. El establecimiento de origen solo dispone de ${stockDisponible} cabezas.`,
+        'ERROR'
+      );
       return;
     }
 
@@ -125,10 +149,15 @@ export const useTrasladoGanadoForm = (onClose: () => void) => {
 
   const categoriaOptions: SelectOption[] = (
     especie === 'VACUNO' ? CATEGORIAS_VACUNAS : CATEGORIAS_OVINAS
-  ).map((c) => ({
-    value: c,
-    label: c.replace(/_/g, ' '),
-  }));
+  ).map((c) => {
+    const stockCat = stockList.find(
+      (s) => s.estancia_id === origenId && s.especie === especie && s.categoria === c
+    )?.cabezas || 0;
+    return {
+      value: c,
+      label: `${c.replace(/_/g, ' ')} (${stockCat} cab.)`,
+    };
+  });
 
   // Retorno estructurado en submódulos legibles
   return {
@@ -151,6 +180,7 @@ export const useTrasladoGanadoForm = (onClose: () => void) => {
       kilosPromedio,
       setKilosPromedio,
       categoriaOptions,
+      stockDisponible,
     },
     imputacion: {
       valorizar,

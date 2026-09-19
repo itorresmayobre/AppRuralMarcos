@@ -125,6 +125,11 @@ export const TrasladoGanadoModal: React.FC<TrasladoGanadoModalProps> = ({ isOpen
                 options={form.hacienda.categoriaOptions}
                 onChange={(val) => form.hacienda.setCategoria(val)}
               />
+              <p className={`text-[11px] font-medium mt-1 ${form.hacienda.stockDisponible > 0 ? 'text-slate-500' : 'text-amber-800 font-medium'}`}>
+                {form.hacienda.stockDisponible > 0
+                  ? `Stock disponible en origen: ${form.hacienda.stockDisponible} cab.`
+                  : 'Sin stock disponible de esta categoría en origen.'}
+              </p>
             </div>
           </div>
 
@@ -137,6 +142,7 @@ export const TrasladoGanadoModal: React.FC<TrasladoGanadoModalProps> = ({ isOpen
                 type="number"
                 required
                 min="1"
+                max={form.hacienda.stockDisponible || 1}
                 value={form.hacienda.cabezas}
                 onChange={(e) => form.hacienda.setCabezas(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs sm:text-sm font-black rounded-xl p-2.5 focus:ring-2 focus:ring-emerald-500 min-h-[42px]"
@@ -243,13 +249,15 @@ export const TrasladoGanadoModal: React.FC<TrasladoGanadoModalProps> = ({ isOpen
           {/* Submit */}
           <button
             type="submit"
-            disabled={form.estancias.length < 2}
+            disabled={form.estancias.length < 2 || form.hacienda.stockDisponible <= 0}
             className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs py-3.5 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 min-h-[46px] cursor-pointer mt-2"
           >
             <Check className="w-4 h-4 text-white" />
             <span>
               {form.estancias.length < 2
                 ? 'Se necesitan al menos 2 Campos para trasladar'
+                : form.hacienda.stockDisponible <= 0
+                ? 'Sin Stock Disponible en Origen'
                 : 'Guardar Traslado y Actualizar Stocks'}
             </span>
           </button>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useEstanciasStore } from '../../stores/useEstanciasStore';
 import { useFinanzasStore } from '../../stores/useFinanzasStore';
@@ -24,7 +24,7 @@ import { EvolucionMensualGraficoSVG } from './EvolucionMensualGraficoSVG';
 
 export const EstadisticasView: React.FC = () => {
   const { usuario } = useAuthStore();
-  const { estancias, estanciaSeleccionadaId } = useEstanciasStore();
+  const { estancias, estanciaSeleccionadaId, seleccionarEstancia } = useEstanciasStore();
   const { obtenerTransaccionesEstancia, transacciones } = useFinanzasStore();
   const { catalog } = useConceptosFinancierosStore();
   const { movimientos } = useGanadoStore();
@@ -38,6 +38,13 @@ export const EstadisticasView: React.FC = () => {
   const [monedaFiltro, setMonedaFiltro] = useState<Moneda>('USD');
   const [estanciaFiltroId, setEstanciaFiltroId] = useState<string>(estanciaSeleccionadaId || 'TODAS');
   const [modoAnalisis, setModoAnalisis] = useState<'FINANCIERO_PURO' | 'ECONOMICO_PRODUCTIVO'>('ECONOMICO_PRODUCTIVO');
+
+  // Sincronizar filtro local si cambia la estancia seleccionada globalmente (ej: desde el Navbar)
+  useEffect(() => {
+    if (estanciaSeleccionadaId) {
+      setEstanciaFiltroId(estanciaSeleccionadaId);
+    }
+  }, [estanciaSeleccionadaId]);
 
   // Generación dinámica de opciones de Ejercicio Agrícola (no hardcodeadas)
   const ejercicioOptions: SelectOption[] = useMemo(() => {
@@ -180,7 +187,10 @@ export const EstadisticasView: React.FC = () => {
               label="Establecimiento:"
               value={estanciaFiltroId}
               options={estanciaOptions}
-              onChange={(val) => setEstanciaFiltroId(val)}
+              onChange={(val) => {
+                setEstanciaFiltroId(val);
+                seleccionarEstancia(val);
+              }}
               icon={<MapPin className="w-4 h-4 text-emerald-600" />}
             />
           </div>

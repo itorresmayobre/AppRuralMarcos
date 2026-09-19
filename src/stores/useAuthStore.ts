@@ -12,11 +12,12 @@ interface AuthState {
   cerrarSesion: () => Promise<void>;
   cambiarRolSimulado: (nuevoRol: UserRole) => void;
   actualizarEmpresasUsuario: (empresaIds: string[]) => Promise<void>;
+  actualizarPerfilUsuario: (datos: { nombre: string; apellido?: string }) => Promise<boolean>;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       usuario: null,
       estaAutenticado: false,
       errorAutenticacion: null,
@@ -154,6 +155,42 @@ export const useAuthStore = create<AuthState>()(
 
           return { usuario: usuarioActualizado };
         });
+      },
+
+      actualizarPerfilUsuario: async (datos: { nombre: string; apellido?: string }) => {
+        const usuarioActual = get().usuario;
+        if (!usuarioActual || !usuarioActual.id) return false;
+
+        try {
+          const { error } = await supabase
+            .from('perfiles')
+            .update({
+              nombre: datos.nombre,
+              apellido: datos.apellido || '',
+            })
+            .eq('id', usuarioActual.id);
+
+          if (error) {
+            console.warn('Error al actualizar perfil en Supabase:', error);
+            return false;
+          }
+
+          set((state) => {
+            if (!state.usuario) return state;
+            return {
+              usuario: {
+                ...state.usuario,
+                nombre: datos.nombre,
+                apellido: datos.apellido || '',
+              },
+            };
+          });
+
+          return true;
+        } catch (e) {
+          console.warn('Excepción al actualizar perfil:', e);
+          return false;
+        }
       },
     }),
     {

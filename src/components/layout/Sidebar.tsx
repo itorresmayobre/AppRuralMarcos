@@ -1,40 +1,38 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useEstanciasStore } from '../../stores/useEstanciasStore';
-import type { UserRole } from '../../types';
-import { 
-  LayoutDashboard, 
-  Beef, 
-  DollarSign, 
+import { PerfilModal } from '../modals/PerfilModal';
+import {
+  LayoutDashboard,
+  Building2,
+  Beef,
+  DollarSign,
   BarChart3,
-  History,
-  Users, 
-  MapPin, 
-  X, 
-  Building2, 
-  Shield, 
-  LogOut, 
-  User,
-  UserCheck,
-  Tractor,
-  HardHat,
-  Check,
+  Users,
   Code,
-  Scale
+  MapPin,
+  X,
+  User,
+  LogOut,
+  History,
+  Shield,
+  Scale,
+  Settings
 } from 'lucide-react';
+import type { UserRole } from '../../types';
 
 interface SidebarProps {
   isMobileMenuOpen: boolean;
   onCloseMobileMenu: () => void;
 }
 
-const rolesDisponibles: { rol: UserRole; label: string; icono: React.ElementType }[] = [
-  { rol: 'SUPERADMIN', label: 'Dev / SaaS', icono: Code },
-  { rol: 'ADMIN', label: 'Admin / Owner', icono: UserCheck },
-  { rol: 'CAPATAZ', label: 'Capataz', icono: Tractor },
-  { rol: 'CONTADOR', label: 'Contador', icono: DollarSign },
-  { rol: 'OPERARIO', label: 'Operario', icono: HardHat },
+const rolesDisponibles: { value: UserRole; label: string }[] = [
+  { value: 'SUPERADMIN', label: 'SuperAdmin' },
+  { value: 'ADMIN', label: 'Admin Empresa' },
+  { value: 'PROPIETARIO', label: 'Propietario' },
+  { value: 'CONTADOR', label: 'Contador' },
+  { value: 'OPERARIO', label: 'Operario' },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -44,6 +42,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { usuario, cambiarRolSimulado, cerrarSesion } = useAuthStore();
   const { estancias, obtenerEstanciaActual } = useEstanciasStore();
   const navigate = useNavigate();
+  const [modalPerfilAbierto, setModalPerfilAbierto] = useState(false);
 
   const currentRole = usuario?.rol || 'OPERARIO';
   const isOwnerOrAdmin = currentRole === 'ADMIN' || currentRole === 'PROPIETARIO' || currentRole === 'SUPERADMIN';
@@ -84,7 +83,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
 
-        {/* Selector de Rol Inline en Móvil (100% Limpio y sin popover desbordado) */}
+        {/* Selector de Rol Inline en Móvil */}
         <div className="lg:hidden bg-slate-950/90 p-3 rounded-2xl border border-slate-800 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1">
@@ -98,24 +97,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <div className="grid grid-cols-2 gap-1.5">
             {rolesDisponibles.map((r) => {
-              const Icono = r.icono;
-              const esActivo = usuario?.rol === r.rol;
+              const esActivo = currentRole === r.value;
               return (
                 <button
-                  key={r.rol}
+                  key={r.value}
                   type="button"
-                  onClick={() => cambiarRolSimulado(r.rol)}
-                  className={`p-2 rounded-xl text-[11px] font-bold flex items-center justify-between border transition-all cursor-pointer ${
+                  onClick={() => cambiarRolSimulado(r.value)}
+                  className={`text-[11px] font-bold px-2 py-1.5 rounded-xl border transition-all text-left truncate cursor-pointer ${
                     esActivo
-                      ? 'bg-gradient-to-r from-emerald-950 to-slate-900 border-emerald-500 text-white shadow-sm ring-1 ring-emerald-400/40'
-                      : 'bg-slate-900/90 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                      ? 'bg-emerald-900 text-white border-emerald-500/80 shadow-sm'
+                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
                   }`}
                 >
-                  <div className="flex items-center space-x-1.5 truncate">
-                    <Icono className={`w-3.5 h-3.5 flex-shrink-0 ${esActivo ? 'text-emerald-400' : 'text-slate-400'}`} />
-                    <span className="truncate">{r.label}</span>
-                  </div>
-                  {esActivo && <Check className="w-3 h-3 text-emerald-400 flex-shrink-0" />}
+                  {r.label}
                 </button>
               );
             })}
@@ -126,46 +120,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
           Navegación de Campo
         </header>
 
-        {/* Lista de Navegación */}
-        <ul className="space-y-1.5">
-          {menuItems.filter(i => i.allowed).map((item) => {
-            const Icon = item.icon;
-            return (
-              <li key={item.path}>
+        {/* Enlaces del Menú Principal */}
+        <div className="space-y-1">
+          {menuItems
+            .filter((item) => item.allowed)
+            .map((item) => {
+              const IconComponent = item.icon;
+              return (
                 <NavLink
+                  key={item.path}
                   to={item.path}
                   onClick={onCloseMobileMenu}
                   className={({ isActive }) =>
-                    `w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-sm lg:text-xs font-bold transition-all min-h-[44px] ${
+                    `flex items-center space-x-3 px-3.5 py-2.5 rounded-2xl transition-all duration-150 min-h-[44px] cursor-pointer text-xs font-bold ${
                       isActive
-                        ? 'bg-gradient-to-r from-brand-primary to-brand-dark text-white shadow-md shadow-slate-950/40 border border-brand-accent/30'
-                        : 'text-slate-400 hover:bg-slate-800/70 hover:text-white'
+                        ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-md shadow-emerald-950/40 font-extrabold'
+                        : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/70'
                     }`
                   }
                 >
-                  {({ isActive }) => (
-                    <>
-                      <Icon className={`w-5 h-5 lg:w-4 lg:h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                      <span>{item.label}</span>
-                    </>
-                  )}
+                  <IconComponent className="w-4 h-4 flex-shrink-0" />
+                  <span>{item.label}</span>
                 </NavLink>
-              </li>
-            );
-          })}
-        </ul>
+              );
+            })}
+        </div>
       </nav>
 
-      {/* Info del Establecimiento Seleccionado + Botón Salir */}
-      <div className="space-y-3 mt-4">
-        <section aria-label="Información del Establecimiento Activo" className="p-3.5 bg-slate-950 rounded-xl border border-emerald-900/40 shadow-inner text-xs text-slate-400 space-y-1">
-          <div className="flex items-center space-x-1.5 text-emerald-400 font-bold text-xs">
-            <MapPin className="w-4 h-4 flex-shrink-0" />
+      {/* Pie del Menú con Tarjeta de Campo y Usuario */}
+      <div className="pt-4 border-t border-slate-800 space-y-3">
+        {/* Información de Establecimiento Seleccionado */}
+        <section aria-label="Información del Establecimiento" className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800/90 space-y-1">
+          <div className="flex items-center space-x-2 text-emerald-400 font-extrabold text-xs">
+            <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
             <span className="truncate">
-              {estanciaActual ? estanciaActual.nombre : 'Consolidado Empresa'}
+              {estanciaActual ? estanciaActual.nombre : 'Todos los Campos'}
             </span>
           </div>
-          <p className="text-[11px] text-slate-300 font-medium pl-5.5">
+          <p className="text-[11px] text-slate-400 pl-5.5 font-medium">
             {estanciaActual 
               ? `${estanciaActual.hectareas_totales} Ha • ${estanciaActual.departamento}` 
               : `${estancias.reduce((a, b) => a + b.hectareas_totales, 0)} Ha • ${estancias.length} Establecimientos`}
@@ -175,14 +167,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </p>
         </section>
 
+        {/* Botón Mi Perfil / Contraseña */}
+        <button
+          onClick={() => {
+            setModalPerfilAbierto(true);
+            onCloseMobileMenu();
+          }}
+          className="w-full bg-slate-950 hover:bg-slate-850 text-slate-200 font-bold text-xs py-2.5 px-3 rounded-xl border border-slate-800 hover:border-emerald-500/50 shadow-sm flex items-center justify-between transition-all min-h-[40px] cursor-pointer"
+        >
+          <span className="flex items-center gap-2 truncate">
+            <User className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            <span className="truncate">{usuario?.nombre} {usuario?.apellido || ''}</span>
+          </span>
+          <Settings className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+        </button>
+
         {/* Botón de Cerrar Sesión Prominente en Móvil */}
-        <div className="pt-2 border-t border-slate-800/80 lg:hidden space-y-2">
-          <div className="flex items-center space-x-2 px-1 text-slate-300 text-xs font-bold">
-            <User className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-            <span className="truncate">
-              {usuario?.nombre} {usuario?.apellido || ''} ({usuario?.rol})
-            </span>
-          </div>
+        <div className="pt-1 lg:hidden">
           <button
             onClick={handleCerrarSesion}
             className="w-full bg-gradient-to-r from-rose-950 to-slate-950 hover:from-rose-900 hover:to-rose-950 text-rose-300 hover:text-white font-extrabold text-xs py-3 px-4 rounded-xl border border-rose-800/80 shadow-md flex items-center justify-center space-x-2 transition-all min-h-[44px] cursor-pointer active:scale-95"
@@ -214,6 +215,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </aside>
         </div>
       )}
+
+      {/* Modal de Perfil y Contraseña */}
+      <PerfilModal
+        isOpen={modalPerfilAbierto}
+        onClose={() => setModalPerfilAbierto(false)}
+      />
     </>
   );
 };

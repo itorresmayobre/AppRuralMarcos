@@ -8,6 +8,7 @@ import {
   calcularEjercicioYMesAgricola,
   obtenerEjercicioAgricolaActual
 } from '../utils/periodoAgricola';
+import { obtenerMontoEnMoneda } from '../utils/monedas';
 import { CustomSelect, type SelectOption } from '../components/ui/CustomSelect';
 import type { Moneda } from '../types';
 import {
@@ -48,7 +49,7 @@ export interface ResumenEjercicioHistorico {
 
 export const HistoricoPage: React.FC = () => {
   const { usuario } = useAuthStore();
-  const { estancias, estanciaSeleccionadaId } = useEstanciasStore();
+  const { estancias, estanciaSeleccionadaId, seleccionarEstancia } = useEstanciasStore();
   const { obtenerEmpresaActual } = useEmpresasStore();
   const { obtenerTransaccionesEstancia } = useFinanzasStore();
 
@@ -62,6 +63,13 @@ export const HistoricoPage: React.FC = () => {
   const [estadosBD, setEstadosBD] = useState<Record<string, 'ABIERTO' | 'CERRADO'>>({});
   const [snapshotsBD, setSnapshotsBD] = useState<Record<string, number>>({});
   const [guardandoEstado, setGuardandoEstado] = useState<string | null>(null);
+
+  // Sincronizar filtro local si cambia la estancia seleccionada globalmente (ej: desde el Navbar)
+  useEffect(() => {
+    if (estanciaSeleccionadaId) {
+      setEstanciaFiltroId(estanciaSeleccionadaId);
+    }
+  }, [estanciaSeleccionadaId]);
 
   const ejercicioActual = useMemo(() => obtenerEjercicioAgricolaActual(), []);
 
@@ -144,15 +152,14 @@ export const HistoricoPage: React.FC = () => {
     })),
   ], [estancias]);
 
-  // Transacciones filtradas por Estancia y Moneda
+  // Transacciones de la estancia seleccionada (sin filtrar por moneda, para convertir todas dinámicamente)
   const todasTransacciones = obtenerTransaccionesEstancia(estanciaFiltroId);
-  const transaccionesMoneda = todasTransacciones.filter((t) => t.moneda === monedaFiltro);
 
   // Generar datos agrupados ÚNICAMENTE por Ejercicios Agrícolas con datos reales
   const resumenEjercicios: ResumenEjercicioHistorico[] = useMemo(() => {
     // Extraer solo los ejercicios con fechas reales registradas
     const ejerciciosSet = new Set<string>();
-    transaccionesMoneda.forEach((t) => {
+    todasTransacciones.forEach((t) => {
       if (t.fecha) {
         const { ejercicio } = calcularEjercicioYMesAgricola(t.fecha);
         ejerciciosSet.add(t.ejercicio_agricola || ejercicio);
@@ -166,18 +173,18 @@ export const HistoricoPage: React.FC = () => {
       : (estancias.find((e) => e.id === estanciaFiltroId)?.hectareas_totales || 1);
 
     const listaProcesada: ResumenEjercicioHistorico[] = listaEjerciciosReales.map((ej) => {
-      const transaccionesDelEj = transaccionesMoneda.filter((t) => {
+      const transaccionesDelEj = todasTransacciones.filter((t) => {
         const { ejercicio } = calcularEjercicioYMesAgricola(t.fecha);
         return (t.ejercicio_agricola || ejercicio) === ej;
       });
 
       const ingresos = transaccionesDelEj
         .filter((t) => t.tipo === 'INGRESO')
-        .reduce((sum, t) => sum + t.monto, 0);
+        .reduce((sum, t) => sum + obtenerMontoEnMoneda(t, monedaFiltro), 0);
 
       const egresos = transaccionesDelEj
         .filter((t) => t.tipo === 'EGRESO')
-        .reduce((sum, t) => sum + t.monto, 0);
+        .reduce((sum, t) => sum + obtenerMontoEnMoneda(t, monedaFiltro), 0);
 
       const resultadoNeto = ingresos - egresos;
       const margenPorHectarea = Math.round(resultadoNeto / (hectareasTotales || 1));
@@ -213,7 +220,7 @@ export const HistoricoPage: React.FC = () => {
 
     // Retornar en orden inverso (más reciente arriba)
     return listaProcesada.reverse();
-  }, [transaccionesMoneda, estanciaFiltroId, estancias, ejercicioActual, estadosBD]);
+  }, [todasTransacciones, estanciaFiltroId, estancias, ejercicioActual, estadosBD, monedaFiltro]);
 
   // Totales acumulados históricos
   const acumuladosTotales = useMemo(() => {
@@ -295,7 +302,10 @@ export const HistoricoPage: React.FC = () => {
               label="Filtrar Establecimiento:"
               value={estanciaFiltroId}
               options={estanciaOptions}
-              onChange={(val) => setEstanciaFiltroId(val)}
+              onChange={(val) => {
+                setEstanciaFiltroId(val);
+                seleccionarEstancia(val);
+              }}
               icon={<MapPin className="w-4 h-4 text-emerald-600" />}
             />
           </div>
