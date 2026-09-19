@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTransaccionForm } from '../../hooks/finanzas/useTransaccionForm';
 import { FileUploadInput } from '../ui/FileUploadInput';
+import type { TransaccionFinanciera } from '../../types';
 import {
   X,
   DollarSign,
@@ -19,10 +20,11 @@ import {
 interface TransaccionModalProps {
   isOpen: boolean;
   onClose: () => void;
+  transaccionAEditar?: TransaccionFinanciera | null;
 }
 
-export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onClose }) => {
-  const form = useTransaccionForm(onClose);
+export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onClose, transaccionAEditar }) => {
+  const form = useTransaccionForm(onClose, transaccionAEditar);
 
   if (!isOpen || !form.puedeVerFinanzas) return null;
 

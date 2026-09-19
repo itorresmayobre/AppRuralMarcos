@@ -9,7 +9,8 @@ import { ReciboSueldoModal } from '../modals/ReciboSueldoModal';
 import { ConfiguracionConceptosView } from './ConfiguracionConceptosView';
 import { calcularEjercicioYMesAgricola } from '../../utils/periodoAgricola';
 import { formatearFechaUY } from '../../utils/fechas';
-import { DollarSign, Plus, ArrowUpRight, ArrowDownRight, ShieldAlert, Settings, TableProperties, Trash2, FileText } from 'lucide-react';
+import { DollarSign, Plus, ArrowUpRight, ArrowDownRight, ShieldAlert, Settings, TableProperties, Trash2, FileText, Eye, Pencil } from 'lucide-react';
+import type { TransaccionFinanciera } from '../../types';
 
 export const FinanzasView: React.FC = () => {
   const finanzas = useFinanzasState();
@@ -17,6 +18,7 @@ export const FinanzasView: React.FC = () => {
   const { mostrarToast } = useToastStore();
 
   const [modalReciboAbierto, setModalReciboAbierto] = useState(false);
+  const [transaccionAEditar, setTransaccionAEditar] = useState<TransaccionFinanciera | null>(null);
 
   useEffect(() => {
     if (!useFinanzasStore.getState().inicializado) {
@@ -33,6 +35,16 @@ export const FinanzasView: React.FC = () => {
   const handleEliminarTransaccion = (id: string, desc: string) => {
     eliminarTransaccion(id);
     mostrarToast('Transacción Eliminada', `Se eliminó "${desc}" correctamente.`, 'INFO');
+  };
+
+  const handleEditarTransaccion = (t: TransaccionFinanciera) => {
+    setTransaccionAEditar(t);
+    finanzas.setModalAbierto(true);
+  };
+
+  const handleNuevaTransaccion = () => {
+    setTransaccionAEditar(null);
+    finanzas.setModalAbierto(true);
   };
 
   if (!finanzas.canAccess) {
@@ -118,7 +130,7 @@ export const FinanzasView: React.FC = () => {
                 </button>
                 <button 
                   type="button"
-                  onClick={() => finanzas.setModalAbierto(true)}
+                  onClick={handleNuevaTransaccion}
                   className="inline-flex items-center justify-center space-x-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-3 py-1.5 rounded-lg shadow-sm cursor-pointer transition-all active:scale-95 min-h-[34px]"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -140,7 +152,8 @@ export const FinanzasView: React.FC = () => {
                     <th>Clasificación</th>
                     <th>Descripción</th>
                     <th className="text-right">Monto</th>
-                    <th className="text-center">Acción</th>
+                    <th className="text-center">Comprobante</th>
+                    <th className="text-center">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -185,21 +198,47 @@ export const FinanzasView: React.FC = () => {
                             {t.monto.toLocaleString('es-UY')}
                           </td>
                           <td className="text-center">
-                            <button
-                              type="button"
-                              onClick={() => handleEliminarTransaccion(t.id, t.descripcion)}
-                              className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
-                              title="Eliminar Transacción"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {t.comprobante_url ? (
+                              <a
+                                href={t.comprobante_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2 py-1 rounded-lg transition-all"
+                                title="Ver foto o factura adjunta"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Ver</span>
+                              </a>
+                            ) : (
+                              <span className="text-[10px] font-medium text-slate-400">—</span>
+                            )}
+                          </td>
+                          <td className="text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleEditarTransaccion(t)}
+                                className="p-1 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors cursor-pointer"
+                                title="Editar Transacción"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleEliminarTransaccion(t.id, t.descripcion)}
+                                className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                                title="Eliminar Transacción"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
                     })
                   ) : (
                     <tr>
-                      <td colSpan={7} className="py-6 text-center text-slate-500 text-xs font-medium">
+                      <td colSpan={8} className="py-6 text-center text-slate-500 text-xs font-medium">
                         No hay transacciones registradas para esta estancia.
                       </td>
                     </tr>
@@ -215,7 +254,11 @@ export const FinanzasView: React.FC = () => {
 
       <TransaccionModal
         isOpen={finanzas.modalAbierto}
-        onClose={() => finanzas.setModalAbierto(false)}
+        onClose={() => {
+          finanzas.setModalAbierto(false);
+          setTransaccionAEditar(null);
+        }}
+        transaccionAEditar={transaccionAEditar}
       />
 
       <ReciboSueldoModal

@@ -7,12 +7,15 @@ import { useToastStore } from '../stores/useToastStore';
 import { cotizacionService } from '../services/api/cotizacionService';
 import { calcularEjercicioYMesAgricola } from '../utils/periodoAgricola';
 import { hoyISO } from '../utils/fechas';
-import type { Moneda, TipoTransaccion, DistribucionProrrateoItem } from '../types';
+import type { Moneda, TipoTransaccion, DistribucionProrrateoItem, TransaccionFinanciera } from '../types';
 
-export const useTransaccionForm = (onClose: () => void) => {
+export const useTransaccionForm = (
+  onClose: () => void,
+  transaccionAEditar?: TransaccionFinanciera | null
+) => {
   const { usuario } = useAuthStore();
   const { estancias, obtenerEstanciaActual, reglasProrrateo } = useEstanciasStore();
-  const { agregarTransaccion } = useFinanzasStore();
+  const { agregarTransaccion, actualizarTransaccion } = useFinanzasStore();
   const { catalog, obtenerConceptosActivosPorTipo } = useConceptosFinancierosStore();
   const { mostrarToast } = useToastStore();
 
@@ -43,6 +46,26 @@ export const useTransaccionForm = (onClose: () => void) => {
   const [tipoCambio, setTipoCambio] = useState<number>(40.50);
   const [esProrrateado, setEsProrrateado] = useState<boolean>(false);
   const [customProrrateo, setCustomProrrateo] = useState<Record<string, number>>(reglasProrrateo);
+
+  // Precompletar formulario si se pasa una transacción para editar
+  useEffect(() => {
+    if (transaccionAEditar) {
+      setEstanciaFormId(transaccionAEditar.estancia_id);
+      setTipoFinanciero(transaccionAEditar.tipo);
+      setMoneda(transaccionAEditar.moneda);
+      setMonto(transaccionAEditar.monto.toString());
+      setCategoria(transaccionAEditar.categoria);
+      if (transaccionAEditar.naturaleza_costo) {
+        setNaturalezaCosto(transaccionAEditar.naturaleza_costo);
+      }
+      setDescripcionFinanciera(transaccionAEditar.descripcion || '');
+      setFecha(transaccionAEditar.fecha);
+      setComprobanteUrl(transaccionAEditar.comprobante_url || '');
+      setComprobanteTipo(transaccionAEditar.comprobante_tipo);
+      setNroFactura(transaccionAEditar.nro_factura || '');
+      setEsProrrateado(transaccionAEditar.es_prorrateado || false);
+    }
+  }, [transaccionAEditar]);
 
   // Obtener cotización oficial al cambiar fecha
   useEffect(() => {
@@ -98,7 +121,7 @@ export const useTransaccionForm = (onClose: () => void) => {
       });
     }
 
-    agregarTransaccion({
+    const payload = {
       estancia_id: esProrrateado ? 'TODAS' : estanciaFormId,
       tipo: tipoFinanciero,
       categoria: categoria || 'General',
@@ -119,13 +142,23 @@ export const useTransaccionForm = (onClose: () => void) => {
       comprobante_url: comprobanteUrl || undefined,
       comprobante_tipo: comprobanteTipo,
       nro_factura: nroFactura || undefined,
-    });
+    };
 
-    mostrarToast(
-      'Transacción Guardada',
-      `Se registró el ${tipoFinanciero.toLowerCase()} por ${moneda} ${valMonto.toLocaleString('es-UY')}`,
-      'EXITO'
-    );
+    if (transaccionAEditar?.id) {
+      actualizarTransaccion(transaccionAEditar.id, payload);
+      mostrarToast(
+        'Transacción Actualizada',
+        `Se modificó la transacción por ${moneda} ${valMonto.toLocaleString('es-UY')}`,
+        'EXITO'
+      );
+    } else {
+      agregarTransaccion(payload);
+      mostrarToast(
+        'Transacción Guardada',
+        `Se registró el ${tipoFinanciero.toLowerCase()} por ${moneda} ${valMonto.toLocaleString('es-UY')}`,
+        'EXITO'
+      );
+    }
 
     setComprobanteUrl('');
     setComprobanteTipo(undefined);

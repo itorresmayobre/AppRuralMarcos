@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useEstanciasStore } from '../../stores/useEstanciasStore';
 import { useFinanzasStore } from '../../stores/useFinanzasStore';
@@ -8,12 +8,15 @@ import { useCotizacionDolar } from './useCotizacionDolar';
 import { useProrrateoCampos } from './useProrrateoCampos';
 import { calcularEjercicioYMesAgricola } from '../../utils/periodoAgricola';
 import { hoyISO } from '../../utils/fechas';
-import type { Moneda, TipoTransaccion } from '../../types';
+import type { Moneda, TipoTransaccion, TransaccionFinanciera } from '../../types';
 
-export const useTransaccionForm = (onClose: () => void) => {
+export const useTransaccionForm = (
+  onClose: () => void,
+  transaccionAEditar?: TransaccionFinanciera | null
+) => {
   const { usuario } = useAuthStore();
   const { estancias, obtenerEstanciaActual } = useEstanciasStore();
-  const { agregarTransaccion } = useFinanzasStore();
+  const { agregarTransaccion, actualizarTransaccion } = useFinanzasStore();
   const { catalog, obtenerConceptosActivosPorTipo } = useConceptosFinancierosStore();
   const { mostrarToast } = useToastStore();
 
@@ -43,6 +46,25 @@ export const useTransaccionForm = (onClose: () => void) => {
   // Consumir Sub-Hooks
   const cotizacion = useCotizacionDolar(fecha);
   const prorrateo = useProrrateoCampos();
+
+  useEffect(() => {
+    if (transaccionAEditar) {
+      setEstanciaFormId(transaccionAEditar.estancia_id);
+      setTipoFinanciero(transaccionAEditar.tipo);
+      setMoneda(transaccionAEditar.moneda);
+      setMonto(transaccionAEditar.monto.toString());
+      setCategoria(transaccionAEditar.categoria);
+      if (transaccionAEditar.naturaleza_costo) {
+        setNaturalezaCosto(transaccionAEditar.naturaleza_costo);
+      }
+      setDescripcionFinanciera(transaccionAEditar.descripcion || '');
+      setFecha(transaccionAEditar.fecha);
+      setComprobanteUrl(transaccionAEditar.comprobante_url || '');
+      setComprobanteTipo(transaccionAEditar.comprobante_tipo);
+      setNroFactura(transaccionAEditar.nro_factura || '');
+      prorrateo.setEsProrrateado(transaccionAEditar.es_prorrateado || false);
+    }
+  }, [transaccionAEditar]);
 
   const { ejercicio: ejercicioAgricola, mes: mesAgricola } = calcularEjercicioYMesAgricola(fecha);
 
@@ -83,7 +105,7 @@ export const useTransaccionForm = (onClose: () => void) => {
     const conversion = cotizacion.calcularConversion(valMonto, moneda);
     const distribucion = prorrateo.calcularDistribucion(valMonto);
 
-    agregarTransaccion({
+    const payload = {
       estancia_id: prorrateo.esProrrateado ? 'TODAS' : estanciaFormId,
       tipo: tipoFinanciero,
       categoria: categoria || 'General',
@@ -104,13 +126,23 @@ export const useTransaccionForm = (onClose: () => void) => {
       comprobante_url: comprobanteUrl || undefined,
       comprobante_tipo: comprobanteTipo,
       nro_factura: nroFactura || undefined,
-    });
+    };
 
-    mostrarToast(
-      'Transacción Guardada',
-      `Se registró el ${tipoFinanciero.toLowerCase()} por ${moneda} ${valMonto.toLocaleString('es-UY')}`,
-      'EXITO'
-    );
+    if (transaccionAEditar?.id) {
+      actualizarTransaccion(transaccionAEditar.id, payload);
+      mostrarToast(
+        'Transacción Actualizada',
+        `Se modificó la transacción por ${moneda} ${valMonto.toLocaleString('es-UY')}`,
+        'EXITO'
+      );
+    } else {
+      agregarTransaccion(payload);
+      mostrarToast(
+        'Transacción Guardada',
+        `Se registró el ${tipoFinanciero.toLowerCase()} por ${moneda} ${valMonto.toLocaleString('es-UY')}`,
+        'EXITO'
+      );
+    }
 
     // Limpiar formulario y cerrar
     setMonto('');
