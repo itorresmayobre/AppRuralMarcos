@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Empresa, SolicitudRegistro, PlanSaaS } from '../types';
 import { hoyISO, formatearFechaUY } from '../utils/fechas';
-import { obtenerEmpresasBD, obtenerSolicitudesRegistroBD, supabase } from '../services/supabase';
+import { obtenerEmpresasBD, obtenerSolicitudesRegistroBD } from '../services/supabase';
 
 interface EmpresasState {
   empresas: Empresa[];

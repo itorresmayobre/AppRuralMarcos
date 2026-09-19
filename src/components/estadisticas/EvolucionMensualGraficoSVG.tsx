@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { LineChart, Calendar, ArrowUpRight, ArrowDownRight, Info } from 'lucide-react';
-import { MESES_AGRICOLAS, type MesAgricola } from '../../utils/periodoAgricola';
+import { LineChart, Calendar } from 'lucide-react';
+import { MESES_AGRICOLAS } from '../../utils/periodoAgricola';
 import type { Moneda } from '../../types';
 
 interface Props {

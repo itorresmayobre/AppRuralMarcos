@@ -38,7 +38,7 @@ export const DevConsoleView: React.FC = () => {
   } = useEmpresasStore();
   
   const { estancias } = useEstanciasStore();
-  const { usuarios, vincularEmpresaAUsuario } = useUsuariosStore();
+  const { usuarios } = useUsuariosStore();
   const { transacciones } = useFinanzasStore();
   const { mostrarToast } = useToastStore();
 

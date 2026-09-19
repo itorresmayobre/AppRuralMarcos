@@ -17,13 +17,7 @@ import { ParametrosPage } from './pages/ParametrosPage';
 import { HistoricoPage } from './pages/HistoricoPage';
 
 import { useEstanciasStore } from './stores/useEstanciasStore';
-import { useGanadoStore } from './stores/useGanadoStore';
-import { useFinanzasStore } from './stores/useFinanzasStore';
-import { useRecibosSueldoStore } from './stores/useRecibosSueldoStore';
-import { useConceptosFinancierosStore } from './stores/useConceptosFinancierosStore';
 import { useEmpresasStore } from './stores/useEmpresasStore';
-import { useCampoNotasStore } from './stores/useCampoNotasStore';
-import { useUsuariosStore } from './stores/useUsuariosStore';
 import { validarSesionActivaSupabase } from './stores/useAuthStore';
 
 function MainLayout() {
