@@ -211,6 +211,8 @@ export const PerfilModal: React.FC<PerfilModalProps> = ({ isOpen, onClose }) => 
                 <div className="relative">
                   <input
                     id="nueva-pass-input"
+                    name="new-password"
+                    autoComplete="new-password"
                     type={mostrarPass ? 'text' : 'password'}
                     required
                     minLength={6}
@@ -234,6 +236,8 @@ export const PerfilModal: React.FC<PerfilModalProps> = ({ isOpen, onClose }) => 
                 <label htmlFor="confirmar-pass-input" className="font-bold text-emerald-950 block text-[11px]">Confirmar Nueva Contraseña</label>
                 <input
                   id="confirmar-pass-input"
+                  name="confirm-new-password"
+                  autoComplete="new-password"
                   type={mostrarPass ? 'text' : 'password'}
                   required
                   minLength={6}
