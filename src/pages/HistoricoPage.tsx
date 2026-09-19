@@ -60,11 +60,12 @@ export const HistoricoPage: React.FC = () => {
   const [estanciaFiltroId, setEstanciaFiltroId] = useState<string>(estanciaSeleccionadaId || 'TODAS');
   const [monedaFiltro, setMonedaFiltro] = useState<Moneda>('USD');
   const [estadosBD, setEstadosBD] = useState<Record<string, 'ABIERTO' | 'CERRADO'>>({});
+  const [snapshotsBD, setSnapshotsBD] = useState<Record<string, number>>({});
   const [guardandoEstado, setGuardandoEstado] = useState<string | null>(null);
 
   const ejercicioActual = useMemo(() => obtenerEjercicioAgricolaActual(), []);
 
-  // Cargar estados de ejercicios desde Supabase
+  // Cargar estados y snapshots de ejercicios desde Supabase
   useEffect(() => {
     if (empresaActual?.id) {
       cargarEstadosEjercicios();
@@ -76,41 +77,52 @@ export const HistoricoPage: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('ejercicios_agricolas_estado')
-        .select('ejercicio, estado')
+        .select('ejercicio, estado, carga_ug_ha_snapshot')
         .eq('empresa_id', empresaActual.id);
 
       if (!error && data) {
-        const mapa: Record<string, 'ABIERTO' | 'CERRADO'> = {};
+        const mapaEstados: Record<string, 'ABIERTO' | 'CERRADO'> = {};
+        const mapaSnaps: Record<string, number> = {};
         data.forEach((row) => {
-          mapa[row.ejercicio] = row.estado as 'ABIERTO' | 'CERRADO';
+          mapaEstados[row.ejercicio] = row.estado as 'ABIERTO' | 'CERRADO';
+          if (row.carga_ug_ha_snapshot !== null && row.carga_ug_ha_snapshot !== undefined) {
+            mapaSnaps[row.ejercicio] = Number(row.carga_ug_ha_snapshot);
+          }
         });
-        setEstadosBD(mapa);
+        setEstadosBD(mapaEstados);
+        setSnapshotsBD(mapaSnaps);
       }
     } catch (err) {
       console.error('Error cargando estados de ejercicios:', err);
     }
   };
 
-  const handleToggleEstadoEjercicio = async (ejercicio: string, nuevoEstado: 'ABIERTO' | 'CERRADO') => {
+  const handleToggleEstadoEjercicio = async (ejercicio: string, nuevoEstado: 'ABIERTO' | 'CERRADO', cargaUgActual?: number) => {
     if (!esAdminOPropietario || !empresaActual?.id) return;
     setGuardandoEstado(ejercicio);
 
     try {
+      const payload: Record<string, any> = {
+        empresa_id: empresaActual.id,
+        ejercicio,
+        estado: nuevoEstado,
+        cerrado_por: usuario?.id || null,
+        cerrado_at: new Date().toISOString(),
+      };
+
+      if (nuevoEstado === 'CERRADO' && cargaUgActual != null) {
+        payload.carga_ug_ha_snapshot = cargaUgActual;
+      }
+
       const { error } = await supabase
         .from('ejercicios_agricolas_estado')
-        .upsert(
-          {
-            empresa_id: empresaActual.id,
-            ejercicio,
-            estado: nuevoEstado,
-            cerrado_por: usuario?.id || null,
-            cerrado_at: new Date().toISOString(),
-          },
-          { onConflict: 'empresa_id,ejercicio' }
-        );
+        .upsert(payload, { onConflict: 'empresa_id,ejercicio' });
 
       if (!error) {
         setEstadosBD((prev) => ({ ...prev, [ejercicio]: nuevoEstado }));
+        if (nuevoEstado === 'CERRADO' && cargaUgActual != null) {
+          setSnapshotsBD((prev) => ({ ...prev, [ejercicio]: cargaUgActual }));
+        }
       } else {
         console.error('Error al actualizar estado del ejercicio:', error.message);
       }
@@ -425,19 +437,26 @@ export const HistoricoPage: React.FC = () => {
                       )}
                     </td>
 
-                    {/* Estado Contable */}
+                    {/* Estado Contable y Snapshot de Carga UG */}
                     <td className="py-3 px-3 text-center">
-                      {item.estado === 'CERRADO' ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-900 border border-rose-300">
-                          <Lock className="w-3 h-3 text-rose-700" />
-                          <span>Cerrado</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
-                          <Unlock className="w-3 h-3 text-emerald-700" />
-                          <span>Abierto</span>
-                        </span>
-                      )}
+                      <div className="flex flex-col items-center gap-0.5">
+                        {item.estado === 'CERRADO' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-900 border border-rose-300">
+                            <Lock className="w-3 h-3 text-rose-700" />
+                            <span>Cerrado</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
+                            <Unlock className="w-3 h-3 text-emerald-700" />
+                            <span>Abierto</span>
+                          </span>
+                        )}
+                        {snapshotsBD[item.ejercicio] != null && (
+                          <span className="text-[10px] font-bold text-slate-500 font-mono">
+                            UG Cierre: {snapshotsBD[item.ejercicio].toFixed(2)} / Ha
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     {/* Superficie */}

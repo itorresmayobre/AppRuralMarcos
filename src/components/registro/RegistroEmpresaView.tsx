@@ -4,14 +4,13 @@ import {
   CheckCircle2,
   ArrowLeft,
   Send,
-  ShieldCheck,
-  Wheat,
   Mail,
   User,
   Phone,
   Loader2,
   AlertCircle,
-  IdCard
+  IdCard,
+  Tractor
 } from 'lucide-react';
 import { solicitudRegistroSchema } from '../../schemas/solicitudSchema';
 import { formatearCIUruguaya, formatearTelefonoUruguayo } from '../../utils/validacionesUruguay';
@@ -31,7 +30,6 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
   const [cargandoEnvio, setCargandoEnvio] = useState(false);
   const [enviadoExitoso, setEnviadoExitoso] = useState(false);
   const [errorFormulario, setErrorFormulario] = useState<string | null>(null);
-  const [erroresCampo, setErroresCampo] = useState<Record<string, string>>({});
 
   const handleCIChange = (val: string) => {
     setSolicitanteCI(formatearCIUruguaya(val));
@@ -44,9 +42,8 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorFormulario(null);
-    setErroresCampo({});
 
-    // Validar con Zod antes de enviar
+    // Validar datos antes de enviar
     const validacion = solicitudRegistroSchema.safeParse({
       nombre: solicitanteNombre,
       apellido: solicitanteApellido,
@@ -56,14 +53,7 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
     });
 
     if (!validacion.success) {
-      const mapaErrores: Record<string, string> = {};
-      validacion.error.issues.forEach((issue) => {
-        if (issue.path[0]) {
-          mapaErrores[issue.path[0].toString()] = issue.message;
-        }
-      });
-      setErroresCampo(mapaErrores);
-      setErrorFormulario('Por favor corrige los errores indicados en el formulario.');
+      setErrorFormulario('Por favor completa todos los campos requeridos en el formato correcto.');
       return;
     }
 
@@ -98,34 +88,34 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
 
   if (enviadoExitoso) {
     return (
-      <main className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full text-center space-y-5 border border-slate-200 shadow-2xl animate-fadeIn">
-          <div className="w-16 h-16 bg-amber-100 text-amber-700 rounded-3xl flex items-center justify-center mx-auto border border-amber-200 shadow-sm">
-            <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+      <main className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 sm:p-6 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-950/40 via-slate-950 to-slate-950">
+        <div className="bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-lg w-full text-center space-y-5 border border-slate-800 shadow-2xl animate-fadeIn">
+          <div className="w-16 h-16 bg-emerald-950 text-emerald-400 rounded-3xl flex items-center justify-center mx-auto border border-emerald-800/80 shadow-md">
+            <CheckCircle2 className="w-10 h-10 text-emerald-400" />
           </div>
 
           <div className="space-y-2">
-            <h2 className="text-xl sm:text-2xl font-black text-slate-900">¡Solicitud Registrada!</h2>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
+            <h2 className="text-xl sm:text-2xl font-black text-white">¡Solicitud Registrada!</h2>
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
               Tu solicitud para sumarte a AgroUY fue enviada con éxito.
             </p>
           </div>
 
-          <div className="p-4 bg-amber-50/80 rounded-2xl border border-amber-200/80 text-left text-xs space-y-1.5 font-medium text-amber-950">
-            <p><strong className="text-amber-900">Solicitante:</strong> {solicitanteNombre} {solicitanteApellido}</p>
-            <p><strong className="text-amber-900">C.I.:</strong> {solicitanteCI}</p>
-            <p><strong className="text-amber-900">Email de Contacto:</strong> {solicitanteEmail.toLowerCase()}</p>
-            <p><strong className="text-amber-900">Estado:</strong> PENDIENTE DE APROBACIÓN POR SUPERADMIN</p>
+          <div className="p-4 bg-slate-950/80 rounded-2xl border border-slate-800 text-left text-xs space-y-1.5 font-medium text-slate-300">
+            <p><strong className="text-emerald-400">Solicitante:</strong> {solicitanteNombre} {solicitanteApellido}</p>
+            <p><strong className="text-emerald-400">C.I.:</strong> {solicitanteCI}</p>
+            <p><strong className="text-emerald-400">Email de Contacto:</strong> {solicitanteEmail.toLowerCase()}</p>
+            <p><strong className="text-emerald-400">Estado:</strong> PENDIENTE DE APROBACIÓN POR SUPERADMIN</p>
           </div>
 
-          <p className="text-[11px] text-slate-500 font-medium">
+          <p className="text-[11px] text-slate-400 font-medium">
             El SuperAdministrador revisará tu solicitud y habilitará tu cuenta. Luego ingresarás y configurarás tu empresa y campos.
           </p>
 
           <button
             type="button"
             onClick={handleVolver}
-            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs py-3.5 rounded-xl shadow-md cursor-pointer transition-all active:scale-95"
+            className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-extrabold text-xs py-3.5 rounded-xl shadow-lg cursor-pointer transition-all active:scale-98 min-h-[46px]"
           >
             Volver al Inicio de Sesión
           </button>
@@ -135,164 +125,136 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 flex flex-col justify-center py-8 px-4 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-4 sm:p-6 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-950/40 via-slate-950 to-slate-950">
       
       <div className="max-w-md w-full mx-auto space-y-6">
         
+        {/* Header con Marca AgroUY identico a Login */}
         <header className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center p-3 bg-emerald-950 border border-emerald-700/60 rounded-2xl text-emerald-400 shadow-lg">
-            <Wheat className="w-8 h-8" />
+          <div className="inline-flex bg-gradient-to-br from-emerald-500 to-emerald-700 p-3.5 rounded-2xl text-white shadow-xl shadow-emerald-950/80 border border-emerald-400/30 mb-2">
+            <Tractor className="w-8 h-8" />
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">
-            Solicitar Acceso a AgroUY
+          <h1 className="text-2xl sm:text-3xl font-black tracking-wider bg-gradient-to-r from-white via-slate-100 to-emerald-400 bg-clip-text text-transparent">
+            AGRO<span className="text-emerald-400">UY</span>
           </h1>
-          <p className="text-xs text-slate-400 max-w-sm mx-auto">
-            Registro rápido de cuenta. Configuras tu empresa y campos al ingresar.
+          <p className="text-xs text-slate-400 font-medium">
+            Gestión Rural Uruguay • Solicitud de Alta de Empresa
           </p>
         </header>
 
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-5 sm:p-6 space-y-5">
+        {/* Tarjeta de Formulario Oscura sin blur */}
+        <section aria-label="Formulario de Solicitud de Alta" className="bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-800 shadow-2xl space-y-5">
           
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <button
               type="button"
               onClick={handleVolver}
-              className="inline-flex items-center space-x-1 text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
+              className="inline-flex items-center space-x-2 text-xs font-extrabold text-emerald-400 hover:text-emerald-300 bg-slate-950 hover:bg-slate-800/80 border border-emerald-500/40 hover:border-emerald-500/70 px-3.5 py-2 rounded-xl transition-all duration-200 cursor-pointer shadow-sm active:scale-95 group"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Volver a Login</span>
+              <ArrowLeft className="w-4 h-4 text-emerald-400 group-hover:-translate-x-0.5 transition-transform" />
+              <span>Volver a Iniciar Sesión</span>
             </button>
-
-            <span className="text-[10px] font-bold text-emerald-900 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
-              <span>Validación Zod</span>
-            </span>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-3.5 text-xs" noValidate>
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             
-            {/* Nombre y Apellido del Solicitante Separados en 2 Columnas */}
+            {/* Nombre y Apellido */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="font-bold text-slate-700 block">Nombre *</label>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-300">Nombre *</label>
                 <div className="relative">
-                  <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     required
                     placeholder="ej: Marcos"
                     value={solicitanteNombre}
                     onChange={(e) => setSolicitanteNombre(e.target.value)}
-                    className={`w-full bg-slate-50 border rounded-xl py-2.5 pl-9 pr-3 text-xs font-bold text-slate-900 focus:ring-2 min-h-[40px] ${
-                      erroresCampo.nombre ? 'border-rose-400 ring-rose-400/30' : 'border-slate-300 focus:ring-emerald-500'
-                    }`}
+                    className="w-full bg-slate-50 text-slate-900 font-bold placeholder-slate-400 text-xs rounded-xl pl-10 pr-4 py-3 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
                   />
                 </div>
-                {erroresCampo.nombre && (
-                  <p className="text-[11px] text-rose-600 font-medium pl-1">{erroresCampo.nombre}</p>
-                )}
               </div>
 
-              <div className="space-y-1">
-                <label className="font-bold text-slate-700 block">Apellido *</label>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-300">Apellido *</label>
                 <div className="relative">
-                  <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     required
                     placeholder="ej: Torres"
                     value={solicitanteApellido}
                     onChange={(e) => setSolicitanteApellido(e.target.value)}
-                    className={`w-full bg-slate-50 border rounded-xl py-2.5 pl-9 pr-3 text-xs font-bold text-slate-900 focus:ring-2 min-h-[40px] ${
-                      erroresCampo.apellido ? 'border-rose-400 ring-rose-400/30' : 'border-slate-300 focus:ring-emerald-500'
-                    }`}
+                    className="w-full bg-slate-50 text-slate-900 font-bold placeholder-slate-400 text-xs rounded-xl pl-10 pr-4 py-3 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
                   />
                 </div>
-                {erroresCampo.apellido && (
-                  <p className="text-[11px] text-rose-600 font-medium pl-1">{erroresCampo.apellido}</p>
-                )}
               </div>
             </div>
 
-            {/* Cédula de Identidad (C.I. Uruguaya) */}
-            <div className="space-y-1">
-              <label className="font-bold text-slate-700 block">Cédula de Identidad (C.I.) *</label>
+            {/* Cédula de Identidad */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-300">Cédula de Identidad (C.I.) *</label>
               <div className="relative">
-                <IdCard className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                <IdCard className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   required
                   placeholder="ej: 1.234.567-8"
                   value={solicitanteCI}
                   onChange={(e) => handleCIChange(e.target.value)}
-                  className={`w-full bg-slate-50 border rounded-xl py-2.5 pl-9 pr-3 text-xs font-bold text-slate-900 focus:ring-2 min-h-[40px] ${
-                    erroresCampo.ci ? 'border-rose-400 ring-rose-400/30' : 'border-slate-300 focus:ring-emerald-500'
-                  }`}
+                  className="w-full bg-slate-50 text-slate-900 font-bold placeholder-slate-400 text-xs rounded-xl pl-10 pr-4 py-3 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
                 />
               </div>
-              {erroresCampo.ci && (
-                <p className="text-[11px] text-rose-600 font-medium pl-1">{erroresCampo.ci}</p>
-              )}
             </div>
 
             {/* Email de Contacto */}
-            <div className="space-y-1">
-              <label className="font-bold text-slate-700 block">Email de Contacto *</label>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-300">Correo Electrónico *</label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="email"
                   required
                   placeholder="ej: marcos@estancia.com"
                   value={solicitanteEmail}
                   onChange={(e) => setSolicitanteEmail(e.target.value)}
-                  className={`w-full bg-slate-50 border rounded-xl py-2.5 pl-9 pr-3 text-xs font-bold text-slate-900 focus:ring-2 min-h-[40px] ${
-                    erroresCampo.email ? 'border-rose-400 ring-rose-400/30' : 'border-slate-300 focus:ring-emerald-500'
-                  }`}
+                  className="w-full bg-slate-50 text-slate-900 font-bold placeholder-slate-400 text-xs rounded-xl pl-10 pr-4 py-3 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
                 />
               </div>
-              {erroresCampo.email && (
-                <p className="text-[11px] text-rose-600 font-medium pl-1">{erroresCampo.email}</p>
-              )}
             </div>
 
-            {/* Teléfono de Contacto (Obligatorio) */}
-            <div className="space-y-1">
-              <label className="font-bold text-slate-700 block">Teléfono de Contacto *</label>
+            {/* Teléfono de Contacto */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-300">Teléfono de Contacto *</label>
               <div className="relative">
-                <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="tel"
                   required
                   placeholder="ej: 099 123 456"
                   value={solicitanteTelefono}
                   onChange={(e) => handleTelefonoChange(e.target.value)}
-                  className={`w-full bg-slate-50 border rounded-xl py-2.5 pl-9 pr-3 text-xs font-bold text-slate-900 focus:ring-2 min-h-[40px] ${
-                    erroresCampo.telefono ? 'border-rose-400 ring-rose-400/30' : 'border-slate-300 focus:ring-emerald-500'
-                  }`}
+                  className="w-full bg-slate-50 text-slate-900 font-bold placeholder-slate-400 text-xs rounded-xl pl-10 pr-4 py-3 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
                 />
               </div>
-              {erroresCampo.telefono && (
-                <p className="text-[11px] text-rose-600 font-medium pl-1">{erroresCampo.telefono}</p>
-              )}
             </div>
 
             {errorFormulario && (
-              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-semibold flex items-start space-x-2 animate-fadeIn">
-                <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
-                <span className="leading-snug">{errorFormulario}</span>
+              <div className="p-3.5 bg-rose-950/80 border border-rose-800 text-rose-300 rounded-xl text-xs flex items-center space-x-2.5 animate-fadeIn">
+                <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+                <span>{errorFormulario}</span>
               </div>
             )}
 
             <button
               type="submit"
               disabled={cargandoEnvio}
-              className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-3 rounded-xl shadow-md cursor-pointer transition-all active:scale-95 flex items-center justify-center space-x-2 min-h-[42px] mt-2 disabled:opacity-50"
+              className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-extrabold text-xs py-3.5 rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:scale-98 transition-all duration-200 flex items-center justify-center space-x-2 min-h-[46px] mt-2 cursor-pointer disabled:opacity-50"
             >
               {cargandoEnvio ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin text-white" />
-                  <span>Validando y Enviando...</span>
+                  <span>Enviando Solicitud...</span>
                 </>
               ) : (
                 <>
@@ -302,7 +264,13 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
               )}
             </button>
           </form>
-        </div>
+        </section>
+
+        {/* Footer */}
+        <footer className="text-center text-[11px] text-slate-600">
+          AgroUY • Sistema de Gestión de Empresa Rural en Uruguay
+        </footer>
+
       </div>
     </main>
   );

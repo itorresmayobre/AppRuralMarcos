@@ -557,7 +557,7 @@ export async function aprobarSolicitudRegistroBD(solicitudId: string): Promise<{
     // 6. Enviar correo de bienvenida / contraseña por Supabase Auth
     try {
       await supabase.auth.resetPasswordForEmail(emailTarget, {
-        redirectTo: `${window.location.origin}/login`,
+        redirectTo: `${window.location.origin}/login#type=recovery`,
       });
     } catch (e) {
       console.warn('Aviso enviando correo de bienvenida:', e);

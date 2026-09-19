@@ -11,7 +11,12 @@ export const LoginPage: React.FC = () => {
   const [cargando, setCargando] = useState(false);
 
   // Estados para cuando el usuario ingresa desde el link del correo
-  const [esRecuperacion, setEsRecuperacion] = useState(false);
+  const [esRecuperacion, setEsRecuperacion] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const hash = window.location.hash;
+    const search = window.location.search;
+    return hash.includes('type=recovery') || search.includes('type=recovery') || hash.includes('access_token');
+  });
   const [nuevaContrasenia, setNuevaContrasenia] = useState('');
   const [confirmarContrasenia, setConfirmarContrasenia] = useState('');
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
@@ -23,12 +28,22 @@ export const LoginPage: React.FC = () => {
   const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/dashboard';
 
   useEffect(() => {
-    // Detectar si el usuario aterriza desde un link de invitación/reset de contraseña por correo
+    // Escuchar evento directo PASSWORD_RECOVERY de Supabase Auth
+    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setEsRecuperacion(true);
+      }
+    });
+
     const hash = window.location.hash;
     const search = window.location.search;
-    if (hash.includes('type=recovery') || search.includes('type=recovery')) {
+    if (hash.includes('type=recovery') || search.includes('type=recovery') || hash.includes('access_token')) {
       setEsRecuperacion(true);
     }
+
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
   }, [location]);
 
   useEffect(() => {
@@ -126,13 +141,13 @@ export const LoginPage: React.FC = () => {
                     value={nuevaContrasenia}
                     onChange={(e) => setNuevaContrasenia(e.target.value)}
                     placeholder="Mínimo 6 caracteres"
-                    className="w-full bg-slate-950 text-white placeholder-slate-600 text-xs rounded-xl pl-10 pr-10 py-3 border border-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all min-h-[44px]"
+                    className="w-full bg-slate-50 text-slate-900 font-bold placeholder-slate-400 text-xs rounded-xl pl-10 pr-10 py-3 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all min-h-[44px]"
                   />
                   <button
                     type="button"
                     onClick={() => setMostrarPassword(!mostrarPassword)}
                     tabIndex={-1}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 p-1 rounded-lg transition-colors cursor-pointer"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 p-1 rounded-lg transition-colors cursor-pointer"
                   >
                     {mostrarPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -144,7 +159,7 @@ export const LoginPage: React.FC = () => {
                   Confirmar Contraseña *
                 </label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     id="confirmarPass"
                     type={mostrarPassword ? 'text' : 'password'}
@@ -153,7 +168,7 @@ export const LoginPage: React.FC = () => {
                     value={confirmarContrasenia}
                     onChange={(e) => setConfirmarContrasenia(e.target.value)}
                     placeholder="Repite tu contraseña"
-                    className="w-full bg-slate-950 text-white placeholder-slate-600 text-xs rounded-xl pl-10 pr-4 py-3 border border-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all min-h-[44px]"
+                    className="w-full bg-slate-50 text-slate-900 font-bold placeholder-slate-400 text-xs rounded-xl pl-10 pr-4 py-3 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all min-h-[44px]"
                   />
                 </div>
               </div>
@@ -176,7 +191,7 @@ export const LoginPage: React.FC = () => {
                   Correo Electrónico o Usuario *
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     id="email"
                     type="text"
@@ -184,7 +199,7 @@ export const LoginPage: React.FC = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="usuario@empresa.com"
-                    className="w-full bg-slate-950 text-white placeholder-slate-600 text-xs rounded-xl pl-10 pr-4 py-3 border border-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all min-h-[44px]"
+                    className="w-full bg-slate-50 text-slate-900 font-bold placeholder-slate-400 text-xs rounded-xl pl-10 pr-4 py-3 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all min-h-[44px]"
                   />
                 </div>
               </div>
@@ -195,7 +210,7 @@ export const LoginPage: React.FC = () => {
                   Contraseña *
                 </label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     id="password"
                     type={mostrarPassword ? 'text' : 'password'}
@@ -203,13 +218,13 @@ export const LoginPage: React.FC = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full bg-slate-950 text-white placeholder-slate-600 text-xs rounded-xl pl-10 pr-10 py-3 border border-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all min-h-[44px]"
+                    className="w-full bg-slate-50 text-slate-900 font-bold placeholder-slate-400 text-xs rounded-xl pl-10 pr-10 py-3 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all min-h-[44px]"
                   />
                   <button
                     type="button"
                     onClick={() => setMostrarPassword(!mostrarPassword)}
                     tabIndex={-1}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 p-1 rounded-lg transition-colors cursor-pointer"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 p-1 rounded-lg transition-colors cursor-pointer"
                     title={mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                   >
                     {mostrarPassword ? (
@@ -239,9 +254,10 @@ export const LoginPage: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/registro')}
-            className="text-xs font-bold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer"
+            className="inline-flex items-center space-x-1.5 text-xs font-extrabold text-emerald-400 hover:text-emerald-300 bg-slate-900 hover:bg-slate-800/90 border border-emerald-500/30 hover:border-emerald-500/60 px-4 py-2.5 rounded-xl shadow-md transition-all duration-200 cursor-pointer group active:scale-98"
           >
-            ¿Tu empresa aún no está en AppRural? <strong className="underline">Solicita el alta de tu empresa aquí ➔</strong>
+            <span>¿Tu empresa aún no está en AgroUY?</span>
+            <strong className="underline text-white group-hover:text-emerald-300 font-black">Solicita el alta aquí ➔</strong>
           </button>
         </div>
 
