@@ -223,40 +223,40 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
 
           {/* VISTA 1: TRANSACCIÓN FINANCIERA (INGRESO / EGRESO) */}
           {modoAccion === 'FINANZAS' && puedeVerFinanzas && (
-            <form onSubmit={handleSubmitFinanzas} className="space-y-4">
+            <form onSubmit={handleSubmitFinanzas} className="space-y-4 text-xs">
 
-              {/* Tipo: Ingreso / Egreso */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* Tipo: Ingreso / Egreso con símbolo dinámico ($ / $U) */}
+              <div className="grid grid-cols-2 gap-2.5">
                 <button
                   type="button"
                   onClick={() => { setTipoFinanciero('INGRESO'); setCategoria('VENTA_HACIENDA'); }}
-                  className={`p-3 rounded-2xl border font-extrabold text-xs flex items-center justify-center space-x-2 transition-all cursor-pointer ${
+                  className={`p-2.5 rounded-2xl border font-extrabold text-xs flex items-center justify-center space-x-2 transition-all cursor-pointer ${
                     tipoFinanciero === 'INGRESO'
-                      ? 'bg-emerald-100 border-emerald-500 text-emerald-950 shadow-sm ring-1 ring-emerald-500/50'
+                      ? 'bg-emerald-100 border-emerald-500 text-emerald-950 shadow-sm ring-2 ring-emerald-500/30'
                       : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                   }`}
                 >
-                  <ArrowUpRight className="w-4 h-4 text-emerald-600" />
-                  <span>INGRESO</span>
+                  <ArrowUpRight className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>INGRESO ({moneda === 'USD' ? '$' : '$U'})</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => { setTipoFinanciero('EGRESO'); setCategoria('INSUMOS_VETERINARIOS'); }}
-                  className={`p-3 rounded-2xl border font-extrabold text-xs flex items-center justify-center space-x-2 transition-all cursor-pointer ${
+                  className={`p-2.5 rounded-2xl border font-extrabold text-xs flex items-center justify-center space-x-2 transition-all cursor-pointer ${
                     tipoFinanciero === 'EGRESO'
-                      ? 'bg-rose-100 border-rose-500 text-rose-950 shadow-sm ring-1 ring-rose-500/50'
+                      ? 'bg-rose-100 border-rose-500 text-rose-950 shadow-sm ring-2 ring-rose-500/30'
                       : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                   }`}
                 >
-                  <ArrowDownRight className="w-4 h-4 text-rose-600" />
-                  <span>EGRESO</span>
+                  <ArrowDownRight className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>EGRESO ({moneda === 'USD' ? '$' : '$U'})</span>
                 </button>
               </div>
 
               {/* Custom Moneda Selector (Chips táctiles en vez de select nativo) */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">Moneda de la Operación</label>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-extrabold text-slate-700">Moneda de la Operación</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -285,11 +285,11 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
               </div>
 
               {/* Monto Total */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Monto Total ({moneda})</label>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-extrabold text-slate-700">Monto Total ({moneda})</label>
                 <div className="relative">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-500">
-                    {moneda === 'USD' ? '$ US' : '$ UYU'}
+                    {moneda === 'USD' ? '$' : '$U'}
                   </span>
                   <input
                     type="number"
@@ -298,15 +298,15 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
                     placeholder="ej: 14500"
                     value={monto}
                     onChange={(e) => setMonto(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm font-black rounded-xl pl-16 pr-4 py-3 focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
+                    className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm font-black rounded-xl pl-12 pr-4 py-2.5 focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
                   />
                 </div>
               </div>
 
               {/* Custom Selector de Categoría Rubro (Chips interactivos sin select nativo) */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">Rubro / Categoría Financiera</label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar p-1 border border-slate-200 rounded-2xl bg-slate-50/50">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-extrabold text-slate-700">Rubro / Categoría Financiera</label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto custom-scrollbar p-1.5 border border-slate-200 rounded-2xl bg-slate-50/50">
                   {categoriasDisponibles.map((catKey) => {
                     const info = CATEGORIAS_INFO[catKey];
                     const esSeleccionada = categoria === catKey;
@@ -323,7 +323,7 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
                             : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
                         }`}
                       >
-                        <span className="text-sm">{info.icono}</span>
+                        <span className="text-sm flex-shrink-0">{info.icono}</span>
                         <span className="truncate">{info.label}</span>
                       </button>
                     );
@@ -332,8 +332,8 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
               </div>
 
               {/* Descripción */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Descripción / Detalle de la Operación</label>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700">Descripción / Detalle de la Operación</label>
                 <input
                   type="text"
                   placeholder={tipoFinanciero === 'INGRESO' ? "ej: Venta novillos remate pantalla" : "ej: Compra ración destete y vacuna 1er dosis"}
@@ -345,14 +345,19 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
 
               <button
                 type="submit"
-                className={`w-full text-white font-extrabold text-xs py-3.5 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 min-h-[44px] cursor-pointer ${
+                disabled={estancias.length === 0}
+                className={`w-full text-white font-extrabold text-xs py-3.5 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 min-h-[46px] cursor-pointer mt-2 disabled:opacity-50 disabled:cursor-not-allowed ${
                   tipoFinanciero === 'INGRESO'
                     ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600'
                     : 'bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600'
                 }`}
               >
                 <Check className="w-4 h-4" />
-                <span>{tipoFinanciero === 'INGRESO' ? 'Guardar Ingreso Financiero' : 'Guardar Egreso Financiero'}</span>
+                <span>
+                  {estancias.length === 0 
+                    ? 'Debes agregar un Campo primero' 
+                    : tipoFinanciero === 'INGRESO' ? 'Guardar Ingreso Financiero' : 'Guardar Egreso Financiero'}
+                </span>
               </button>
 
             </form>
@@ -360,16 +365,16 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
 
           {/* VISTA 2: PLUVIÓMETRO */}
           {modoAccion === 'PLUVIOMETRO' && (
-            <form onSubmit={handleSubmitPluviometro} className="space-y-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-xs text-blue-900 flex items-center space-x-3">
-                <CloudDrizzle className="w-6 h-6 text-blue-600 flex-shrink-0" />
+            <form onSubmit={handleSubmitPluviometro} className="space-y-4 text-xs">
+              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3 text-xs text-blue-900 flex items-center space-x-3">
+                <CloudDrizzle className="w-5 h-5 text-blue-600 flex-shrink-0" />
                 <p>
                   Registro diario de precipitaciones en el pluviómetro del establecimiento.
                 </p>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Milímetros Caídos (mm)</label>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-extrabold text-slate-700">Milímetros Caídos (mm)</label>
                 <div className="relative">
                   <input
                     type="number"
@@ -380,12 +385,12 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
                     onChange={(e) => setMilimetros(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm font-extrabold rounded-xl p-3 pr-12 focus:ring-2 focus:ring-blue-500 min-h-[44px]"
                   />
-                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-500">mm</span>
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-500 bg-slate-200 px-2 py-0.5 rounded-md">mm</span>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Observación del Terreno / Pastura</label>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700">Observación del Terreno / Pastura</label>
                 <textarea
                   rows={3}
                   placeholder="ej: Lluvia mansa y pareja, recargó tajamares del potrero 2."
@@ -397,19 +402,20 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
 
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-extrabold text-xs py-3.5 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 min-h-[44px] cursor-pointer"
+                disabled={estancias.length === 0}
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs py-3.5 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 min-h-[46px] cursor-pointer mt-2"
               >
                 <Check className="w-4 h-4" />
-                <span>Registrar Pluviómetro (mm)</span>
+                <span>{estancias.length === 0 ? 'Debes agregar un Campo primero' : 'Registrar Pluviómetro (mm)'}</span>
               </button>
             </form>
           )}
 
           {/* VISTA 3: NOTA DE CAMPO */}
           {modoAccion === 'NOTA' && (
-            <form onSubmit={handleSubmitNota} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Título del Registro / Alerta</label>
+            <form onSubmit={handleSubmitNota} className="space-y-4 text-xs">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700">Título del Registro / Alerta</label>
                 <input
                   type="text"
                   required
@@ -421,8 +427,8 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
               </div>
 
               {/* Custom Selector de Prioridad (Chips táctiles en vez de select) */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Nivel de Nivel / Prioridad</label>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700">Nivel de Prioridad</label>
                 <div className="grid grid-cols-3 gap-2">
                   {(['BAJA', 'MEDIA', 'ALTA'] as const).map((p) => (
                     <button
@@ -445,8 +451,8 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Detalle de la Observación</label>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700">Detalle de la Observación</label>
                 <textarea
                   rows={3}
                   placeholder="Escribe aquí los detalles para el capataz o equipo..."
@@ -458,10 +464,11 @@ export const AccionesRapidasModal: React.FC<AccionesRapidasModalProps> = ({
 
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white font-extrabold text-xs py-3.5 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 min-h-[44px] cursor-pointer"
+                disabled={estancias.length === 0}
+                className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs py-3.5 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 min-h-[46px] cursor-pointer mt-2"
               >
                 <Check className="w-4 h-4" />
-                <span>Guardar Nota de Campo</span>
+                <span>{estancias.length === 0 ? 'Debes agregar un Campo primero' : 'Guardar Nota de Campo'}</span>
               </button>
             </form>
           )}

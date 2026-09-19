@@ -7,6 +7,7 @@ interface UsuariosState {
   usuarios: UsuarioEmpleado[];
   matrizPermisos: Record<UserRole, PermisoRol>;
   cargando: boolean;
+  inicializado: boolean;
   cargarUsuariosDesdeSupabase: () => Promise<void>;
   crearUsuario: (nuevo: Omit<UsuarioEmpleado, 'id' | 'fecha_alta' | 'activo' | 'username'>) => void;
   actualizarRolUsuario: (usuarioId: string, nuevoRol: UserRole) => Promise<void>;
@@ -89,11 +90,12 @@ export const useUsuariosStore = create<UsuariosState>((set, get) => ({
   usuarios: [],
   matrizPermisos: matrizPermisosInicial,
   cargando: false,
+  inicializado: false,
 
   cargarUsuariosDesdeSupabase: async () => {
     set({ cargando: true });
     const datosBD = await obtenerUsuariosBD();
-    set({ usuarios: datosBD, cargando: false });
+    set({ usuarios: datosBD || [], cargando: false, inicializado: true });
   },
 
   crearUsuario: (data) => {

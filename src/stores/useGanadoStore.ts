@@ -7,6 +7,7 @@ interface GanadoState {
   stockList: StockGanadero[];
   movimientos: MovimientoGanado[];
   cargando: boolean;
+  inicializado: boolean;
   cargarGanadoDesdeSupabase: () => Promise<void>;
   registrarMovimiento: (mov: Omit<MovimientoGanado, 'id' | 'creado_por_usuario'>) => Promise<void>;
   obtenerStockEstancia: (estanciaId: string) => StockGanadero[];
@@ -19,15 +20,16 @@ export const useGanadoStore = create<GanadoState>()(
       stockList: [],
       movimientos: [],
       cargando: false,
+      inicializado: false,
 
       cargarGanadoDesdeSupabase: async () => {
         set({ cargando: true });
         const datosStock = await obtenerStockGanaderoBD();
-        if (datosStock && datosStock.length > 0) {
-          set({ stockList: datosStock, cargando: false });
-        } else {
-          set({ cargando: false });
-        }
+        set({
+          stockList: datosStock || [],
+          cargando: false,
+          inicializado: true,
+        });
       },
 
       registrarMovimiento: async (movData) => {

@@ -24,6 +24,7 @@ interface CampoNotasState {
   registrosPluviometro: RegistroPluviometro[];
   notasCampo: NotaCampo[];
   cargando: boolean;
+  inicializado: boolean;
   cargarNotasYPluviometroDesdeSupabase: () => Promise<void>;
   agregarPluviometro: (registro: Omit<RegistroPluviometro, 'id'>) => Promise<{ success: boolean; error?: string }>;
   agregarNotaCampo: (nota: Omit<NotaCampo, 'id'>) => Promise<{ success: boolean; error?: string }>;
@@ -35,6 +36,7 @@ export const useCampoNotasStore = create<CampoNotasState>((set, get) => ({
   registrosPluviometro: [],
   notasCampo: [],
   cargando: false,
+  inicializado: false,
 
   cargarNotasYPluviometroDesdeSupabase: async () => {
     set({ cargando: true });
@@ -44,9 +46,10 @@ export const useCampoNotasStore = create<CampoNotasState>((set, get) => ({
     ]);
 
     set({
-      registrosPluviometro: pluviometroBD,
-      notasCampo: notasBD,
+      registrosPluviometro: pluviometroBD || [],
+      notasCampo: notasBD || [],
       cargando: false,
+      inicializado: true,
     });
   },
 

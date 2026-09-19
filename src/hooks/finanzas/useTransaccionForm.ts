@@ -63,6 +63,16 @@ export const useTransaccionForm = (onClose: () => void) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!estancias || estancias.length === 0 || (!prorrateo.esProrrateado && !estanciaFormId)) {
+      mostrarToast(
+        'Sin Campo Seleccionado',
+        'Debes crear primero al menos un establecimiento antes de registrar transacciones.',
+        'ADVERTENCIA'
+      );
+      return;
+    }
+
     const valMonto = parseFloat(monto);
 
     if (isNaN(valMonto) || valMonto <= 0) {

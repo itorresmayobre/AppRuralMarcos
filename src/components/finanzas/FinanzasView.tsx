@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFinanzasState } from '../../hooks/useFinanzasState';
 import { useFinanzasStore } from '../../stores/useFinanzasStore';
+import { useConceptosFinancierosStore } from '../../stores/useConceptosFinancierosStore';
+import { useRecibosSueldoStore } from '../../stores/useRecibosSueldoStore';
 import { useToastStore } from '../../stores/useToastStore';
 import { TransaccionModal } from '../modals/TransaccionModal';
 import { ReciboSueldoModal } from '../modals/ReciboSueldoModal';
@@ -15,6 +17,18 @@ export const FinanzasView: React.FC = () => {
   const { mostrarToast } = useToastStore();
 
   const [modalReciboAbierto, setModalReciboAbierto] = useState(false);
+
+  useEffect(() => {
+    if (!useFinanzasStore.getState().inicializado) {
+      useFinanzasStore.getState().cargarTransaccionesDesdeSupabase();
+    }
+    if (!useConceptosFinancierosStore.getState().inicializado) {
+      useConceptosFinancierosStore.getState().cargarConceptosDesdeSupabase();
+    }
+    if (!useRecibosSueldoStore.getState().inicializado) {
+      useRecibosSueldoStore.getState().cargarRecibosDesdeSupabase();
+    }
+  }, []);
 
   const handleEliminarTransaccion = (id: string, desc: string) => {
     eliminarTransaccion(id);

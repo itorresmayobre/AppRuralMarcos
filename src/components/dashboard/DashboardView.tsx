@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useEstanciasStore } from '../../stores/useEstanciasStore';
 import { useGanadoStore } from '../../stores/useGanadoStore';
 import { useFinanzasStore } from '../../stores/useFinanzasStore';
+import { useCampoNotasStore } from '../../stores/useCampoNotasStore';
 import { StatCard } from './StatCard';
 import { AccionesRapidasBar } from './AccionesRapidasBar';
 import { FiltroEstablecimientosRapido } from './FiltroEstablecimientosRapido';
@@ -18,6 +19,18 @@ export const DashboardView: React.FC = () => {
   const { obtenerTransaccionesEstancia } = useFinanzasStore();
 
   const [mostrarOnboardingModal, setMostrarOnboardingModal] = useState(false);
+
+  useEffect(() => {
+    if (!useGanadoStore.getState().inicializado) {
+      useGanadoStore.getState().cargarGanadoDesdeSupabase();
+    }
+    if (!useFinanzasStore.getState().inicializado) {
+      useFinanzasStore.getState().cargarTransaccionesDesdeSupabase();
+    }
+    if (!useCampoNotasStore.getState().inicializado) {
+      useCampoNotasStore.getState().cargarNotasYPluviometroDesdeSupabase();
+    }
+  }, []);
 
   const currentRole = usuario?.rol || 'OPERARIO';
   const estanciaActual = obtenerEstanciaActual();

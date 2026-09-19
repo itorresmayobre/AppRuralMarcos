@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useEstanciasStore } from '../stores/useEstanciasStore';
 import { useRecibosSueldoStore } from '../stores/useRecibosSueldoStore';
+import { useUsuariosStore } from '../stores/useUsuariosStore';
 import { useUsuariosLista } from '../hooks/usuarios/useUsuariosLista';
 import { useCrearEmpleadoForm } from '../hooks/usuarios/useCrearEmpleadoForm';
 import { useCambiarPasswordForm } from '../hooks/usuarios/useCambiarPasswordForm';
@@ -17,6 +18,12 @@ export const UsuariosPage: React.FC = () => {
   const { usuario } = useAuthStore();
   const { estancias } = useEstanciasStore();
   const { recibos } = useRecibosSueldoStore();
+
+  useEffect(() => {
+    if (!useUsuariosStore.getState().inicializado) {
+      useUsuariosStore.getState().cargarUsuariosDesdeSupabase();
+    }
+  }, []);
 
   // 1. Hook para lista de empleados y matriz de permisos
   const lista = useUsuariosLista();

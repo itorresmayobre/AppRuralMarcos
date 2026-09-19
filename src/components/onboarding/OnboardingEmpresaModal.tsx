@@ -94,6 +94,7 @@ export const OnboardingEmpresaModal: React.FC<Props> = ({ isOpen, onClose, onSuc
     try {
       // 1. Guardar Empresa en Supabase
       const payloadEmpresa = {
+        propietario_usuario_id: usuario?.id || null,
         razon_social: razonSocial.trim(),
         nombre_fantasia: nombreFantasia.trim() || razonSocial.trim(),
         rut: rut.trim() || '210000000000',

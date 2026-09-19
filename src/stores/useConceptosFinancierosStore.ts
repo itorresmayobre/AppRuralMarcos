@@ -7,6 +7,7 @@ interface ConceptosStoreState {
   catalog: ConceptoFinanciero[];
   conceptosActivosIds: string[];
   cargando: boolean;
+  inicializado: boolean;
   cargarConceptosDesdeSupabase: () => Promise<void>;
   toggleConcepto: (conceptoId: string) => void;
   activarTodosGrupo: (grupo: string, activar: boolean) => void;
@@ -23,6 +24,7 @@ export const useConceptosFinancierosStore = create<ConceptosStoreState>()(
       catalog: [],
       conceptosActivosIds: [],
       cargando: false,
+      inicializado: false,
 
       cargarConceptosDesdeSupabase: async () => {
         set({ cargando: true });
@@ -31,6 +33,7 @@ export const useConceptosFinancierosStore = create<ConceptosStoreState>()(
           catalog: datosBD || [],
           conceptosActivosIds: (datosBD || []).map((c) => c.id),
           cargando: false,
+          inicializado: true,
         });
       },
 

@@ -5,6 +5,7 @@ import { obtenerTransaccionesBD, guardarTransaccionBD, supabase } from '../servi
 interface FinanzasState {
   transacciones: TransaccionFinanciera[];
   cargando: boolean;
+  inicializado: boolean;
   cargarTransaccionesDesdeSupabase: () => Promise<void>;
   agregarTransaccion: (nueva: Omit<TransaccionFinanciera, 'id' | 'creado_por_usuario'>) => Promise<void>;
   actualizarTransaccion: (id: string, datos: Partial<TransaccionFinanciera>) => Promise<void>;
@@ -15,15 +16,16 @@ interface FinanzasState {
 export const useFinanzasStore = create<FinanzasState>((set, get) => ({
   transacciones: [],
   cargando: false,
+  inicializado: false,
 
   cargarTransaccionesDesdeSupabase: async () => {
     set({ cargando: true });
     const datosBD = await obtenerTransaccionesBD();
-    if (datosBD && datosBD.length > 0) {
-      set({ transacciones: datosBD, cargando: false });
-    } else {
-      set({ cargando: false });
-    }
+    set({
+      transacciones: datosBD || [],
+      cargando: false,
+      inicializado: true,
+    });
   },
 
   agregarTransaccion: async (nuevaData) => {

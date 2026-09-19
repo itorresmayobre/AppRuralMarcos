@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { useEstanciasStore } from '../stores/useEstanciasStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { CustomSelect } from '../components/ui/CustomSelect';
+import { CoeficientesUGModal } from '../components/ganado/CoeficientesUGModal';
 import type { TipoTenencia } from '../types';
-import { MapPin, Plus, CheckCircle2, Building2, X } from 'lucide-react';
+import { MapPin, Plus, CheckCircle2, Building2, X, Scale } from 'lucide-react';
 
 export const EstanciasPage: React.FC = () => {
   const { estancias, agregarEstancia, seleccionarEstancia, estanciaSeleccionadaId } = useEstanciasStore();
@@ -11,6 +12,7 @@ export const EstanciasPage: React.FC = () => {
   const esAdmin = usuario?.rol === 'ADMIN' || usuario?.rol === 'PROPIETARIO' || usuario?.rol === 'SUPERADMIN';
 
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [mostrarModalUG, setMostrarModalUG] = useState(false);
   const [nombre, setNombre] = useState('');
   const [dicose, setDicose] = useState('');
   const [hectareasTotales, setHectareasTotales] = useState(500);
@@ -56,15 +58,26 @@ export const EstanciasPage: React.FC = () => {
           </p>
         </div>
 
-        {esAdmin && (
+        <div className="flex flex-col sm:flex-row items-center gap-2">
           <button
-            onClick={() => setMostrarModal(true)}
-            className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold text-xs px-4 py-3 rounded-xl shadow-md min-h-[44px] cursor-pointer hover:shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all"
+            onClick={() => setMostrarModalUG(true)}
+            className="w-full sm:w-auto inline-flex items-center justify-center space-x-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs px-3.5 py-3 rounded-xl border border-slate-300 min-h-[44px] cursor-pointer transition-all"
+            title="Ver / Configurar coeficientes de Carga Animal (INIA)"
           >
-            <Plus className="w-4 h-4" />
-            <span>Registrar Nuevo Establecimiento</span>
+            <Scale className="w-4 h-4 text-emerald-700" />
+            <span>Coeficientes UG (INIA)</span>
           </button>
-        )}
+
+          {esAdmin && (
+            <button
+              onClick={() => setMostrarModal(true)}
+              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold text-xs px-4 py-3 rounded-xl shadow-md min-h-[44px] cursor-pointer hover:shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Registrar Nuevo Establecimiento</span>
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Resumen Consolidado de Hectáreas */}
@@ -250,6 +263,12 @@ export const EstanciasPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de Consulta y Edición de Coeficientes UG (INIA) */}
+      <CoeficientesUGModal
+        isOpen={mostrarModalUG}
+        onClose={() => setMostrarModalUG(false)}
+      />
 
     </section>
   );

@@ -132,6 +132,7 @@ export const useTrasladoGanadoForm = (onClose: () => void) => {
 
   // Retorno estructurado en submódulos legibles
   return {
+    estancias,
     ubicacion: {
       origenId,
       setOrigenId,

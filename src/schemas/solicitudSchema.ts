@@ -1,11 +1,25 @@
 import { z } from 'zod';
+import { validarCIUruguaya, validarTelefonoUruguayo } from '../utils/validacionesUruguay';
 
 export const solicitudRegistroSchema = z.object({
-  nombreContacto: z
+  nombre: z
     .string()
-    .min(3, { message: 'El nombre y apellido debe tener al menos 3 caracteres.' })
-    .max(100, { message: 'El nombre es demasiado largo.' })
+    .min(2, { message: 'El nombre debe tener al menos 2 caracteres.' })
+    .max(50, { message: 'El nombre es demasiado largo.' })
     .refine((val) => val.trim().length > 0, { message: 'El nombre no puede estar vacío.' }),
+
+  apellido: z
+    .string()
+    .min(2, { message: 'El apellido debe tener al menos 2 caracteres.' })
+    .max(50, { message: 'El apellido es demasiado largo.' })
+    .refine((val) => val.trim().length > 0, { message: 'El apellido no puede estar vacío.' }),
+
+  ci: z
+    .string()
+    .min(1, { message: 'La Cédula de Identidad (C.I.) es obligatoria.' })
+    .refine((val) => validarCIUruguaya(val), {
+      message: 'La C.I. ingresada no es válida (verifica los dígitos y el dígito verificador).',
+    }),
 
   email: z
     .string()
@@ -15,9 +29,9 @@ export const solicitudRegistroSchema = z.object({
 
   telefono: z
     .string()
-    .optional()
-    .refine((val) => !val || val.replace(/\D/g, '').length >= 7, {
-      message: 'El teléfono debe tener al menos 7 dígitos numéricos.',
+    .min(1, { message: 'El teléfono de contacto es obligatorio.' })
+    .refine((val) => validarTelefonoUruguayo(val), {
+      message: 'Ingresa un teléfono uruguayo válido (Celular ej: 099 123 456 / Fijo ej: 4532 1234).',
     }),
 });
 

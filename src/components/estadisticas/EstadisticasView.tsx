@@ -19,6 +19,7 @@ import { EstructuraCostosCard } from './EstructuraCostosCard';
 import { RankingGruposCard, type GrupoRankingItem } from './RankingGruposCard';
 import { MatrizRentabilidadTabla } from './MatrizRentabilidadTabla';
 import { EvolucionMensualGrid } from './EvolucionMensualGrid';
+import { EvolucionMensualGraficoSVG } from './EvolucionMensualGraficoSVG';
 
 export const EstadisticasView: React.FC = () => {
   const { usuario } = useAuthStore();
@@ -262,10 +263,17 @@ export const EstadisticasView: React.FC = () => {
         setModoAnalisis={setModoAnalisis}
       />
 
-      {/* Grid 3: Evolución Mensual del Ejercicio Agrícola (Julio a Junio) */}
+      {/* Grid 3: Evolución Mensual del Ejercicio Agrícola (Julio a Junio) - Valores Mes a Mes */}
       <EvolucionMensualGrid
         ejercicioFiltro={ejercicioFiltro}
         evolucionMensualMap={evolucionMensualMap}
+      />
+
+      {/* Gráfica de Líneas Comparativas de la Evolución Mensual */}
+      <EvolucionMensualGraficoSVG
+        ejercicioFiltro={ejercicioFiltro}
+        evolucionMensualMap={evolucionMensualMap}
+        monedaFiltro={monedaFiltro}
       />
     </div>
   );

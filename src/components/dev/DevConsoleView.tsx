@@ -80,12 +80,21 @@ export const DevConsoleView: React.FC = () => {
     .filter((t) => t.moneda === 'USD')
     .reduce((a, b) => a + b.monto, 0);
 
-  const handleAprobar = async (id: string, nombre: string, email: string, solicitanteNombre: string) => {
-    const nuevaEmpresaId = await aprobarSolicitud(id);
-    if (nuevaEmpresaId) {
-      vincularEmpresaAUsuario(email, nuevaEmpresaId, solicitanteNombre);
+  const handleAprobar = async (id: string, nombre: string, email: string) => {
+    const res = await aprobarSolicitud(id);
+    if (res?.exito) {
+      mostrarToast(
+        'Solicitud Aprobada con Éxito',
+        `Se aprobó el alta para "${nombre}" (${email}). El usuario y su perfil han sido creados en Supabase.`,
+        'EXITO'
+      );
+    } else {
+      mostrarToast(
+        'Error al Aprobar Solicitud',
+        res?.error || 'Ocurrió un error al procesar la aprobación en Supabase.',
+        'ERROR'
+      );
     }
-    mostrarToast('Empresa Aprobada y Vinculada', `Se dio de alta "${nombre}" y quedó asignada al usuario ${email}.`, 'EXITO');
   };
 
   const handleRechazar = (id: string, nombre: string) => {
@@ -303,7 +312,7 @@ export const DevConsoleView: React.FC = () => {
                     <div className="flex items-center space-x-2 self-start sm:self-auto">
                       <button
                         type="button"
-                        onClick={() => handleAprobar(sol.id, sol.nombre_empresa || 'Empresa', sol.solicitante_email || sol.email, sol.solicitante_nombre || sol.nombre_solicitante)}
+                        onClick={() => handleAprobar(sol.id, sol.nombre_empresa || sol.nombre_solicitante || 'Empresa', sol.solicitante_email || sol.email)}
                         className="inline-flex items-center space-x-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs px-3.5 py-2 rounded-xl shadow-sm transition-all cursor-pointer min-h-[38px] active:scale-95"
                       >
                         <Check className="w-4 h-4" />

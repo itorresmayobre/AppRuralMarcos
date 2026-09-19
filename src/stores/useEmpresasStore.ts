@@ -9,13 +9,13 @@ interface EmpresasState {
   empresaSeleccionadaId: string;
   cargando: boolean;
   inicializado: boolean;
-  
+
   // Acciones
   cargarEmpresasDesdeSupabase: () => Promise<void>;
   seleccionarEmpresa: (id: string) => void;
   obtenerEmpresaActual: () => Empresa | undefined;
-  solicitarRegistroEmpresa: (data: Omit<SolicitudRegistro, 'id' | 'estado' | 'fecha_solicitud'>) => Promise<void>;
-  aprobarSolicitud: (solicitudId: string) => Promise<string | undefined>;
+  solicitarRegistroEmpresa: (data: Omit<SolicitudRegistro, 'id' | 'estado' | 'fecha_solicitud'>) => Promise<{ exito: boolean; id?: string; error?: string }>;
+  aprobarSolicitud: (solicitudId: string) => Promise<{ exito: boolean; solicitudId?: string; error?: string }>;
   rechazarSolicitud: (solicitudId: string, motivo?: string) => void;
   toggleEstadoEmpresa: (empresaId: string) => void;
   cambiarPlanEmpresa: (empresaId: string, plan: PlanSaaS) => void;
@@ -54,99 +54,59 @@ export const useEmpresasStore = create<EmpresasState>((set, get) => ({
   },
 
   solicitarRegistroEmpresa: async (data) => {
-    let newId = `sol-${Date.now()}`;
+    const { enviarSolicitudRegistroBD } = await import('../services/supabase');
+    const res = await enviarSolicitudRegistroBD({
+      nombre: data.solicitante_nombre || data.nombre_solicitante || 'Solicitante',
+      apellido: '',
+      ci: '',
+      email: data.solicitante_email || data.email || '',
+      telefono: data.solicitante_telefono || data.telefono || '',
+    });
 
-    try {
-      const payload = {
-        nombre_solicitante: data.nombre_solicitante || data.solicitante_nombre || 'Solicitante',
-        email: data.email || data.solicitante_email || '',
-        telefono: data.telefono || data.solicitante_telefono || '',
+    if (res.exito && res.id) {
+      const nuevaSolicitud: SolicitudRegistro = {
+        ...data,
+        id: res.id,
         estado: 'PENDIENTE',
+        fecha_solicitud: formatearFechaUY(hoyISO()),
       };
 
-      const { data: res, error } = await supabase
-        .from('solicitudes_registro')
-        .insert([payload])
-        .select('id')
-        .single();
-
-      if (!error && res) {
-        newId = res.id;
-      }
-    } catch (e) {
-      console.warn('Error enviando solicitud en Supabase:', e);
+      set((state) => ({
+        solicitudesRegistro: [nuevaSolicitud, ...state.solicitudesRegistro],
+      }));
+      return { exito: true, id: res.id };
     }
 
-    const nuevaSolicitud: SolicitudRegistro = {
-      ...data,
-      id: newId,
-      estado: 'PENDIENTE',
-      fecha_solicitud: formatearFechaUY(hoyISO()),
-    };
-
-    set((state) => ({
-      solicitudesRegistro: [nuevaSolicitud, ...state.solicitudesRegistro],
-    }));
+    return { exito: false, error: res.error || 'Error al guardar la solicitud en la base de datos.' };
   },
 
   aprobarSolicitud: async (solicitudId: string) => {
     const state = get();
     const solicitud = state.solicitudesRegistro.find((s) => s.id === solicitudId);
-    if (!solicitud) return undefined;
-
-    let newEmpresaId = `emp-${Date.now()}`;
-
-    try {
-      const payload = {
-        razon_social: solicitud.nombre_empresa || 'Empresa por defect',
-        nombre_fantasia: solicitud.nombre_empresa || 'Empresa',
-        rut: solicitud.rut || '210000000000',
-        email_contacto: solicitud.solicitante_email || solicitud.email,
-        telefono_contacto: solicitud.solicitante_telefono || solicitud.telefono || '',
-        departamento_sede: solicitud.departamento || 'Soriano',
-        activa: true,
-      };
-
-      const { data: res, error } = await supabase
-        .from('empresas')
-        .insert([payload])
-        .select('id')
-        .single();
-
-      if (!error && res) {
-        newEmpresaId = res.id;
-      }
-
-      await supabase
-        .from('solicitudes_registro')
-        .update({ estado: 'APROBADA' })
-        .eq('id', solicitudId);
-    } catch (e) {
-      console.warn('Error aprobando solicitud en Supabase:', e);
+    if (!solicitud) {
+      return { exito: false, error: 'Solicitud no encontrada en memoria.' };
     }
 
-    const nuevaEmpresa: Empresa = {
-      id: newEmpresaId,
-      razon_social: solicitud.nombre_empresa || 'Empresa Nueva',
-      nombre_fantasia: solicitud.nombre_empresa || 'Empresa Nueva',
-      rut: solicitud.rut || '210000000000',
-      email_contacto: solicitud.solicitante_email || solicitud.email,
-      telefono_contacto: solicitud.solicitante_telefono || solicitud.telefono || '',
-      departamento_sede: solicitud.departamento || 'Soriano',
-      hectareas_totales_grupo: solicitud.hectareas_estimadas || 0,
-      plan: 'PRO',
-      activa: true,
-      fecha_registro: formatearFechaUY(hoyISO()),
-    };
+    const { aprobarSolicitudRegistroBD } = await import('../services/supabase');
+    const res = await aprobarSolicitudRegistroBD(solicitudId);
 
-    set({
-      solicitudesRegistro: state.solicitudesRegistro.map((s) =>
-        s.id === solicitudId ? { ...s, estado: 'APROBADA' } : s
-      ),
-      empresas: [...state.empresas, nuevaEmpresa],
-    });
+    if (res.exito) {
+      set({
+        solicitudesRegistro: state.solicitudesRegistro.map((s) =>
+          s.id === solicitudId ? { ...s, estado: 'APROBADA' } : s
+        ),
+      });
 
-    return nuevaEmpresa.id;
+      // Recargar la lista de usuarios para reflejar el perfil creado por el Trigger
+      try {
+        const { useUsuariosStore } = await import('./useUsuariosStore');
+        await useUsuariosStore.getState().cargarUsuariosDesdeSupabase();
+      } catch { }
+
+      return { exito: true, solicitudId };
+    }
+
+    return { exito: false, error: res.error || 'Error al aprobar la solicitud en Supabase.' };
   },
 
   rechazarSolicitud: (solicitudId: string, motivo?: string) => {

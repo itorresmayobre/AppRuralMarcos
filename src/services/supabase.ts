@@ -8,6 +8,7 @@ import type {
   UserProfile,
   UsuarioEmpleado
 } from '../types';
+import { formatearCIUruguaya } from '../utils/validacionesUruguay';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://dyzeiwwafcdzwocuksao.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5emVpd3dhZmNkendvY3Vrc2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0ODk1MzYsImV4cCI6MjEwNTA2NTUzNn0.x0amIE8dqfhItWLLb3K2O7fjsGBBQ3vzqQ5eZzrcqvI';
@@ -32,7 +33,7 @@ export function formatearErrorSupabase(error: any): string {
       mensajeClaro = 'Error de permisos (RLS). Tu usuario o el cliente público no tiene permisos para insertar en esta tabla.';
       break;
     case '23505':
-      mensajeClaro = 'Registro duplicado. El correo electrónico o identificador ya se encuentra registrado en el sistema.';
+      mensajeClaro = 'Registro duplicado. La Cédula de Identidad o el correo electrónico ya se encuentra registrado en el sistema.';
       break;
     case '23503':
       mensajeClaro = 'Referencia inválida. Los datos asociados no existen o fueron eliminados.';
@@ -411,21 +412,56 @@ export async function obtenerNotasCampoBD(): Promise<any[]> {
  * Registrar una solicitud de alta pendiente de aprobación por el SuperAdmin (Formulario Ligero)
  */
 export async function enviarSolicitudRegistroBD(data: {
-  nombreContacto: string;
+  nombre: string;
+  apellido: string;
+  ci: string;
   email: string;
   telefono?: string;
 }): Promise<{ exito: boolean; id?: string; error?: string }> {
   try {
-    const payload: Record<string, any> = {
-      nombre_solicitante: data.nombreContacto,
-      email: data.email.trim().toLowerCase(),
-    };
-
-    if (data.telefono) payload.telefono = data.telefono;
+    const ciLimpia = data.ci.replace(/\D/g, '');
+    const emailLimpio = data.email.trim().toLowerCase();
 
     const clientePublico = createClient(supabaseUrl, supabaseAnonKey, {
       auth: { persistSession: false },
     });
+
+    // 1. Verificación preventiva de duplicado por C.I.
+    const { data: ciExistente } = await clientePublico
+      .from('solicitudes_registro')
+      .select('id')
+      .eq('ci', ciLimpia)
+      .maybeSingle();
+
+    if (ciExistente) {
+      const ciFormateada = formatearCIUruguaya(ciLimpia);
+      return {
+        exito: false,
+        error: `La Cédula de Identidad N° ${ciFormateada} ya tiene una solicitud de registro activa.`,
+      };
+    }
+
+    // 2. Verificación preventiva de duplicado por Email
+    const { data: emailExistente } = await clientePublico
+      .from('solicitudes_registro')
+      .select('id')
+      .eq('email', emailLimpio)
+      .maybeSingle();
+
+    if (emailExistente) {
+      return {
+        exito: false,
+        error: `El correo electrónico '${emailLimpio}' ya tiene una solicitud registrada.`,
+      };
+    }
+
+    const payload: Record<string, any> = {
+      nombre_solicitante: `${data.nombre.trim()} ${data.apellido.trim()}`,
+      ci: ciLimpia,
+      email: emailLimpio,
+    };
+
+    if (data.telefono) payload.telefono = data.telefono;
 
     const { data: res, error } = await clientePublico
       .from('solicitudes_registro')
@@ -440,5 +476,134 @@ export async function enviarSolicitudRegistroBD(data: {
     return { exito: true, id: res.id };
   } catch (err: any) {
     return { exito: false, error: err?.message || 'Error registrando la solicitud.' };
+  }
+}
+
+/**
+ * Aprobar una solicitud de registro: Actualiza la solicitud a 'APROBADA'.
+ * El Trigger 'trigger_aprobar_solicitud' en Supabase creará el perfil automáticamente.
+ */
+export async function aprobarSolicitudRegistroBD(solicitudId: string): Promise<{
+  exito: boolean;
+  error?: string;
+}> {
+  try {
+    // 1. Obtener datos de la solicitud
+    const { data: sol, error: solErr } = await supabase
+      .from('solicitudes_registro')
+      .select('*')
+      .eq('id', solicitudId)
+      .single();
+
+    if (solErr || !sol) {
+      return { exito: false, error: 'No se encontró la solicitud de registro en Supabase.' };
+    }
+
+    // 2. Marcar solicitud como APROBADA
+    const { error: updateErr } = await supabase
+      .from('solicitudes_registro')
+      .update({ estado: 'APROBADA' })
+      .eq('id', solicitudId);
+
+    if (updateErr) {
+      return { exito: false, error: formatearErrorSupabase(updateErr) };
+    }
+
+    const emailTarget = sol.email || sol.solicitante_email;
+    if (!emailTarget) {
+      return { exito: true };
+    }
+
+    // 3. Parsear nombre y apellido del solicitante
+    const partesNombre = (sol.nombre_solicitante || 'Propietario').split(' ');
+    const nombre = partesNombre[0] || 'Propietario';
+    const apellido = partesNombre.slice(1).join(' ') || 'Nuevo';
+    const username = emailTarget.split('@')[0].toLowerCase();
+    const telefonoVal = sol.telefono || sol.solicitante_telefono || null;
+
+    // 4. Crear la cuenta en Supabase Auth con una contraseña aleatoria única de alta seguridad
+    const tempPassword = `${crypto.randomUUID()}!Aa1`;
+    const { data: authRes } = await supabase.auth.signUp({
+      email: emailTarget,
+      password: tempPassword,
+      options: {
+        data: { nombre, apellido, rol: 'PROPIETARIO' }
+      }
+    });
+
+    const userId = authRes?.user?.id;
+
+    // 5. Crear o actualizar la fila correspondiente en public.perfiles
+    if (userId) {
+      const { error: perfilErr } = await supabase.from('perfiles').upsert([{
+        id: userId,
+        email: emailTarget,
+        username,
+        nombre,
+        apellido,
+        rol: 'PROPIETARIO',
+        ci: sol.ci || null,
+        telefono: telefonoVal,
+        telefono_contacto: telefonoVal,
+        empresa_ids: [],
+        activa: true
+      }], { onConflict: 'id' });
+
+      if (perfilErr) {
+        console.warn('Aviso al upsert en perfiles:', perfilErr.message);
+      }
+    }
+
+    // 6. Enviar correo de bienvenida / contraseña por Supabase Auth
+    try {
+      await supabase.auth.resetPasswordForEmail(emailTarget, {
+        redirectTo: `${window.location.origin}/login`,
+      });
+    } catch (e) {
+      console.warn('Aviso enviando correo de bienvenida:', e);
+    }
+
+    return { exito: true };
+  } catch (err: any) {
+    return { exito: false, error: err?.message || 'Error aprobando la solicitud.' };
+  }
+}
+
+/**
+ * Obtener métricas agregadas del Dashboard directamente desde PostgreSQL (Vía RPC de Supabase)
+ */
+export async function obtenerKpisDashboardBD(estanciaId: string = 'TODAS'): Promise<{
+  total_vacunos: number;
+  total_ovinos: number;
+  total_hectareas: number;
+  total_ug: number;
+  carga_ug_ha: number;
+  ingresos_usd: number;
+  egresos_usd: number;
+  resultado_neto_usd: number;
+} | null> {
+  try {
+    const { data, error } = await supabase.rpc('obtener_kpis_dashboard', {
+      p_estancia_id: estanciaId,
+    });
+
+    if (error || !data || data.length === 0) {
+      return null;
+    }
+
+    const row = data[0];
+    return {
+      total_vacunos: Number(row.total_vacunos || 0),
+      total_ovinos: Number(row.total_ovinos || 0),
+      total_hectareas: Number(row.total_hectareas || 0),
+      total_ug: Number(row.total_ug || 0),
+      carga_ug_ha: Number(row.carga_ug_ha || 0),
+      ingresos_usd: Number(row.ingresos_usd || 0),
+      egresos_usd: Number(row.egresos_usd || 0),
+      resultado_neto_usd: Number(row.resultado_neto_usd || 0),
+    };
+  } catch (e) {
+    console.warn('Aviso obteniendo KPIs de Supabase RPC:', e);
+    return null;
   }
 }

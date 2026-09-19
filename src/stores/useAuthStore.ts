@@ -169,6 +169,13 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     } catch {}
     useAuthStore.setState({ usuario: null, estaAutenticado: false, cargando: false });
   } else if ((event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') && session?.user) {
+    const usuarioActual = useAuthStore.getState().usuario;
+    if (usuarioActual && usuarioActual.id === session.user.id) {
+      // Usuario ya cargado en memoria, no requiere nueva petición HTTP
+      useAuthStore.setState({ estaAutenticado: true });
+      return;
+    }
+
     const perfil = await obtenerPerfilUsuarioBD(session.user.id);
     if (perfil) {
       useAuthStore.setState({ usuario: perfil, estaAutenticado: true });
@@ -192,7 +199,14 @@ export async function validarSesionActivaSupabase(): Promise<boolean> {
       return false;
     }
 
-    // Verificar si el perfil sigue existiendo en la tabla perfiles de PostgreSQL
+    // Si el usuario ya está cargado en Zustand y coincide con la sesión, reutilizarlo
+    const usuarioActual = useAuthStore.getState().usuario;
+    if (usuarioActual && usuarioActual.id === session.user.id) {
+      useAuthStore.setState({ estaAutenticado: true });
+      return true;
+    }
+
+    // Solo consultar a PostgreSQL si no está en memoria
     const perfilBD = await obtenerPerfilUsuarioBD(session.user.id);
     if (!perfilBD) {
       await supabase.auth.signOut().catch(() => {});

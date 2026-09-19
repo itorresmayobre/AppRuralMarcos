@@ -12,7 +12,8 @@ import {
   Layers,
   PieChart,
   RefreshCw,
-  FileText
+  FileText,
+  AlertTriangle
 } from 'lucide-react';
 
 interface TransaccionModalProps {
@@ -63,68 +64,77 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
           </button>
         </header>
 
-        {/* Selector de Establecimiento Destino */}
-        <nav aria-label="Selección de Establecimiento" className="p-3 bg-slate-50 border-b border-slate-200/80 space-y-1.5 flex-shrink-0">
-          <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block">Establecimiento Destino:</label>
-          <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1">
-            {form.prorrateo.estancias.map((est) => {
-              const esSeleccionado = form.estanciaFormId === est.id;
-              return (
-                <button
-                  key={est.id}
-                  type="button"
-                  onClick={() => form.setEstanciaFormId(est.id)}
-                  className={`px-3 py-2 rounded-xl text-xs font-extrabold flex items-center space-x-1.5 transition-all cursor-pointer flex-shrink-0 border ${
-                    esSeleccionado
-                      ? 'bg-emerald-700 text-white border-emerald-600 shadow-sm'
-                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
-                  }`}
-                >
-                  <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span className="truncate">{est.nombre}</span>
-                  {esSeleccionado && <Check className="w-3.5 h-3.5 ml-1 text-emerald-200 flex-shrink-0" />}
-                </button>
-              );
-            })}
+        {/* Selector de Establecimiento Destino o Alerta de Campo Faltante */}
+        {form.prorrateo.estancias.length === 0 ? (
+          <div className="p-3 bg-amber-50 border-b border-amber-200 text-amber-900 text-xs flex items-center gap-2 flex-shrink-0">
+            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <div>
+              <p className="font-bold">No tienes establecimientos creados aún</p>
+              <p className="text-[11px] text-amber-800">Primero debes agregar un campo o estancia en la sección <strong>Establecimientos</strong>.</p>
+            </div>
           </div>
-        </nav>
+        ) : (
+          <nav aria-label="Selección de Establecimiento" className="p-3 bg-slate-50 border-b border-slate-200/80 space-y-1.5 flex-shrink-0">
+            <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block">Establecimiento Destino:</label>
+            <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1">
+              {form.prorrateo.estancias.map((est) => {
+                const esSeleccionado = form.estanciaFormId === est.id;
+                return (
+                  <button
+                    key={est.id}
+                    type="button"
+                    onClick={() => form.setEstanciaFormId(est.id)}
+                    className={`px-3 py-2 rounded-xl text-xs font-extrabold flex items-center space-x-1.5 transition-all cursor-pointer flex-shrink-0 border ${
+                      esSeleccionado
+                        ? 'bg-emerald-700 text-white border-emerald-600 shadow-sm'
+                        : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                    }`}
+                  >
+                    <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="truncate">{est.nombre}</span>
+                    {esSeleccionado && <Check className="w-3.5 h-3.5 ml-1 text-emerald-200 flex-shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
+          </nav>
+        )}
 
         {/* Formulario Exclusivo de Finanzas */}
         <form onSubmit={form.handleSubmit} className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1 text-xs">
 
-          {/* Selector Prominente Ingreso vs Egreso */}
-          <fieldset className="grid grid-cols-2 gap-3 border-0 p-0 m-0">
-            <legend className="sr-only">Tipo de Operación Financiera</legend>
+          {/* Selector Prominente Ingreso vs Egreso con símbolo dinámico ($ / $U) */}
+          <div className="grid grid-cols-2 gap-2.5">
             <button
               type="button"
               onClick={() => form.setTipoFinanciero('INGRESO')}
-              className={`p-3 rounded-2xl border font-extrabold text-xs flex items-center justify-center space-x-2 transition-all cursor-pointer ${
+              className={`p-2.5 rounded-2xl border font-extrabold text-xs flex items-center justify-center space-x-2 transition-all cursor-pointer ${
                 form.tipoFinanciero === 'INGRESO'
                   ? 'bg-emerald-100 border-emerald-500 text-emerald-950 shadow-sm ring-2 ring-emerald-500/30'
                   : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
               }`}
             >
-              <ArrowUpRight className="w-4 h-4 text-emerald-600" />
-              <span>INGRESO (Entrada US$)</span>
+              <ArrowUpRight className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>INGRESO ({form.moneda === 'USD' ? '$' : '$U'})</span>
             </button>
 
             <button
               type="button"
               onClick={() => form.setTipoFinanciero('EGRESO')}
-              className={`p-3 rounded-2xl border font-extrabold text-xs flex items-center justify-center space-x-2 transition-all cursor-pointer ${
+              className={`p-2.5 rounded-2xl border font-extrabold text-xs flex items-center justify-center space-x-2 transition-all cursor-pointer ${
                 form.tipoFinanciero === 'EGRESO'
                   ? 'bg-rose-100 border-rose-500 text-rose-950 shadow-sm ring-2 ring-rose-500/30'
                   : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
               }`}
             >
-              <ArrowDownRight className="w-4 h-4 text-rose-600" />
-              <span>EGRESO (Salida US$)</span>
+              <ArrowDownRight className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>EGRESO ({form.moneda === 'USD' ? '$' : '$U'})</span>
             </button>
-          </fieldset>
+          </div>
 
           {/* Selector de Moneda (USD / UYU) */}
-          <fieldset className="space-y-1 border-0 p-0 m-0">
-            <legend className="font-bold text-slate-700 block mb-1">Moneda de la Operación</legend>
+          <div className="space-y-1.5">
+            <label className="font-extrabold text-slate-700 block text-xs">Moneda de la Operación</label>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -150,12 +160,12 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
                 <span>🇺🇾 Pesos (UYU)</span>
               </button>
             </div>
-          </fieldset>
+          </div>
 
           {/* Monto Total y Conversión Bimoneda */}
-          <fieldset className="space-y-1 border-0 p-0 m-0">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label htmlFor="monto-input" className="font-extrabold text-slate-700 block">Monto Total ({form.moneda})</label>
+              <label htmlFor="monto-input" className="font-extrabold text-slate-700 block text-xs">Monto Total ({form.moneda})</label>
               <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md flex items-center gap-1">
                 <RefreshCw className="w-3 h-3 text-emerald-600" /> TC: $ {form.cotizacion.tipoCambio}
               </span>
@@ -163,7 +173,7 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
 
             <div className="relative">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-500">
-                {form.moneda === 'USD' ? '$ US' : '$ UYU'}
+                {form.moneda === 'USD' ? '$' : '$U'}
               </span>
               <input
                 id="monto-input"
@@ -173,13 +183,13 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
                 placeholder="ej: 14500"
                 value={form.monto}
                 onChange={(e) => form.setMonto(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm font-black rounded-xl pl-16 pr-4 py-3 focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
+                className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm font-black rounded-xl pl-12 pr-4 py-2.5 focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
               />
             </div>
 
             {/* Vista Previa Conversión Bimoneda Automática */}
             {parseFloat(form.monto) > 0 && (
-              <output className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-950 flex items-center justify-between text-xs font-bold block">
+              <output className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-950 flex items-center justify-between text-xs font-bold block mt-1">
                 <span>Equivalente estimado:</span>
                 <span className="font-black text-emerald-800">
                   {form.moneda === 'USD'
@@ -188,11 +198,10 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
                 </span>
               </output>
             )}
-          </fieldset>
+          </div>
 
           {/* Bloque Prorratear entre Campos */}
-          <fieldset className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl space-y-3 border-0">
-            <legend className="sr-only">Prorrateo Multipredial</legend>
+          <div className="bg-slate-50 border border-slate-200 p-3 rounded-2xl space-y-2.5">
             <label className="flex items-center space-x-2.5 cursor-pointer">
               <input
                 type="checkbox"
@@ -201,13 +210,13 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
                 className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 cursor-pointer"
               />
               <span className="font-extrabold text-slate-900 text-xs flex items-center gap-1.5">
-                <PieChart className="w-4 h-4 text-emerald-600" />
+                <PieChart className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>🌐 Repartir este gasto entre varios campos (Prorrateo)</span>
               </span>
             </label>
 
             {form.prorrateo.esProrrateado && (
-              <div className="space-y-2.5 pt-2 border-t border-slate-200/80 animate-fadeIn">
+              <div className="space-y-2 pt-2 border-t border-slate-200/80 animate-fadeIn">
                 <p className="text-[11px] text-slate-500 font-medium">
                   Carga los porcentajes asignados a cada campo para esta transacción:
                 </p>
@@ -219,10 +228,10 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
                     const montoParcial = Math.round((valMonto * (pct / 100)) * 100) / 100;
 
                     return (
-                      <div key={est.id} className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+                      <div key={est.id} className="bg-white p-2 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
                         <div className="flex items-center space-x-2">
                           <MapPin className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-                          <span className="font-extrabold text-slate-800">{est.nombre}</span>
+                          <span className="font-bold text-slate-800">{est.nombre}</span>
                         </div>
 
                         <div className="flex items-center space-x-2">
@@ -251,18 +260,18 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
                 </div>
               </div>
             )}
-          </fieldset>
+          </div>
 
           {/* Categorías / Rubros Habilitados por el Admin */}
-          <fieldset className="space-y-2 border-0 p-0 m-0">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <legend className="font-bold text-slate-700 block">Rubro / Concepto (Habilitados por Admin)</legend>
+              <label className="font-extrabold text-slate-700 block text-xs">Rubro / Concepto (Habilitados por Admin)</label>
               <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
                 {form.conceptosDisponibles.length} disponibles
               </span>
             </div>
 
-            <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar p-1 border border-slate-200 rounded-2xl bg-slate-50/50">
+            <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar p-1.5 border border-slate-200 rounded-2xl bg-slate-50/50">
               {Object.keys(gruposMap).map((grupo) => (
                 <div key={grupo} className="space-y-1">
                   <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block px-1 pt-1 flex items-center gap-1">
@@ -309,14 +318,14 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
                 </div>
               ))}
             </div>
-          </fieldset>
+          </div>
 
           {/* Selector de Clasificación de Costo (Solo para Egresos) */}
           {form.tipoFinanciero === 'EGRESO' && (
-            <fieldset className="space-y-1.5 bg-slate-50 p-3 rounded-2xl border border-slate-200/80">
-              <legend className="font-extrabold text-slate-700 block text-[11px]">
+            <div className="space-y-1.5 bg-slate-50 p-3 rounded-2xl border border-slate-200/80">
+              <label className="font-extrabold text-slate-700 block text-[11px]">
                 Clasificación de Costo para esta Transacción:
-              </legend>
+              </label>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -327,7 +336,7 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
                       : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
-                  <span>📌 Costo Fijo (Estructura)</span>
+                  <span>📌 Costo Fijo</span>
                 </button>
 
                 <button
@@ -339,16 +348,16 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
                       : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
-                  <span>📈 Costo Variable (Productivo)</span>
+                  <span>📈 Costo Variable</span>
                 </button>
               </div>
-            </fieldset>
+            </div>
           )}
 
           {/* Fecha y Período Agrícola */}
-          <fieldset className="space-y-1 border-0 p-0 m-0">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label htmlFor="fecha-comprobante" className="font-bold text-slate-700 flex items-center gap-1.5">
+              <label htmlFor="fecha-comprobante" className="font-bold text-slate-700 flex items-center gap-1.5 text-xs">
                 <Calendar className="w-4 h-4 text-slate-500" />
                 <span>Fecha del Comprobante</span>
               </label>
@@ -364,11 +373,11 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
               onChange={(e) => form.setFecha(e.target.value)}
               className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 min-h-[42px]"
             />
-          </fieldset>
+          </div>
 
           {/* Descripción */}
-          <fieldset className="space-y-1 border-0 p-0 m-0">
-            <label htmlFor="descripcion-op" className="font-bold text-slate-700 block">Descripción / Detalle de la Operación</label>
+          <div className="space-y-1.5">
+            <label htmlFor="descripcion-op" className="font-bold text-slate-700 block text-xs">Descripción / Detalle de la Operación</label>
             <input
               id="descripcion-op"
               type="text"
@@ -377,12 +386,12 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
               onChange={(e) => form.setDescripcionFinanciera(e.target.value)}
               className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl p-3 focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
             />
-          </fieldset>
+          </div>
 
           {/* Número de Factura / Remito (Opcional) */}
-          <fieldset className="space-y-1 border-0 p-0 m-0">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label htmlFor="nro-factura" className="font-bold text-slate-700 flex items-center gap-1.5">
+              <label htmlFor="nro-factura" className="font-bold text-slate-700 flex items-center gap-1.5 text-xs">
                 <FileText className="w-3.5 h-3.5 text-slate-500" />
                 <span>Nro. de Factura / Remito</span>
               </label>
@@ -396,12 +405,12 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
               placeholder="ej: A-0004582"
               value={form.nroFactura}
               onChange={(e) => form.setNroFactura(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl p-2.5 focus:ring-2 focus:ring-emerald-500 min-h-[40px]"
+              className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-xl p-2.5 focus:ring-2 focus:ring-emerald-500 min-h-[42px]"
             />
-          </fieldset>
+          </div>
 
           {/* Subida de Foto o PDF del Comprobante (Opcional) */}
-          <fieldset className="border-0 p-0 m-0">
+          <div className="space-y-1.5">
             <FileUploadInput
               label="Foto del Comprobante / Factura"
               bucket="facturas-comprobantes"
@@ -409,19 +418,24 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
               onChange={form.handleComprobanteChange}
               optional={true}
             />
-          </fieldset>
+          </div>
 
           {/* Botón de Enviar */}
           <button
             type="submit"
-            className={`w-full text-white font-extrabold text-xs py-3.5 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 min-h-[46px] cursor-pointer mt-2 ${
+            disabled={form.prorrateo.estancias.length === 0}
+            className={`w-full text-white font-extrabold text-xs py-3.5 rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 min-h-[46px] cursor-pointer mt-2 disabled:opacity-50 disabled:cursor-not-allowed ${
               form.tipoFinanciero === 'INGRESO'
                 ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800'
                 : 'bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-700 hover:to-rose-800'
             }`}
           >
             <Check className="w-4 h-4 text-white" />
-            <span>{form.tipoFinanciero === 'INGRESO' ? 'Guardar Ingreso Financiero' : 'Guardar Egreso Financiero'}</span>
+            <span>
+              {form.prorrateo.estancias.length === 0 
+                ? 'Debes agregar un Campo primero' 
+                : form.tipoFinanciero === 'INGRESO' ? 'Guardar Ingreso Financiero' : 'Guardar Egreso Financiero'}
+            </span>
           </button>
 
         </form>

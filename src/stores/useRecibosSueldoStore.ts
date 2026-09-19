@@ -5,6 +5,7 @@ import { obtenerRecibosSueldoBD, supabase } from '../services/supabase';
 interface RecibosSueldoState {
   recibos: ReciboSueldo[];
   cargando: boolean;
+  inicializado: boolean;
   cargarRecibosDesdeSupabase: () => Promise<void>;
   agregarRecibo: (nuevo: Omit<ReciboSueldo, 'id'>) => Promise<void>;
   eliminarRecibo: (id: string) => Promise<void>;
@@ -15,15 +16,16 @@ interface RecibosSueldoState {
 export const useRecibosSueldoStore = create<RecibosSueldoState>((set, get) => ({
   recibos: [],
   cargando: false,
+  inicializado: false,
 
   cargarRecibosDesdeSupabase: async () => {
     set({ cargando: true });
     const datosBD = await obtenerRecibosSueldoBD();
-    if (datosBD && datosBD.length > 0) {
-      set({ recibos: datosBD, cargando: false });
-    } else {
-      set({ cargando: false });
-    }
+    set({
+      recibos: datosBD || [],
+      cargando: false,
+      inicializado: true,
+    });
   },
 
   agregarRecibo: async (nuevoData) => {

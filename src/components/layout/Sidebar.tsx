@@ -8,6 +8,7 @@ import {
   Beef, 
   DollarSign, 
   BarChart3,
+  History,
   Users, 
   MapPin, 
   X, 
@@ -19,7 +20,8 @@ import {
   Tractor,
   HardHat,
   Check,
-  Code
+  Code,
+  Scale
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -60,6 +62,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { path: '/ganado', label: 'Ganado y Stock', icon: Beef, allowed: true },
     { path: '/finanzas', label: 'Ingresos / Egresos', icon: DollarSign, allowed: canViewFinances },
     { path: '/estadisticas', label: 'Estadísticas & Análisis', icon: BarChart3, allowed: canViewFinances },
+    { path: '/historico', label: 'Histórico Completo', icon: History, allowed: canViewFinances },
+    { path: '/parametros', label: 'Parámetros Ganaderos (INIA)', icon: Scale, allowed: isOwnerOrAdmin },
     { path: '/dev', label: 'Consola Desarrollador', icon: Code, allowed: currentRole === 'SUPERADMIN' },
     { path: '/usuarios', label: 'Roles y Permisos', icon: Users, allowed: isOwnerOrAdmin },
   ];

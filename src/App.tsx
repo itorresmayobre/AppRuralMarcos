@@ -13,6 +13,8 @@ import { FinanzasView } from './components/finanzas/FinanzasView';
 import { EstadisticasView } from './components/estadisticas/EstadisticasView';
 import { RegistroEmpresaView } from './components/registro/RegistroEmpresaView';
 import { DevConsoleView } from './components/dev/DevConsoleView';
+import { ParametrosPage } from './pages/ParametrosPage';
+import { HistoricoPage } from './pages/HistoricoPage';
 
 import { useEstanciasStore } from './stores/useEstanciasStore';
 import { useGanadoStore } from './stores/useGanadoStore';
@@ -31,15 +33,9 @@ function MainLayout() {
     // 1. Validar si el token venció para purgar localStorage automáticamente
     validarSesionActivaSupabase();
 
-    // 2. Carga inicial de datos desde Supabase PostgreSQL
+    // 2. Carga inicial ligera: sólo empresas y estancias necesarias para la barra de navegación
     useEmpresasStore.getState().cargarEmpresasDesdeSupabase();
     useEstanciasStore.getState().cargarEstanciasDesdeSupabase();
-    useGanadoStore.getState().cargarGanadoDesdeSupabase();
-    useFinanzasStore.getState().cargarTransaccionesDesdeSupabase();
-    useRecibosSueldoStore.getState().cargarRecibosDesdeSupabase();
-    useConceptosFinancierosStore.getState().cargarConceptosDesdeSupabase();
-    useCampoNotasStore.getState().cargarNotasYPluviometroDesdeSupabase();
-    useUsuariosStore.getState().cargarUsuariosDesdeSupabase();
   }, []);
 
   return (
@@ -122,6 +118,15 @@ export function App() {
           />
 
           <Route
+            path="/historico"
+            element={
+              <ProtectedRoute rolesPermitidos={['ADMIN', 'CONTADOR', 'PROPIETARIO', 'SUPERADMIN']}>
+                <HistoricoPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/dev"
             element={
               <ProtectedRoute rolesPermitidos={['SUPERADMIN']}>
@@ -135,6 +140,15 @@ export function App() {
             element={
               <ProtectedRoute rolesPermitidos={['ADMIN', 'PROPIETARIO', 'SUPERADMIN']}>
                 <UsuariosPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/parametros"
+            element={
+              <ProtectedRoute rolesPermitidos={['ADMIN', 'PROPIETARIO', 'SUPERADMIN']}>
+                <ParametrosPage />
               </ProtectedRoute>
             }
           />

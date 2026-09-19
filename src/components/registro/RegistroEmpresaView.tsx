@@ -10,9 +10,11 @@ import {
   User,
   Phone,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  IdCard
 } from 'lucide-react';
 import { solicitudRegistroSchema } from '../../schemas/solicitudSchema';
+import { formatearCIUruguaya, formatearTelefonoUruguayo } from '../../utils/validacionesUruguay';
 
 interface RegistroEmpresaViewProps {
   onVolverALogin?: () => void;
@@ -22,12 +24,22 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
   const navigate = useNavigate();
 
   const [solicitanteNombre, setSolicitanteNombre] = useState('');
+  const [solicitanteApellido, setSolicitanteApellido] = useState('');
+  const [solicitanteCI, setSolicitanteCI] = useState('');
   const [solicitanteEmail, setSolicitanteEmail] = useState('');
   const [solicitanteTelefono, setSolicitanteTelefono] = useState('');
   const [cargandoEnvio, setCargandoEnvio] = useState(false);
   const [enviadoExitoso, setEnviadoExitoso] = useState(false);
   const [errorFormulario, setErrorFormulario] = useState<string | null>(null);
   const [erroresCampo, setErroresCampo] = useState<Record<string, string>>({});
+
+  const handleCIChange = (val: string) => {
+    setSolicitanteCI(formatearCIUruguaya(val));
+  };
+
+  const handleTelefonoChange = (val: string) => {
+    setSolicitanteTelefono(formatearTelefonoUruguayo(val));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +48,9 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
 
     // Validar con Zod antes de enviar
     const validacion = solicitudRegistroSchema.safeParse({
-      nombreContacto: solicitanteNombre,
+      nombre: solicitanteNombre,
+      apellido: solicitanteApellido,
+      ci: solicitanteCI,
       email: solicitanteEmail,
       telefono: solicitanteTelefono || undefined,
     });
@@ -58,7 +72,9 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
 
     const { enviarSolicitudRegistroBD } = await import('../../services/supabase');
     const res = await enviarSolicitudRegistroBD({
-      nombreContacto: datosValidados.nombreContacto,
+      nombre: datosValidados.nombre,
+      apellido: datosValidados.apellido,
+      ci: datosValidados.ci,
       email: datosValidados.email,
       telefono: datosValidados.telefono,
     });
@@ -96,7 +112,8 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
           </div>
 
           <div className="p-4 bg-amber-50/80 rounded-2xl border border-amber-200/80 text-left text-xs space-y-1.5 font-medium text-amber-950">
-            <p><strong className="text-amber-900">Solicitante:</strong> {solicitanteNombre}</p>
+            <p><strong className="text-amber-900">Solicitante:</strong> {solicitanteNombre} {solicitanteApellido}</p>
+            <p><strong className="text-amber-900">C.I.:</strong> {solicitanteCI}</p>
             <p><strong className="text-amber-900">Email de Contacto:</strong> {solicitanteEmail.toLowerCase()}</p>
             <p><strong className="text-amber-900">Estado:</strong> PENDIENTE DE APROBACIÓN POR SUPERADMIN</p>
           </div>
@@ -154,24 +171,67 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
 
           <form onSubmit={handleSubmit} className="space-y-3.5 text-xs" noValidate>
             
-            {/* Nombre y Apellido del Solicitante */}
+            {/* Nombre y Apellido del Solicitante Separados en 2 Columnas */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700 block">Nombre *</label>
+                <div className="relative">
+                  <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <input
+                    type="text"
+                    required
+                    placeholder="ej: Marcos"
+                    value={solicitanteNombre}
+                    onChange={(e) => setSolicitanteNombre(e.target.value)}
+                    className={`w-full bg-slate-50 border rounded-xl py-2.5 pl-9 pr-3 text-xs font-bold text-slate-900 focus:ring-2 min-h-[40px] ${
+                      erroresCampo.nombre ? 'border-rose-400 ring-rose-400/30' : 'border-slate-300 focus:ring-emerald-500'
+                    }`}
+                  />
+                </div>
+                {erroresCampo.nombre && (
+                  <p className="text-[11px] text-rose-600 font-medium pl-1">{erroresCampo.nombre}</p>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700 block">Apellido *</label>
+                <div className="relative">
+                  <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <input
+                    type="text"
+                    required
+                    placeholder="ej: Torres"
+                    value={solicitanteApellido}
+                    onChange={(e) => setSolicitanteApellido(e.target.value)}
+                    className={`w-full bg-slate-50 border rounded-xl py-2.5 pl-9 pr-3 text-xs font-bold text-slate-900 focus:ring-2 min-h-[40px] ${
+                      erroresCampo.apellido ? 'border-rose-400 ring-rose-400/30' : 'border-slate-300 focus:ring-emerald-500'
+                    }`}
+                  />
+                </div>
+                {erroresCampo.apellido && (
+                  <p className="text-[11px] text-rose-600 font-medium pl-1">{erroresCampo.apellido}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Cédula de Identidad (C.I. Uruguaya) */}
             <div className="space-y-1">
-              <label className="font-bold text-slate-700 block">Nombre y Apellido *</label>
+              <label className="font-bold text-slate-700 block">Cédula de Identidad (C.I.) *</label>
               <div className="relative">
-                <User className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                <IdCard className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                 <input
                   type="text"
                   required
-                  placeholder="ej: Marcos Torres"
-                  value={solicitanteNombre}
-                  onChange={(e) => setSolicitanteNombre(e.target.value)}
+                  placeholder="ej: 1.234.567-8"
+                  value={solicitanteCI}
+                  onChange={(e) => handleCIChange(e.target.value)}
                   className={`w-full bg-slate-50 border rounded-xl py-2.5 pl-9 pr-3 text-xs font-bold text-slate-900 focus:ring-2 min-h-[40px] ${
-                    erroresCampo.nombreContacto ? 'border-rose-400 ring-rose-400/30' : 'border-slate-300 focus:ring-emerald-500'
+                    erroresCampo.ci ? 'border-rose-400 ring-rose-400/30' : 'border-slate-300 focus:ring-emerald-500'
                   }`}
                 />
               </div>
-              {erroresCampo.nombreContacto && (
-                <p className="text-[11px] text-rose-600 font-medium pl-1">{erroresCampo.nombreContacto}</p>
+              {erroresCampo.ci && (
+                <p className="text-[11px] text-rose-600 font-medium pl-1">{erroresCampo.ci}</p>
               )}
             </div>
 
@@ -196,16 +256,17 @@ export const RegistroEmpresaView: React.FC<RegistroEmpresaViewProps> = ({ onVolv
               )}
             </div>
 
-            {/* Teléfono de Contacto (Opcional) */}
+            {/* Teléfono de Contacto (Obligatorio) */}
             <div className="space-y-1">
-              <label className="font-bold text-slate-700 block">Teléfono de Contacto (Opcional)</label>
+              <label className="font-bold text-slate-700 block">Teléfono de Contacto *</label>
               <div className="relative">
                 <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                 <input
                   type="tel"
+                  required
                   placeholder="ej: 099 123 456"
                   value={solicitanteTelefono}
-                  onChange={(e) => setSolicitanteTelefono(e.target.value)}
+                  onChange={(e) => handleTelefonoChange(e.target.value)}
                   className={`w-full bg-slate-50 border rounded-xl py-2.5 pl-9 pr-3 text-xs font-bold text-slate-900 focus:ring-2 min-h-[40px] ${
                     erroresCampo.telefono ? 'border-rose-400 ring-rose-400/30' : 'border-slate-300 focus:ring-emerald-500'
                   }`}

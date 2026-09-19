@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useEstanciasStore } from '../../stores/useEstanciasStore';
 import { useGanadoStore } from '../../stores/useGanadoStore';
@@ -10,6 +10,12 @@ export const HaciendaView: React.FC = () => {
   const { usuario } = useAuthStore();
   const { estanciaSeleccionadaId, estancias } = useEstanciasStore();
   const { movimientos, obtenerStockEstancia } = useGanadoStore();
+
+  useEffect(() => {
+    if (!useGanadoStore.getState().inicializado) {
+      useGanadoStore.getState().cargarGanadoDesdeSupabase();
+    }
+  }, []);
 
   const currentRole = usuario?.rol || 'OPERARIO';
   const canEdit = currentRole === 'ADMIN' || currentRole === 'CAPATAZ' || currentRole === 'PROPIETARIO' || currentRole === 'SUPERADMIN';

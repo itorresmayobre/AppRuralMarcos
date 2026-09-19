@@ -125,6 +125,45 @@ body {
   .app-table tr:hover td {
     background-color: #f8fafc;
   }
+
+  /* Form y Tipografía Estandarizada */
+  .app-label {
+    font-size: 0.75rem; /* text-xs */
+    font-weight: 700;
+    color: #334155; /* slate-700 */
+    display: block;
+  }
+
+  .app-label-extrabold {
+    font-size: 0.75rem; /* text-xs */
+    font-weight: 800;
+    color: #334155; /* slate-700 */
+    display: block;
+  }
+
+  .app-input {
+    width: 100%;
+    background-color: #f8fafc;
+    border: 1px solid #cbd5e1;
+    color: #0f172a;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 0.75rem;
+    padding: 0.625rem;
+    min-height: 42px;
+  }
+
+  .app-input:focus {
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+  }
+
+  .app-body-text {
+    font-size: 0.75rem;
+    line-height: 1.6;
+    color: #334155;
+  }
 }
 
 /* Scrollbar Delgado y Elegante Global */
