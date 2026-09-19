@@ -10,6 +10,7 @@ import {
   obtenerListaEjerciciosDinamica,
   MESES_AGRICOLAS
 } from '../../utils/periodoAgricola';
+import { obtenerMontoEnMoneda } from '../../utils/monedas';
 import { CustomSelect, type SelectOption } from '../ui/CustomSelect';
 import type { Moneda } from '../../types';
 import { BarChart3, DollarSign, ShieldAlert, Calendar, MapPin } from 'lucide-react';
@@ -81,21 +82,19 @@ export const EstadisticasView: React.FC = () => {
   // Obtener transacciones según estancia seleccionada
   const todasTransacciones = obtenerTransaccionesEstancia(estanciaFiltroId);
 
-  // Filtrar transacciones por Moneda y Ejercicio Agrícola (o TODOS)
+  // Filtrar transacciones por Ejercicio Agrícola (o TODOS). Todas las transacciones se convierten dinámicamente a la moneda seleccionada.
   const transaccionesFiltradas = todasTransacciones.filter((t) => {
-    const coincideMoneda = t.moneda === monedaFiltro;
     const { ejercicio } = calcularEjercicioYMesAgricola(t.fecha);
     const ejercicioEfectivo = t.ejercicio_agricola || ejercicio;
-    const coincideEjercicio = ejercicioFiltro === 'TODOS' || ejercicioEfectivo === ejercicioFiltro;
-    return coincideMoneda && coincideEjercicio;
+    return ejercicioFiltro === 'TODOS' || ejercicioEfectivo === ejercicioFiltro;
   });
 
-  // Totales generales
+  // Totales generales calculados dinámicamente según la moneda seleccionada
   const ingresosList = transaccionesFiltradas.filter((t) => t.tipo === 'INGRESO');
   const egresosList = transaccionesFiltradas.filter((t) => t.tipo === 'EGRESO');
 
-  const totalIngresos = ingresosList.reduce((sum, t) => sum + t.monto, 0);
-  const totalEgresos = egresosList.reduce((sum, t) => sum + t.monto, 0);
+  const totalIngresos = ingresosList.reduce((sum, t) => sum + obtenerMontoEnMoneda(t, monedaFiltro), 0);
+  const totalEgresos = egresosList.reduce((sum, t) => sum + obtenerMontoEnMoneda(t, monedaFiltro), 0);
   const resultadoNeto = totalIngresos - totalEgresos;
 
   // Clasificación de Costos Fijos vs. Variables
@@ -105,7 +104,8 @@ export const EstadisticasView: React.FC = () => {
       const conc = catalog.find((c) => c.nombre === t.categoria);
       if (conc?.naturaleza_costo === 'FIJO') esFijo = true;
     }
-    return esFijo ? sum + t.monto : sum;
+    const monto = obtenerMontoEnMoneda(t, monedaFiltro);
+    return esFijo ? sum + monto : sum;
   }, 0);
 
   const totalCostosVariables = totalEgresos - totalCostosFijos;
@@ -126,7 +126,8 @@ export const EstadisticasView: React.FC = () => {
   egresosList.forEach((t) => {
     const conc = catalog.find((c) => c.nombre === t.categoria);
     const grupoNombre = conc?.grupo || 'Otros Gastos';
-    egresosPorGrupoMap[grupoNombre] = (egresosPorGrupoMap[grupoNombre] || 0) + t.monto;
+    const monto = obtenerMontoEnMoneda(t, monedaFiltro);
+    egresosPorGrupoMap[grupoNombre] = (egresosPorGrupoMap[grupoNombre] || 0) + monto;
   });
 
   const gruposRanking: GrupoRankingItem[] = Object.entries(egresosPorGrupoMap)
@@ -142,9 +143,10 @@ export const EstadisticasView: React.FC = () => {
   transaccionesFiltradas.forEach((t) => {
     const { mes } = calcularEjercicioYMesAgricola(t.fecha);
     const mesNombre = t.periodo_mes || mes;
+    const monto = obtenerMontoEnMoneda(t, monedaFiltro);
     if (evolucionMensualMap[mesNombre]) {
-      if (t.tipo === 'INGRESO') evolucionMensualMap[mesNombre].ingresos += t.monto;
-      else evolucionMensualMap[mesNombre].egresos += t.monto;
+      if (t.tipo === 'INGRESO') evolucionMensualMap[mesNombre].ingresos += monto;
+      else evolucionMensualMap[mesNombre].egresos += monto;
     }
   });
 

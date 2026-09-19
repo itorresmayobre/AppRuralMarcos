@@ -1,6 +1,9 @@
 import React from 'react';
 import { Building2, Truck, MapPin } from 'lucide-react';
 import type { Estancia, Moneda, TransaccionFinanciera, MovimientoGanado } from '../../types';
+import { obtenerMontoEnMoneda } from '../../utils/monedas';
+
+import { useFinanzasStore } from '../../stores/useFinanzasStore';
 
 interface MatrizRentabilidadTablaProps {
   estancias: Estancia[];
@@ -19,6 +22,10 @@ export const MatrizRentabilidadTabla: React.FC<MatrizRentabilidadTablaProps> = (
   modoAnalisis,
   setModoAnalisis,
 }) => {
+  const { transacciones } = useFinanzasStore();
+  const tcEfectivo = transacciones.find((t) => t.tipo_cambio && t.tipo_cambio > 0)?.tipo_cambio || 1;
+  const factorConversionHacienda = monedaFiltro === 'UYU' ? tcEfectivo : 1;
+
   return (
     <section aria-label="Matriz de Rentabilidad por Campo" className="app-card space-y-3">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-2.5">
@@ -81,18 +88,18 @@ export const MatrizRentabilidadTabla: React.FC<MatrizRentabilidadTablaProps> = (
           </thead>
           <tbody>
             {estancias.map((est) => {
-              const txEst = obtenerTransaccionesEstancia(est.id).filter((t) => t.moneda === monedaFiltro);
-              const ventasReales = txEst.filter((t) => t.tipo === 'INGRESO').reduce((a, b) => a + b.monto, 0);
-              const egresosReales = txEst.filter((t) => t.tipo === 'EGRESO').reduce((a, b) => a + b.monto, 0);
+              const txEst = obtenerTransaccionesEstancia(est.id);
+              const ventasReales = txEst.filter((t) => t.tipo === 'INGRESO').reduce((a, b) => a + obtenerMontoEnMoneda(b, monedaFiltro), 0);
+              const egresosReales = txEst.filter((t) => t.tipo === 'EGRESO').reduce((a, b) => a + obtenerMontoEnMoneda(b, monedaFiltro), 0);
 
               // Transferencias salientes (crédito) y entrantes (débito)
               const transfSalientes = movimientos
                 .filter((m) => m.estancia_origen_id === est.id && m.valorizar_transferencia)
-                .reduce((a, b) => a + b.monto_total_imputado, 0);
+                .reduce((a, b) => a + (b.monto_total_imputado * factorConversionHacienda), 0);
 
               const transfEntrantes = movimientos
                 .filter((m) => m.estancia_destino_id === est.id && m.valorizar_transferencia)
-                .reduce((a, b) => a + b.monto_total_imputado, 0);
+                .reduce((a, b) => a + (b.monto_total_imputado * factorConversionHacienda), 0);
 
               const ingresosEfectivos = modoAnalisis === 'ECONOMICO_PRODUCTIVO'
                 ? ventasReales + transfSalientes
