@@ -355,6 +355,49 @@ export async function guardarTransaccionBD(tx: Omit<TransaccionFinanciera, 'id' 
 }
 
 /**
+ * Actualizar transacción financiera en la base de datos
+ */
+export async function actualizarTransaccionBD(id: string, datos: Partial<TransaccionFinanciera>): Promise<boolean> {
+  const payload: Record<string, any> = {};
+  if (datos.estancia_id !== undefined) payload.establecimiento_id = datos.estancia_id;
+  if (datos.tipo !== undefined) payload.tipo = datos.tipo;
+  if (datos.moneda !== undefined) payload.moneda = datos.moneda;
+  if (datos.monto !== undefined) payload.monto = datos.monto;
+  if (datos.categoria !== undefined) payload.categoria = datos.categoria;
+  if (datos.descripcion !== undefined) payload.descripcion = datos.descripcion;
+  if (datos.fecha !== undefined) payload.fecha = datos.fecha;
+  if (datos.ejercicio_agricola !== undefined) payload.ejercicio_agricola = datos.ejercicio_agricola;
+  if (datos.periodo_mes !== undefined) payload.periodo_mes = datos.periodo_mes;
+  if (datos.naturaleza_costo !== undefined) payload.naturaleza_costo = datos.naturaleza_costo;
+  if (datos.es_prorrateado !== undefined) payload.es_prorrateado = datos.es_prorrateado;
+  if (datos.distribucion_prorrateo !== undefined) payload.distribucion_prorrateo = datos.distribucion_prorrateo;
+  if (datos.moneda_original !== undefined) payload.moneda_original = datos.moneda_original;
+  if (datos.monto_original !== undefined) payload.monto_original = datos.monto_original;
+  if (datos.tipo_cambio !== undefined) payload.tipo_cambio = datos.tipo_cambio;
+  if (datos.monto_usd !== undefined) payload.monto_usd = datos.monto_usd;
+  if (datos.monto_uyu !== undefined) payload.monto_uyu = datos.monto_uyu;
+  if (datos.comprobante_url !== undefined) payload.comprobante_url = datos.comprobante_url || null;
+  if (datos.comprobante_tipo !== undefined) payload.comprobante_tipo = datos.comprobante_tipo || null;
+  if (datos.nro_factura !== undefined) payload.nro_factura = datos.nro_factura || null;
+
+  try {
+    const { error } = await supabase
+      .from('transacciones_financieras')
+      .update(payload)
+      .eq('id', id);
+
+    if (error) {
+      console.warn('Error actualizando transacción en Supabase:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('Excepción actualizando transacción en Supabase:', err);
+    return false;
+  }
+}
+
+/**
  * Obtener recibos de sueldo desde Supabase
  */
 export async function obtenerRecibosSueldoBD(): Promise<ReciboSueldo[]> {

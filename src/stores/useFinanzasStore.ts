@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { TransaccionFinanciera } from '../types';
-import { obtenerTransaccionesBD, guardarTransaccionBD, supabase } from '../services/supabase';
+import { obtenerTransaccionesBD, guardarTransaccionBD, actualizarTransaccionBD, supabase } from '../services/supabase';
 
 interface FinanzasState {
   transacciones: TransaccionFinanciera[];
@@ -50,12 +50,7 @@ export const useFinanzasStore = create<FinanzasState>((set, get) => ({
     const esUUIDValido = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id);
     if (!esUUIDValido) return;
 
-    try {
-      const { error } = await supabase.from('transacciones_financieras').update(datos).eq('id', id);
-      if (error) console.warn('Aviso actualizando transacción en Supabase:', error.message);
-    } catch (e) {
-      console.warn('Error actualizando en Supabase:', e);
-    }
+    await actualizarTransaccionBD(id, datos);
   },
 
   eliminarTransaccion: async (id) => {
