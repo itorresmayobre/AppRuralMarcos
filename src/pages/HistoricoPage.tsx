@@ -187,7 +187,7 @@ export const HistoricoPage: React.FC = () => {
         .reduce((sum, t) => sum + obtenerMontoEnMoneda(t, monedaFiltro), 0);
 
       const resultadoNeto = ingresos - egresos;
-      const margenPorHectarea = Math.round(resultadoNeto / (hectareasTotales || 1));
+      const margenPorHectarea = resultadoNeto / (hectareasTotales || 1);
       const relacionEficiencia = egresos > 0 ? Math.round((ingresos / egresos) * 100) : (ingresos > 0 ? 100 : 0);
 
       const estadoActual = estadosBD[ej] || (ej === ejercicioActual ? 'ABIERTO' : 'CERRADO');
@@ -233,7 +233,7 @@ export const HistoricoPage: React.FC = () => {
       ? estancias.reduce((a, b) => a + b.hectareas_totales, 0)
       : (estancias.find((e) => e.id === estanciaFiltroId)?.hectareas_totales || 1);
 
-    const promedioMargenAnualHa = Math.round((netoTotal / divisorEjercicios) / (haTotales || 1));
+    const promedioMargenAnualHa = (netoTotal / divisorEjercicios) / (haTotales || 1);
 
     return {
       ingTotal,
@@ -394,7 +394,7 @@ export const HistoricoPage: React.FC = () => {
             </div>
           </div>
           <div className="text-xl font-black text-white font-mono">
-            {monedaFiltro} {acumuladosTotales.promedioMargenAnualHa.toLocaleString('es-UY')} / Ha
+            {monedaFiltro} {acumuladosTotales.promedioMargenAnualHa.toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / Ha
           </div>
           <p className="text-[10px] text-emerald-400 font-medium">Promedio anual por hectárea</p>
         </div>
@@ -422,33 +422,35 @@ export const HistoricoPage: React.FC = () => {
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-100 text-slate-700 font-extrabold text-[11px] uppercase tracking-wider border-b border-slate-200">
-                  <th className="py-3 px-3">Ejercicio Agrícola</th>
-                  <th className="py-3 px-3 text-center">Estado Contable</th>
-                  <th className="py-3 px-3 text-right">Superficie</th>
-                  <th className="py-3 px-3 text-right text-emerald-900">Ingresos ({monedaFiltro})</th>
-                  <th className="py-3 px-3 text-right text-slate-700">Egresos ({monedaFiltro})</th>
-                  <th className="py-3 px-3 text-right font-black">Resultado Neto</th>
-                  <th className="py-3 px-3 text-right bg-emerald-50/60 text-emerald-950 font-black">Margen ($/Ha)</th>
-                  <th className="py-3 px-3 text-center">Eficiencia (I/E)</th>
-                  <th className="py-3 px-3 text-center">Variación Interanual</th>
-                  {esAdminOPropietario && <th className="py-3 px-3 text-center">Acción Admin</th>}
+                  <th className="py-3 px-3.5 whitespace-nowrap">Ejercicio Agrícola</th>
+                  <th className="py-3 px-3.5 text-center whitespace-nowrap">Estado Contable</th>
+                  <th className="py-3 px-3.5 text-right whitespace-nowrap">Superficie</th>
+                  <th className="py-3 px-3.5 text-right text-emerald-900 whitespace-nowrap">Ingresos ({monedaFiltro})</th>
+                  <th className="py-3 px-3.5 text-right text-slate-700 whitespace-nowrap">Egresos ({monedaFiltro})</th>
+                  <th className="py-3 px-3.5 text-right font-black whitespace-nowrap">Resultado Neto</th>
+                  <th className="py-3 px-3.5 text-right bg-emerald-50/70 text-emerald-950 font-black whitespace-nowrap">Margen ({monedaFiltro}/Ha)</th>
+                  <th className="py-3 px-3.5 text-center whitespace-nowrap">Eficiencia (I/E)</th>
+                  <th className="py-3 px-3.5 text-center whitespace-nowrap">Variación Interanual</th>
+                  {esAdminOPropietario && <th className="py-3 px-3.5 text-center whitespace-nowrap">Acción Admin</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
                 {resumenEjercicios.map((item) => (
                   <tr key={item.ejercicio} className="hover:bg-slate-50/80 transition-colors">
                     {/* Ejercicio */}
-                    <td className="py-3 px-3 font-black text-slate-900 flex items-center gap-2">
-                      <span className="font-mono text-xs">{item.ejercicio}</span>
-                      {item.esActual && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-900 border border-emerald-300">
-                          Actual
-                        </span>
-                      )}
+                    <td className="py-3.5 px-3.5 font-black text-slate-900 whitespace-nowrap">
+                      <div className="inline-flex items-center gap-2">
+                        <span className="font-mono text-xs">{item.ejercicio}</span>
+                        {item.esActual && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-900 border border-emerald-300">
+                            Actual
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     {/* Estado Contable y Snapshot de Carga UG */}
-                    <td className="py-3 px-3 text-center">
+                    <td className="py-3.5 px-3.5 text-center whitespace-nowrap">
                       <div className="flex flex-col items-center gap-0.5">
                         {item.estado === 'CERRADO' ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-900 border border-rose-300">
@@ -470,31 +472,31 @@ export const HistoricoPage: React.FC = () => {
                     </td>
 
                     {/* Superficie */}
-                    <td className="py-3 px-3 text-right font-mono text-slate-600">
+                    <td className="py-3.5 px-3.5 text-right font-mono text-slate-600 whitespace-nowrap">
                       {item.hectareasTotales.toLocaleString()} Ha
                     </td>
 
                     {/* Ingresos */}
-                    <td className="py-3 px-3 text-right font-mono font-bold text-emerald-800">
-                      {monedaFiltro} {item.ingresos.toLocaleString('es-UY')}
+                    <td className="py-3.5 px-3.5 text-right font-mono font-bold text-emerald-800 whitespace-nowrap">
+                      {monedaFiltro} {item.ingresos.toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
 
                     {/* Egresos */}
-                    <td className="py-3 px-3 text-right font-mono font-bold text-slate-700">
-                      {monedaFiltro} {item.egresos.toLocaleString('es-UY')}
+                    <td className="py-3.5 px-3.5 text-right font-mono font-bold text-slate-700 whitespace-nowrap">
+                      {monedaFiltro} {item.egresos.toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
 
                     {/* Resultado Neto */}
-                    <td className={`py-3 px-3 text-right font-mono font-black ${
+                    <td className={`py-3.5 px-3.5 text-right font-mono font-black whitespace-nowrap ${
                       item.resultadoNeto >= 0 ? 'text-emerald-700' : 'text-rose-700'
                     }`}>
-                      {monedaFiltro} {item.resultadoNeto.toLocaleString('es-UY')}
+                      {monedaFiltro} {item.resultadoNeto.toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
 
                     {/* Margen $/Ha */}
-                    <td className="py-3 px-3 text-right font-mono font-black text-emerald-950 bg-emerald-50/30">
-                      <span className="px-2.5 py-1 rounded-lg bg-emerald-100/90 border border-emerald-300 text-emerald-950">
-                        {monedaFiltro} {item.margenPorHectarea.toLocaleString('es-UY')} / Ha
+                    <td className="py-3.5 px-3.5 text-right font-mono font-black text-emerald-950 bg-emerald-50/20 whitespace-nowrap">
+                      <span className="whitespace-nowrap inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-100/90 border border-emerald-300 text-emerald-950 font-bold">
+                        {monedaFiltro} {item.margenPorHectarea.toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / Ha
                       </span>
                     </td>
 

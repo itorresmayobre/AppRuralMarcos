@@ -6,7 +6,6 @@ import type { UserRole } from '../../types';
 import { UserCheck, Tractor, DollarSign, HardHat } from 'lucide-react';
 
 export const useCrearEmpleadoForm = () => {
-  const { crearUsuario } = useUsuariosStore();
   const { mostrarToast } = useToastStore();
 
   const [mostrarModalAlta, setMostrarModalAlta] = useState(false);
@@ -57,15 +56,7 @@ export const useCrearEmpleadoForm = () => {
       });
 
       if (res.exito) {
-        const usernameGenerado = `${nombre.trim().toLowerCase()}.${apellido.trim().toLowerCase()}`;
-        crearUsuario({
-          nombre,
-          apellido,
-          email,
-          rol: rolForm,
-          empresa_ids: [],
-          estancias_asignadas_ids: estanciasSeleccionadasForm,
-        });
+        useUsuariosStore.getState().cargarUsuariosDesdeSupabase();
 
         setCargandoAltaEmpleado(false);
         setMostrarModalAlta(false);
@@ -74,8 +65,8 @@ export const useCrearEmpleadoForm = () => {
         setEmail('');
 
         mostrarToast(
-          '¡Empleado Registrado!',
-          `Usuario generado: ${usernameGenerado} asignado a ${estanciasSeleccionadasForm.length} campo(s).`,
+          '¡Invitación Enviada!',
+          `Se registró a ${nombre} y se envió un correo a ${email} con el enlace para definir su contraseña.`,
           'EXITO'
         );
       } else {
