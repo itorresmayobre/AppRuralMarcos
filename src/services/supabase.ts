@@ -6,7 +6,10 @@ import type {
   ReciboSueldo, 
   ConceptoFinanciero,
   UserProfile,
-  UsuarioEmpleado
+  UsuarioEmpleado,
+  EspecieGanado,
+  CategoriaVacuno,
+  CategoriaOvino
 } from '../types';
 import { formatearCIUruguaya } from '../utils/validacionesUruguay';
 
@@ -206,6 +209,83 @@ export async function obtenerStockGanaderoBD(): Promise<StockGanadero[]> {
     kilos_promedio: item.kilos_promedio,
     ultima_actualizacion: item.ultima_actualizacion,
   }));
+}
+
+/**
+ * Guardar o actualizar stock ganadero en la base de datos
+ */
+export async function guardarStockGanaderoBD(stockItem: {
+  id?: string;
+  estancia_id: string;
+  especie: EspecieGanado;
+  categoria: CategoriaVacuno | CategoriaOvino;
+  cabezas: number;
+  kilos_promedio?: number;
+}): Promise<StockGanadero | null> {
+  const now = new Date().toISOString();
+  const payload = {
+    establecimiento_id: stockItem.estancia_id,
+    especie: stockItem.especie,
+    categoria: stockItem.categoria,
+    cabezas: stockItem.cabezas,
+    kilos_promedio: stockItem.kilos_promedio || 0,
+    ultima_actualizacion: now,
+  };
+
+  try {
+    let res;
+    if (stockItem.id && !stockItem.id.startsWith('temp-')) {
+      res = await supabase
+        .from('stock_ganadero')
+        .update(payload)
+        .eq('id', stockItem.id)
+        .select('*')
+        .maybeSingle();
+    } else {
+      const { data: existente } = await supabase
+        .from('stock_ganadero')
+        .select('id')
+        .eq('establecimiento_id', stockItem.estancia_id)
+        .eq('especie', stockItem.especie)
+        .eq('categoria', stockItem.categoria)
+        .maybeSingle();
+
+      if (existente?.id) {
+        res = await supabase
+          .from('stock_ganadero')
+          .update(payload)
+          .eq('id', existente.id)
+          .select('*')
+          .maybeSingle();
+      } else {
+        res = await supabase
+          .from('stock_ganadero')
+          .insert([payload])
+          .select('*')
+          .maybeSingle();
+      }
+    }
+
+    if (res.error) {
+      console.warn('Error guardando stock ganadero en Supabase:', res.error.message);
+      return null;
+    }
+
+    if (!res.data) return null;
+
+    return {
+      id: res.data.id,
+      estancia_id: res.data.establecimiento_id,
+      especie: res.data.especie,
+      categoria: res.data.categoria,
+      cabezas: res.data.cabezas,
+      kilos_promedio: res.data.kilos_promedio,
+      ultima_actualizacion: res.data.ultima_actualizacion,
+    };
+  } catch (err) {
+    console.warn('Excepción guardando stock ganadero en Supabase:', err);
+    return null;
+  }
 }
 
 /**

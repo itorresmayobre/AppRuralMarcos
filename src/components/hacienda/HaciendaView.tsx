@@ -2,19 +2,52 @@ import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useEstanciasStore } from '../../stores/useEstanciasStore';
 import { useGanadoStore } from '../../stores/useGanadoStore';
+import { useToastStore } from '../../stores/useToastStore';
+import { supabase } from '../../services/supabase';
 import { TrasladoGanadoModal } from '../modals/TrasladoGanadoModal';
 import { formatearFechaUY } from '../../utils/fechas';
-import { Plus, Beef, Truck } from 'lucide-react';
+import { Plus, Beef, Truck, SlidersHorizontal, Check, X, Save } from 'lucide-react';
+import type { StockGanadero, EspecieGanado, CategoriaVacuno, CategoriaOvino } from '../../types';
 
 export const HaciendaView: React.FC = () => {
   const { usuario } = useAuthStore();
   const { estanciaSeleccionadaId, estancias } = useEstanciasStore();
-  const { movimientos, obtenerStockEstancia } = useGanadoStore();
+  const { movimientos, obtenerStockEstancia, actualizarStock } = useGanadoStore();
+  const { mostrarToast } = useToastStore();
+
+  const [categoriasBD, setCategoriasBD] = useState<{ especie: EspecieGanado; categoria: string; descripcion?: string }[]>([]);
 
   useEffect(() => {
     if (!useGanadoStore.getState().inicializado) {
       useGanadoStore.getState().cargarGanadoDesdeSupabase();
     }
+
+    const cargarCategoriasBD = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('configuracion_equivalencias_ug')
+          .select('especie, categoria, descripcion');
+
+        if (!error && data && data.length > 0) {
+          const mapaUnicos = new Map<string, { especie: EspecieGanado; categoria: string; descripcion?: string }>();
+          data.forEach((item) => {
+            const key = `${item.especie}_${item.categoria}`;
+            if (!mapaUnicos.has(key)) {
+              mapaUnicos.set(key, {
+                especie: item.especie as EspecieGanado,
+                categoria: item.categoria,
+                descripcion: item.descripcion || item.categoria.replace(/_/g, ' '),
+              });
+            }
+          });
+          setCategoriasBD(Array.from(mapaUnicos.values()));
+        }
+      } catch (err) {
+        console.warn('No se pudieron cargar categorías dinámicas de Supabase:', err);
+      }
+    };
+
+    cargarCategoriasBD();
   }, []);
 
   const currentRole = usuario?.rol || 'OPERARIO';
@@ -23,11 +56,91 @@ export const HaciendaView: React.FC = () => {
   const [modalTrasladoAbierto, setModalTrasladoAbierto] = useState(false);
   const [filtroEspecie, setFiltroEspecie] = useState<'TODOS' | 'VACUNO' | 'OVINO'>('TODOS');
 
+  // Estado para Edición Inline por Fila
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editCabezas, setEditCabezas] = useState<number>(0);
+  const [editKilos, setEditKilos] = useState<number>(0);
+  const [guardandoInline, setGuardandoInline] = useState<boolean>(false);
+
+  // Estado para Alta Inline de Nueva Categoría
+  const [mostrarAltaInline, setMostrarAltaInline] = useState<boolean>(false);
+  const [altaEspecie, setAltaEspecie] = useState<EspecieGanado>('VACUNO');
+  const [altaCategoria, setAltaCategoria] = useState<string>('VACAS_DE_CRIA');
+  const [altaCabezas, setAltaCabezas] = useState<number>(0);
+  const [altaKilos, setAltaKilos] = useState<number>(0);
+
   const stockActual = obtenerStockEstancia(estanciaSeleccionadaId);
   const stockFiltrado = stockActual.filter((s) => filtroEspecie === 'TODOS' || s.especie === filtroEspecie);
 
   const totalCabezasVacunos = stockActual.filter((s) => s.especie === 'VACUNO').reduce((acc, curr) => acc + curr.cabezas, 0);
   const totalCabezasOvinos = stockActual.filter((s) => s.especie === 'OVINO').reduce((acc, curr) => acc + curr.cabezas, 0);
+
+  const IniciarEdicionInline = (item: StockGanadero) => {
+    setEditingId(item.id);
+    setEditCabezas(item.cabezas);
+    setEditKilos(item.kilos_promedio || 0);
+  };
+
+  const CancelarEdicionInline = () => {
+    setEditingId(null);
+  };
+
+  const GuardarEdicionInline = async (item: StockGanadero) => {
+    try {
+      setGuardandoInline(true);
+      await actualizarStock({
+        id: item.id,
+        estancia_id: item.estancia_id,
+        especie: item.especie,
+        categoria: item.categoria,
+        cabezas: editCabezas,
+        kilos_promedio: editKilos,
+      });
+      mostrarToast('Stock Actualizado', `Existencias de ${item.categoria.replace(/_/g, ' ')} actualizadas correctamente.`, 'EXITO');
+      setEditingId(null);
+    } catch (e) {
+      mostrarToast('Error al Ajustar', 'No se pudieron guardar las existencias.', 'ERROR');
+    } finally {
+      setGuardandoInline(false);
+    }
+  };
+
+  const GuardarAltaInline = async () => {
+    if (!estanciaSeleccionadaId || estanciaSeleccionadaId === 'TODAS') {
+      mostrarToast('Selecciona un Campo', 'Debes seleccionar un establecimiento específico para registrar ganado.', 'ADVERTENCIA');
+      return;
+    }
+    if (altaCabezas < 0) {
+      mostrarToast('Cabezas Inválidas', 'Ingresa una cantidad de cabezas válida.', 'ERROR');
+      return;
+    }
+
+    try {
+      setGuardandoInline(true);
+      await actualizarStock({
+        estancia_id: estanciaSeleccionadaId,
+        especie: altaEspecie,
+        categoria: altaCategoria as CategoriaVacuno | CategoriaOvino,
+        cabezas: altaCabezas,
+        kilos_promedio: altaKilos,
+      });
+      mostrarToast('Ganado Registrado', `Se registraron ${altaCabezas} cabezas en ${altaCategoria.replace(/_/g, ' ')}.`, 'EXITO');
+      setMostrarAltaInline(false);
+      setAltaCabezas(0);
+      setAltaKilos(0);
+    } catch (e) {
+      mostrarToast('Error al Registrar', 'No se pudo guardar la categoría de ganado.', 'ERROR');
+    } finally {
+      setGuardandoInline(false);
+    }
+  };
+
+  const opcionesCategoriaAlta = categoriasBD
+    .filter((c) => c.especie === altaEspecie)
+    .map((c) => ({
+      value: c.categoria,
+      label: c.descripcion || c.categoria.replace(/_/g, ' '),
+    }));
 
   return (
     <section aria-label="Existencias de Ganado y DICOSE" className="space-y-3">
@@ -43,23 +156,128 @@ export const HaciendaView: React.FC = () => {
         </div>
 
         {canEdit && (
-          <button 
-            type="button"
-            onClick={() => setModalTrasladoAbierto(true)}
-            className="w-full sm:w-auto inline-flex items-center justify-center space-x-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-3.5 py-2 rounded-lg shadow-sm active:scale-95 transition-all min-h-[36px] cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Registrar Traslado de Ganado</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setMostrarAltaInline(!mostrarAltaInline);
+                if (!mostrarAltaInline) {
+                  setAltaEspecie(filtroEspecie === 'OVINO' ? 'OVINO' : 'VACUNO');
+                  setAltaCategoria(filtroEspecie === 'OVINO' ? 'OVEJAS_CRIA' : 'VACAS_DE_CRIA');
+                }
+              }}
+              className="inline-flex items-center justify-center space-x-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-3.5 py-2 rounded-lg shadow-sm active:scale-95 transition-all min-h-[36px] cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>{mostrarAltaInline ? 'Cerrar Alta' : '+ Alta de Ganado'}</span>
+            </button>
+
+            <button 
+              type="button"
+              onClick={() => setModalTrasladoAbierto(true)}
+              className="inline-flex items-center justify-center space-x-1.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs px-3.5 py-2 rounded-lg shadow-sm active:scale-95 transition-all min-h-[36px] cursor-pointer"
+            >
+              <Truck className="w-4 h-4 text-emerald-400" />
+              <span>Traslado Inter-Campo</span>
+            </button>
+          </div>
         )}
       </header>
+
+      {/* Formulario Rápido Inline para Alta de Nuevas Categorías */}
+      {mostrarAltaInline && canEdit && (
+        <div className="app-card bg-emerald-50/70 border border-emerald-300 p-3.5 rounded-xl space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
+              <Plus className="w-4 h-4 text-emerald-700" />
+              <span>Registrar / Inicializar Categoría de Ganado</span>
+            </h3>
+            <button
+              onClick={() => setMostrarAltaInline(false)}
+              className="text-slate-400 hover:text-slate-600 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Especie</label>
+              <select
+                value={altaEspecie}
+                onChange={(e) => {
+                  const nEsp = e.target.value as EspecieGanado;
+                  setAltaEspecie(nEsp);
+                  setAltaCategoria(nEsp === 'VACUNO' ? 'VACAS_DE_CRIA' : 'OVEJAS_CRIA');
+                }}
+                className="w-full px-2.5 py-1.5 bg-white text-slate-900 border border-emerald-300 rounded-lg font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              >
+                <option value="VACUNO">Vacuno</option>
+                <option value="OVINO">Ovino</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Categoría DICOSE</label>
+              <select
+                value={altaCategoria}
+                onChange={(e) => setAltaCategoria(e.target.value)}
+                className="w-full px-2.5 py-1.5 bg-white text-slate-900 border border-emerald-300 rounded-lg font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              >
+                {opcionesCategoriaAlta.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Cabezas</label>
+              <input
+                type="number"
+                min="0"
+                placeholder="Ej. 50"
+                value={altaCabezas || ''}
+                onChange={(e) => setAltaCabezas(Math.max(0, parseInt(e.target.value) || 0))}
+                className="w-full px-2.5 py-1.5 bg-white text-slate-900 border border-emerald-300 rounded-lg font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Peso Prom. (Kg)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.5"
+                placeholder="Ej. 380"
+                value={altaKilos || ''}
+                onChange={(e) => setAltaKilos(Math.max(0, parseFloat(e.target.value) || 0))}
+                className="w-full px-2.5 py-1.5 bg-white text-slate-900 border border-emerald-300 rounded-lg font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              />
+            </div>
+
+            <div className="flex items-end">
+              <button
+                type="button"
+                disabled={guardandoInline}
+                onClick={GuardarAltaInline}
+                className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-1.5 px-3 rounded-lg shadow-sm flex items-center justify-center space-x-1 cursor-pointer transition-all active:scale-95 disabled:opacity-50"
+              >
+                <Save className="w-4 h-4" />
+                <span>{guardandoInline ? 'Guardando...' : 'Guardar Stock'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <nav aria-label="Filtrar por especie" className="flex space-x-2 overflow-x-auto pb-1">
         {(['TODOS', 'VACUNO', 'OVINO'] as const).map((esp) => (
           <button
             key={esp}
             onClick={() => setFiltroEspecie(esp)}
-            className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-bold transition-all min-h-[34px] ${
+            className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-bold transition-all min-h-[34px] cursor-pointer ${
               filtroEspecie === esp
                 ? 'bg-emerald-700 text-white shadow-sm'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-300'
@@ -70,14 +288,16 @@ export const HaciendaView: React.FC = () => {
         ))}
       </nav>
 
-      {/* Vista de Tabla Escritorio Stock */}
+      {/* Vista de Tabla Existencias Actuales de Ganado */}
       <div className="app-card !p-0 overflow-hidden">
         <div className="p-3 border-b border-slate-100 flex items-center justify-between">
           <h3 className="app-section-title">
             <Beef className="w-4 h-4 text-emerald-600" />
             <span>Existencias Actuales de Ganado</span>
           </h3>
-          <span className="text-xs text-slate-500 font-extrabold">{stockFiltrado.length} Categorías</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500 font-extrabold">{stockFiltrado.length} Categorías</span>
+          </div>
         </div>
 
         <div className="app-table-container !border-0 !rounded-none">
@@ -89,32 +309,120 @@ export const HaciendaView: React.FC = () => {
                 <th>Cabezas</th>
                 <th>Peso Prom. (Kg)</th>
                 <th>Última Actualización</th>
+                {canEdit && <th className="text-center w-28">Ajustar</th>}
               </tr>
             </thead>
             <tbody>
-              {stockFiltrado.map((item) => (
-                <tr key={item.id}>
-                  <td className="font-bold">
-                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                      item.especie === 'VACUNO' ? 'bg-emerald-100 text-emerald-900 border border-emerald-200' : 'bg-amber-100 text-amber-900 border border-amber-200'
-                    }`}>
-                      {item.especie}
-                    </span>
-                  </td>
-                  <td className="font-bold text-slate-800">
-                    {item.categoria.replace(/_/g, ' ')}
-                  </td>
-                  <td className="font-bold text-slate-900 text-xs">
-                    {item.cabezas} cabezas
-                  </td>
-                  <td className="text-slate-600 font-medium">
-                    {item.kilos_promedio ? `${item.kilos_promedio} kg` : '-'}
-                  </td>
-                  <td className="text-slate-600 font-mono font-medium">
-                    <time dateTime={item.ultima_actualizacion}>{formatearFechaUY(item.ultima_actualizacion)}</time>
+              {stockFiltrado.length > 0 ? (
+                stockFiltrado.map((item) => {
+                  const isEditing = editingId === item.id;
+                  return (
+                    <tr key={item.id} className={isEditing ? 'bg-amber-50/60 transition-colors' : ''}>
+                      <td className="font-bold">
+                        <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                          item.especie === 'VACUNO' ? 'bg-emerald-100 text-emerald-900 border border-emerald-200' : 'bg-amber-100 text-amber-900 border border-amber-200'
+                        }`}>
+                          {item.especie}
+                        </span>
+                      </td>
+                      <td className="font-bold text-slate-800">
+                        {item.categoria.replace(/_/g, ' ')}
+                      </td>
+                      <td className="font-bold text-slate-900 text-xs">
+                        {isEditing ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              min="0"
+                              value={editCabezas}
+                              onChange={(e) => setEditCabezas(Math.max(0, parseInt(e.target.value) || 0))}
+                              className="w-20 px-2 py-1 bg-white text-slate-900 border-2 border-emerald-500 rounded text-xs font-bold focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                            />
+                            <span className="text-[11px] text-slate-500">cab.</span>
+                          </div>
+                        ) : (
+                          `${item.cabezas} cabezas`
+                        )}
+                      </td>
+                      <td className="text-slate-600 font-medium">
+                        {isEditing ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.5"
+                              value={editKilos}
+                              onChange={(e) => setEditKilos(Math.max(0, parseFloat(e.target.value) || 0))}
+                              className="w-20 px-2 py-1 bg-white text-slate-900 border-2 border-emerald-500 rounded text-xs font-bold focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                            />
+                            <span className="text-[11px] text-slate-500">kg</span>
+                          </div>
+                        ) : (
+                          item.kilos_promedio ? `${item.kilos_promedio} kg` : '-'
+                        )}
+                      </td>
+                      <td className="text-slate-600 font-mono font-medium">
+                        <time dateTime={item.ultima_actualizacion}>{formatearFechaUY(item.ultima_actualizacion)}</time>
+                      </td>
+                      {canEdit && (
+                        <td className="text-center">
+                          {isEditing ? (
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                type="button"
+                                title="Guardar Ajuste"
+                                disabled={guardandoInline}
+                                onClick={() => GuardarEdicionInline(item)}
+                                className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md shadow-sm transition-all cursor-pointer active:scale-95"
+                              >
+                                <Check className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                title="Cancelar"
+                                onClick={CancelarEdicionInline}
+                                className="p-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-md transition-all cursor-pointer"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              title="Ajustar Stock"
+                              onClick={() => IniciarEdicionInline(item)}
+                              className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs rounded border border-emerald-200 transition-all cursor-pointer active:scale-95"
+                            >
+                              <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Ajustar</span>
+                            </button>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={canEdit ? 6 : 5} className="py-6 text-center text-slate-500">
+                    <p className="text-sm font-bold text-slate-700">No hay hacienda registrada en esta estancia.</p>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMostrarAltaInline(true);
+                          setAltaEspecie(filtroEspecie === 'OVINO' ? 'OVINO' : 'VACUNO');
+                          setAltaCategoria(filtroEspecie === 'OVINO' ? 'OVEJAS_CRIA' : 'VACAS_DE_CRIA');
+                        }}
+                        className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:text-emerald-800 underline cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Haz clic aquí para ingresar las primeras existencias</span>
+                      </button>
+                    )}
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { StockGanadero, MovimientoGanado } from '../types';
-import { obtenerStockGanaderoBD, supabase } from '../services/supabase';
+import type { StockGanadero, MovimientoGanado, EspecieGanado, CategoriaVacuno, CategoriaOvino } from '../types';
+import { obtenerStockGanaderoBD, guardarStockGanaderoBD, supabase } from '../services/supabase';
 
 interface GanadoState {
   stockList: StockGanadero[];
@@ -9,6 +9,14 @@ interface GanadoState {
   cargando: boolean;
   inicializado: boolean;
   cargarGanadoDesdeSupabase: () => Promise<void>;
+  actualizarStock: (item: {
+    id?: string;
+    estancia_id: string;
+    especie: EspecieGanado;
+    categoria: CategoriaVacuno | CategoriaOvino;
+    cabezas: number;
+    kilos_promedio?: number;
+  }) => Promise<void>;
   registrarMovimiento: (mov: Omit<MovimientoGanado, 'id' | 'creado_por_usuario'>) => Promise<void>;
   obtenerStockEstancia: (estanciaId: string) => StockGanadero[];
   obtenerMovimientosEstancia: (estanciaId: string) => MovimientoGanado[];
@@ -29,6 +37,40 @@ export const useGanadoStore = create<GanadoState>()(
           stockList: datosStock || [],
           cargando: false,
           inicializado: true,
+        });
+      },
+
+      actualizarStock: async (itemData) => {
+        const stockGuardado = await guardarStockGanaderoBD(itemData);
+        const fechaActual = stockGuardado?.ultima_actualizacion || new Date().toISOString();
+
+        set((state) => {
+          const idx = state.stockList.findIndex(
+            (s) => (s.id && s.id === itemData.id) || (s.estancia_id === itemData.estancia_id && s.especie === itemData.especie && s.categoria === itemData.categoria)
+          );
+
+          if (idx >= 0) {
+            const copia = [...state.stockList];
+            copia[idx] = {
+              ...copia[idx],
+              id: stockGuardado?.id || copia[idx].id,
+              cabezas: itemData.cabezas,
+              kilos_promedio: itemData.kilos_promedio !== undefined ? itemData.kilos_promedio : copia[idx].kilos_promedio,
+              ultima_actualizacion: fechaActual,
+            };
+            return { stockList: copia };
+          } else {
+            const nuevoItem: StockGanadero = {
+              id: stockGuardado?.id || `temp-${Date.now()}`,
+              estancia_id: itemData.estancia_id,
+              especie: itemData.especie,
+              categoria: itemData.categoria,
+              cabezas: itemData.cabezas,
+              kilos_promedio: itemData.kilos_promedio || 0,
+              ultima_actualizacion: fechaActual,
+            };
+            return { stockList: [...state.stockList, nuevoItem] };
+          }
         });
       },
 
