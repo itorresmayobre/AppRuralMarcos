@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useConceptosFinancierosStore } from '../../stores/useConceptosFinancierosStore';
 import { useEstanciasStore } from '../../stores/useEstanciasStore';
 import { useToastStore } from '../../stores/useToastStore';
@@ -29,10 +29,18 @@ export const ConfiguracionConceptosView: React.FC = () => {
   const {
     catalog,
     conceptosActivosIds,
+    inicializado,
+    cargarConceptosDesdeSupabase,
     toggleConcepto,
     activarTodosGrupo,
     agregarConceptoPersonalizado
   } = useConceptosFinancierosStore();
+
+  useEffect(() => {
+    if (!inicializado || catalog.length === 0) {
+      cargarConceptosDesdeSupabase();
+    }
+  }, [inicializado, catalog.length, cargarConceptosDesdeSupabase]);
 
   const { estancias, reglasProrrateo, actualizarReglasProrrateo, calcularProrrateoPorHectareas } = useEstanciasStore();
   const { mostrarToast } = useToastStore();

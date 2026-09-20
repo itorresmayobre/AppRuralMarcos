@@ -28,6 +28,26 @@ export const conceptosService = {
     if (!conceptosActivosIds || conceptosActivosIds.length === 0) {
       throw new Error('Debe haber al menos 1 concepto activo para la empresa.');
     }
+
+    try {
+      // Importación dinámica de stores para no generar referencias circulares
+      const { useEmpresasStore } = await import('../../stores/useEmpresasStore');
+      const { useAuthStore } = await import('../../stores/useAuthStore');
+
+      const empresaIdReal = useEmpresasStore.getState().empresaSeleccionadaId || useAuthStore.getState().usuario?.empresa_ids?.[0];
+
+      if (empresaIdReal) {
+        const payload = conceptosActivosIds.map((id) => ({
+          empresa_id: empresaIdReal,
+          concepto_id: id,
+          activo: true,
+        }));
+
+        await supabase.from('conceptos_activos_empresa').upsert(payload, { onConflict: 'empresa_id,concepto_id' });
+      }
+    } catch (e) {
+      console.warn('Aviso al guardar configuración de conceptos en Supabase:', e);
+    }
     return true;
   },
 
