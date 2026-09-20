@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { StockGanadero, MovimientoGanado, EspecieGanado, CategoriaVacuno, CategoriaOvino } from '../types';
 import { obtenerStockGanaderoBD, guardarStockGanaderoBD, supabase } from '../services/supabase';
+import { useAuthStore } from './useAuthStore';
 
 interface GanadoState {
   stockList: StockGanadero[];
@@ -36,18 +37,33 @@ export const useGanadoStore = create<GanadoState>()(
 
         let datosMovimientos: MovimientoGanado[] = [];
         try {
+          const { data: perfiles } = await supabase.from('perfiles').select('id, nombre, apellido, email');
+          const mapaPerfiles = new Map<string, string>();
+          if (perfiles) {
+            perfiles.forEach((p) => {
+              const nom = `${p.nombre || ''} ${p.apellido || ''}`.trim() || p.email || 'Usuario';
+              mapaPerfiles.set(p.id, nom);
+            });
+          }
+
           const { data } = await supabase
             .from('movimientos_ganado')
             .select('*')
             .order('created_at', { ascending: false });
 
           if (data) {
-            datosMovimientos = data.map((m: any) => ({
-              ...m,
-              valorizar_transferencia: (m.monto_total_imputado || 0) > 0,
-              precio_por_cabeza: m.cabezas > 0 ? (m.monto_total_imputado || 0) / m.cabezas : 0,
-              creado_por_usuario: m.creado_por || 'usuario.actual',
-            }));
+            datosMovimientos = data.map((m: any) => {
+              const idCreador = m.creado_por || m.usuario_id || m.creado_por_usuario;
+              const esUUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(idCreador || '');
+              const nombreResolvido = esUUID ? (mapaPerfiles.get(idCreador) || 'Usuario') : (idCreador || 'Usuario');
+
+              return {
+                ...m,
+                valorizar_transferencia: (m.monto_total_imputado || 0) > 0,
+                precio_por_cabeza: m.cabezas > 0 ? (m.monto_total_imputado || 0) / m.cabezas : 0,
+                creado_por_usuario: nombreResolvido,
+              };
+            });
           }
         } catch (e) {
           console.warn('Error al cargar movimientos_ganado desde Supabase:', e);
@@ -108,6 +124,9 @@ export const useGanadoStore = create<GanadoState>()(
         const cabezasDestinoNuevas = (stockDestino?.cabezas || 0) + movData.cabezas;
 
         try {
+          const usuario = useAuthStore.getState().usuario;
+          const usuarioId = usuario?.id || null;
+
           // 1. Guardar el movimiento en Supabase
           await supabase.from('movimientos_ganado').insert([{
             estancia_origen_id: movData.estancia_origen_id,
@@ -120,6 +139,7 @@ export const useGanadoStore = create<GanadoState>()(
             fecha: movData.fecha,
             observaciones: movData.observaciones,
             monto_total_imputado: movData.monto_total_imputado || 0,
+            ...(usuarioId ? { creado_por: usuarioId } : {}),
           }]);
 
           // 2. Persistir stock actualizado en Supabase (Origen y Destino)
