@@ -121,8 +121,12 @@ export const useTransaccionForm = (
       });
     }
 
+    const estanciaIdReal = (estanciaFormId && estanciaFormId !== 'TODAS')
+      ? estanciaFormId
+      : (estancias[0]?.id || '');
+
     const payload = {
-      estancia_id: esProrrateado ? 'TODAS' : estanciaFormId,
+      estancia_id: estanciaIdReal,
       tipo: tipoFinanciero,
       categoria: categoria || 'General',
       descripcion: descripcionFinanciera || `${tipoFinanciero === 'INGRESO' ? 'Ingreso' : 'Egreso'} financiero`,

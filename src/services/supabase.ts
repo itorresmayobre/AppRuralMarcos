@@ -319,8 +319,15 @@ export async function obtenerTransaccionesBD(): Promise<TransaccionFinanciera[]>
  * Guardar nueva transacción en Supabase
  */
 export async function guardarTransaccionBD(tx: Omit<TransaccionFinanciera, 'id' | 'creado_por_usuario'> | Omit<TransaccionFinanciera, 'id'>): Promise<string | null> {
+  const esUUIDValido = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(tx.estancia_id || '');
+  let idEstablecimientoUUID = esUUIDValido ? tx.estancia_id : undefined;
+
+  if (!idEstablecimientoUUID && tx.distribucion_prorrateo && tx.distribucion_prorrateo.length > 0) {
+    idEstablecimientoUUID = tx.distribucion_prorrateo[0].estancia_id;
+  }
+
   const payload = {
-    establecimiento_id: tx.estancia_id,
+    establecimiento_id: idEstablecimientoUUID || tx.estancia_id,
     tipo: tx.tipo,
     moneda: tx.moneda,
     monto: tx.monto,
@@ -359,7 +366,7 @@ export async function guardarTransaccionBD(tx: Omit<TransaccionFinanciera, 'id' 
  */
 export async function actualizarTransaccionBD(id: string, datos: Partial<TransaccionFinanciera>): Promise<boolean> {
   const payload: Record<string, any> = {};
-  if (datos.estancia_id !== undefined) payload.establecimiento_id = datos.estancia_id;
+  if (datos.estancia_id !== undefined && datos.estancia_id !== 'TODAS') payload.establecimiento_id = datos.estancia_id;
   if (datos.tipo !== undefined) payload.tipo = datos.tipo;
   if (datos.moneda !== undefined) payload.moneda = datos.moneda;
   if (datos.monto !== undefined) payload.monto = datos.monto;
