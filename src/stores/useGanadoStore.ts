@@ -170,13 +170,13 @@ export const useGanadoStore = create<GanadoState>()(
 
       obtenerStockEstancia: (estanciaId: string) => {
         const { stockList } = get();
-        if (estanciaId === 'TODAS') return stockList;
+        if (!estanciaId || estanciaId === 'TODAS' || estanciaId === 'TODOS') return stockList;
         return stockList.filter((s) => s.estancia_id === estanciaId);
       },
 
       obtenerMovimientosEstancia: (estanciaId: string) => {
         const { movimientos } = get();
-        if (estanciaId === 'TODAS') return movimientos;
+        if (!estanciaId || estanciaId === 'TODAS' || estanciaId === 'TODOS') return movimientos;
         return movimientos.filter(
           (m) => m.estancia_origen_id === estanciaId || m.estancia_destino_id === estanciaId
         );

@@ -77,7 +77,7 @@ export const EstadisticasView: React.FC = () => {
 
   // Opciones para CustomSelect de Estancia
   const estanciaOptions: SelectOption[] = [
-    { value: 'TODOS', label: 'Consolidado Total Empresa' },
+    { value: 'TODAS', label: 'Consolidado Total Empresa (Todas las Estancias)' },
     ...estancias.map((est) => ({
       value: est.id,
       label: est.nombre,
@@ -93,7 +93,7 @@ export const EstadisticasView: React.FC = () => {
   const transaccionesFiltradas = todasTransacciones.filter((t) => {
     const { ejercicio } = calcularEjercicioYMesAgricola(t.fecha);
     const ejercicioEfectivo = t.ejercicio_agricola || ejercicio;
-    return ejercicioFiltro === 'TODOS' || ejercicioEfectivo === ejercicioFiltro;
+    return ejercicioFiltro === 'TODOS' || ejercicioFiltro === 'TODAS' || ejercicioEfectivo === ejercicioFiltro;
   });
 
   // Totales generales calculados dinámicamente según la moneda seleccionada
@@ -121,7 +121,7 @@ export const EstadisticasView: React.FC = () => {
   const pctVariables = totalEgresos > 0 ? Math.round((totalCostosVariables / totalEgresos) * 100) : 0;
 
   // Hectáreas totales calculadas para métrica $/Ha
-  const hectareasTotales = estanciaFiltroId === 'TODAS'
+  const hectareasTotales = (estanciaFiltroId === 'TODAS' || estanciaFiltroId === 'TODOS')
     ? estancias.reduce((a, b) => a + b.hectareas_totales, 0)
     : (estancias.find((e) => e.id === estanciaFiltroId)?.hectareas_totales || 1);
 

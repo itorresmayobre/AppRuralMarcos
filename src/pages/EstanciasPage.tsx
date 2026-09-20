@@ -1,17 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useEstanciasStore } from '../stores/useEstanciasStore';
+import { useGanadoStore } from '../stores/useGanadoStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useToastStore } from '../stores/useToastStore';
 import { CustomSelect } from '../components/ui/CustomSelect';
 import { CoeficientesUGModal } from '../components/ganado/CoeficientesUGModal';
 import type { TipoTenencia, Estancia } from '../types';
-import { MapPin, Plus, CheckCircle2, Building2, X, Scale, Pencil, ToggleLeft, ToggleRight } from 'lucide-react';
+import { MapPin, Plus, CheckCircle2, Building2, X, Scale, Pencil, ToggleLeft, ToggleRight, Beef } from 'lucide-react';
 
 export const EstanciasPage: React.FC = () => {
   const { estancias, agregarEstancia, editarEstancia, seleccionarEstancia, estanciaSeleccionadaId } = useEstanciasStore();
+  const { stockList, cargarGanadoDesdeSupabase } = useGanadoStore();
   const { usuario } = useAuthStore();
   const { mostrarToast } = useToastStore();
   const esAdmin = usuario?.rol === 'ADMIN' || usuario?.rol === 'PROPIETARIO' || usuario?.rol === 'SUPERADMIN';
+
+  useEffect(() => {
+    cargarGanadoDesdeSupabase();
+  }, [cargarGanadoDesdeSupabase]);
 
   const [mostrarModal, setMostrarModal] = useState(false);
   const [mostrarModalUG, setMostrarModalUG] = useState(false);
@@ -157,6 +163,18 @@ export const EstanciasPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {estancias.map((estancia) => {
           const esSeleccionada = estanciaSeleccionadaId === estancia.id;
+
+          const stockCampo = stockList.filter((s) => s.estancia_id === estancia.id);
+          const vacunosCampo = stockCampo.filter((s) => s.especie === 'VACUNO').reduce((acc, curr) => acc + curr.cabezas, 0);
+          const ovinosCampo = stockCampo.filter((s) => s.especie === 'OVINO').reduce((acc, curr) => acc + curr.cabezas, 0);
+          const totalCabezasCampo = vacunosCampo + ovinosCampo;
+
+          const totalUGCampo = stockCampo.reduce((sum, item) => {
+            const coef = item.especie === 'OVINO' ? 0.15 : 0.8;
+            return sum + (item.cabezas * coef);
+          }, 0);
+          const cargaUGPerHa = estancia.hectareas_totales > 0 ? (totalUGCampo / estancia.hectareas_totales) : 0;
+
           return (
             <article
               key={estancia.id}
@@ -213,6 +231,27 @@ export const EstanciasPage: React.FC = () => {
                 <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200/60">
                   <span className="text-[10px] font-bold text-slate-500 uppercase block">Pastoreables</span>
                   <span className="font-extrabold text-emerald-700">{estancia.hectareas_pastoreables} Ha</span>
+                </div>
+              </div>
+
+              {/* Bloque de Stock Actual en el Campo */}
+              <div className="bg-emerald-50/70 p-3 rounded-xl border border-emerald-200/90 space-y-1.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-emerald-950 font-extrabold text-xs">
+                    <Beef className="w-4 h-4 text-emerald-700" />
+                    <span>Stock Actual:</span>
+                  </span>
+                  <span className="text-sm font-black text-emerald-950">{totalCabezasCampo.toLocaleString('es-UY')} cab.</span>
+                </div>
+                
+                <div className="flex items-center justify-between text-[11px] text-slate-600 font-semibold">
+                  <span>🐮 Vacunos: <strong className="text-slate-900">{vacunosCampo.toLocaleString('es-UY')}</strong></span>
+                  <span>🐑 Ovinos: <strong className="text-slate-900">{ovinosCampo.toLocaleString('es-UY')}</strong></span>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-emerald-200/70 font-medium text-slate-700">
+                  <span>Carga Total: <strong className="text-slate-900">{totalUGCampo.toFixed(1)} UG</strong></span>
+                  <span>Dotación: <strong className="text-emerald-800 font-bold">{cargaUGPerHa.toFixed(2)} UG/Ha</strong></span>
                 </div>
               </div>
 

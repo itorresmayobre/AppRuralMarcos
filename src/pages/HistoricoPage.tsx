@@ -143,7 +143,7 @@ export const HistoricoPage: React.FC = () => {
 
   // Opciones para CustomSelect de Estancia
   const estanciaOptions: SelectOption[] = useMemo(() => [
-    { value: 'TODOS', label: 'Consolidado Total Empresa' },
+    { value: 'TODAS', label: 'Consolidado Total Empresa (Todas las Estancias)' },
     ...estancias.map((est) => ({
       value: est.id,
       label: est.nombre,
@@ -168,7 +168,7 @@ export const HistoricoPage: React.FC = () => {
 
     const listaEjerciciosReales = Array.from(ejerciciosSet);
 
-    const hectareasTotales = estanciaFiltroId === 'TODOS'
+    const hectareasTotales = (estanciaFiltroId === 'TODAS' || estanciaFiltroId === 'TODOS')
       ? estancias.reduce((a, b) => a + b.hectareas_totales, 0)
       : (estancias.find((e) => e.id === estanciaFiltroId)?.hectareas_totales || 1);
 
@@ -229,7 +229,7 @@ export const HistoricoPage: React.FC = () => {
     const netoTotal = ingTotal - egrTotal;
     const cantEjercicios = resumenEjercicios.length;
     const divisorEjercicios = Math.max(1, cantEjercicios);
-    const haTotales = estanciaFiltroId === 'TODOS'
+    const haTotales = (estanciaFiltroId === 'TODAS' || estanciaFiltroId === 'TODOS')
       ? estancias.reduce((a, b) => a + b.hectareas_totales, 0)
       : (estancias.find((e) => e.id === estanciaFiltroId)?.hectareas_totales || 1);
 

@@ -6,13 +6,13 @@ import { useToastStore } from '../../stores/useToastStore';
 import { supabase } from '../../services/supabase';
 import { TrasladoGanadoModal } from '../modals/TrasladoGanadoModal';
 import { formatearFechaUY } from '../../utils/fechas';
-import { Plus, Beef, Truck, SlidersHorizontal, Check, X, Save } from 'lucide-react';
+import { Plus, Beef, Truck, SlidersHorizontal, Check, X, Save, Building2, MapPin } from 'lucide-react';
 import type { StockGanadero, EspecieGanado, CategoriaVacuno, CategoriaOvino } from '../../types';
 
 export const HaciendaView: React.FC = () => {
   const { usuario } = useAuthStore();
-  const { estanciaSeleccionadaId, estancias } = useEstanciasStore();
-  const { movimientos, obtenerStockEstancia, actualizarStock } = useGanadoStore();
+  const { estanciaSeleccionadaId, estancias, seleccionarEstancia } = useEstanciasStore();
+  const { stockList, movimientos, obtenerStockEstancia, actualizarStock } = useGanadoStore();
   const { mostrarToast } = useToastStore();
 
   const [categoriasBD, setCategoriasBD] = useState<{ especie: EspecieGanado; categoria: string; descripcion?: string }[]>([]);
@@ -281,6 +281,58 @@ export const HaciendaView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Filtro Rápido por Establecimiento / Campo */}
+      <div className="app-card !p-3 space-y-2">
+        <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block">
+          Seleccionar Campo / Establecimiento:
+        </label>
+        <div className="flex space-x-2 overflow-x-auto pb-1">
+          <button
+            type="button"
+            onClick={() => seleccionarEstancia('TODAS')}
+            className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-bold transition-all min-h-[36px] cursor-pointer flex items-center gap-1.5 ${
+              estanciaSeleccionadaId === 'TODAS'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+            }`}
+          >
+            <Building2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Todas las Estancias</span>
+            <span className="ml-1 text-[10px] bg-slate-800 text-emerald-300 px-1.5 py-0.5 rounded-md font-mono font-bold">
+              {stockList.reduce((acc, curr) => acc + curr.cabezas, 0)} cab.
+            </span>
+          </button>
+
+          {estancias.map((est) => {
+            const cabezasEst = stockList
+              .filter((s) => s.estancia_id === est.id)
+              .reduce((acc, curr) => acc + curr.cabezas, 0);
+            const esSel = estanciaSeleccionadaId === est.id;
+
+            return (
+              <button
+                key={est.id}
+                type="button"
+                onClick={() => seleccionarEstancia(est.id)}
+                className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-bold transition-all min-h-[36px] cursor-pointer flex items-center gap-1.5 ${
+                  esSel
+                    ? 'bg-emerald-800 text-white shadow-sm ring-2 ring-emerald-600/30'
+                    : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+                }`}
+              >
+                <MapPin className="w-3.5 h-3.5 text-emerald-600" />
+                <span>{est.nombre}</span>
+                <span className={`ml-1 text-[10px] px-1.5 py-0.5 rounded-md font-mono font-bold ${
+                  esSel ? 'bg-emerald-950 text-emerald-200' : 'bg-slate-100 text-slate-600 border border-slate-200'
+                }`}>
+                  {cabezasEst} cab.
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <nav aria-label="Filtrar por especie" className="flex space-x-2 overflow-x-auto pb-1">
         {(['TODOS', 'VACUNO', 'OVINO'] as const).map((esp) => (

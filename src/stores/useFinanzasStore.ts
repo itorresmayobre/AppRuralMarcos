@@ -61,7 +61,7 @@ export const useFinanzasStore = create<FinanzasState>((set, get) => ({
 
   obtenerTransaccionesEstancia: (estanciaId: string) => {
     const { transacciones } = get();
-    if (estanciaId === 'TODAS') return transacciones;
+    if (!estanciaId || estanciaId === 'TODAS' || estanciaId === 'TODOS') return transacciones;
 
     return transacciones.map((t) => {
       // 1. Si la transacción es prorrateada, obtener la cuota parte correspondiente a esta estancia

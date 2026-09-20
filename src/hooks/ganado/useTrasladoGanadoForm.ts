@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useEstanciasStore } from '../../stores/useEstanciasStore';
 import { useGanadoStore } from '../../stores/useGanadoStore';
 import { useToastStore } from '../../stores/useToastStore';
+import { supabase } from '../../services/supabase';
 import type { SelectOption } from '../../components/ui/CustomSelect';
 import type { EspecieGanado, CategoriaVacuno, CategoriaOvino } from '../../types';
 import { hoyISO } from '../../utils/fechas';
@@ -29,9 +30,26 @@ export const useTrasladoGanadoForm = (onClose: () => void) => {
   const { stockList, registrarMovimiento, cargarGanadoDesdeSupabase } = useGanadoStore();
   const { mostrarToast } = useToastStore();
 
-  // Asegurar que el stock esté fresco al abrir el formulario de traslado
+  const [categoriasBD, setCategoriasBD] = useState<{ especie: string; categoria: string; descripcion?: string }[]>([]);
+
+  // Cargar categorías dinámicas de la BD
   useEffect(() => {
     cargarGanadoDesdeSupabase();
+
+    const cargarCatBD = async () => {
+      try {
+        const { data } = await supabase
+          .from('configuracion_equivalencias_ug')
+          .select('especie, categoria, descripcion');
+        if (data && data.length > 0) {
+          setCategoriasBD(data);
+        }
+      } catch (e) {
+        console.warn('No se pudieron cargar equivalencias UG para traslados:', e);
+      }
+    };
+
+    cargarCatBD();
   }, [cargarGanadoDesdeSupabase]);
 
   const estanciaActual = obtenerEstanciaActual();
@@ -45,12 +63,11 @@ export const useTrasladoGanadoForm = (onClose: () => void) => {
 
   const [especie, setEspecie] = useState<EspecieGanado>('VACUNO');
 
-  // Obtener todas las categorías conocidas de esta especie (estándar + registradas en BD)
+  // Obtener todas las categorías conocidas de esta especie (estándar + configuradas en BD + registradas en Stock)
   const categoriasBase = especie === 'VACUNO' ? CATEGORIAS_VACUNAS : CATEGORIAS_OVINAS;
-  const categoriasEnStock = stockList
-    .filter((s) => s.especie === especie)
-    .map((s) => s.categoria);
-  const todasLasCategorias = Array.from(new Set([...categoriasBase, ...categoriasEnStock]));
+  const categoriasBDConEspecie = categoriasBD.filter((c) => c.especie === especie).map((c) => c.categoria);
+  const categoriasEnStock = stockList.filter((s) => s.especie === especie).map((s) => s.categoria);
+  const todasLasCategorias = Array.from(new Set([...categoriasBase, ...categoriasBDConEspecie, ...categoriasEnStock]));
 
   const [categoria, setCategoria] = useState<string>(
     todasLasCategorias[0] || (especie === 'VACUNO' ? 'VACAS_DE_CRIA' : 'OVEJAS_CRIA')
@@ -195,12 +212,16 @@ export const useTrasladoGanadoForm = (onClose: () => void) => {
   // Opciones de categoría ordenadas para mostrar las que tienen stock primero
   const categoriaOptions: SelectOption[] = todasLasCategorias
     .map((c) => {
+      const descItem = categoriasBD.find((item) => item.especie === especie && item.categoria === c);
+      const nombreMostrar = descItem?.descripcion || c.replace(/_/g, ' ');
+
       const stockCat = stockList.find(
         (s) => s.estancia_id === origenId && s.especie === especie && s.categoria === c
       )?.cabezas || 0;
+
       return {
         value: c,
-        label: `${c.replace(/_/g, ' ')} (${stockCat} cab. disponible${stockCat !== 1 ? 's' : ''})`,
+        label: `${nombreMostrar} (${stockCat} cab. disponible${stockCat !== 1 ? 's' : ''})`,
         stockCat,
       };
     })
