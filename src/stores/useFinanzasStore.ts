@@ -29,28 +29,17 @@ export const useFinanzasStore = create<FinanzasState>((set, get) => ({
   },
 
   agregarTransaccion: async (nuevaData) => {
-    const idBD = await guardarTransaccionBD(nuevaData);
-    const nueva: TransaccionFinanciera = {
-      ...nuevaData,
-      id: idBD || `t-${Date.now()}`,
-      creado_por_usuario: 'usuario.actual',
-    };
-
-    set((state) => ({
-      transacciones: [nueva, ...state.transacciones],
-    }));
+    await guardarTransaccionBD(nuevaData);
+    await get().cargarTransaccionesDesdeSupabase();
   },
 
   actualizarTransaccion: async (id, datos) => {
-    set((state) => ({
-      transacciones: state.transacciones.map((t) => (t.id === id ? { ...t, ...datos } : t)),
-    }));
-
     // Solo consultar Supabase si el ID es un UUID válido
     const esUUIDValido = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id);
-    if (!esUUIDValido) return;
-
-    await actualizarTransaccionBD(id, datos);
+    if (esUUIDValido) {
+      await actualizarTransaccionBD(id, datos);
+    }
+    await get().cargarTransaccionesDesdeSupabase();
   },
 
   eliminarTransaccion: async (id) => {

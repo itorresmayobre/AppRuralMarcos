@@ -21,15 +21,9 @@ export const DashboardView: React.FC = () => {
   const [mostrarOnboardingModal, setMostrarOnboardingModal] = useState(false);
 
   useEffect(() => {
-    if (!useGanadoStore.getState().inicializado) {
-      useGanadoStore.getState().cargarGanadoDesdeSupabase();
-    }
-    if (!useFinanzasStore.getState().inicializado) {
-      useFinanzasStore.getState().cargarTransaccionesDesdeSupabase();
-    }
-    if (!useCampoNotasStore.getState().inicializado) {
-      useCampoNotasStore.getState().cargarNotasYPluviometroDesdeSupabase();
-    }
+    useGanadoStore.getState().cargarGanadoDesdeSupabase();
+    useFinanzasStore.getState().cargarTransaccionesDesdeSupabase();
+    useCampoNotasStore.getState().cargarNotasYPluviometroDesdeSupabase();
   }, []);
 
   const currentRole = usuario?.rol || 'OPERARIO';
@@ -67,11 +61,21 @@ export const DashboardView: React.FC = () => {
 
   const ventasHaciendaUSD = transaccionesVista
     .filter((t) => t.tipo === 'INGRESO')
-    .reduce((sum, t) => sum + (t.moneda === 'USD' ? t.monto : t.monto / 40), 0);
+    .reduce((sum, t) => {
+      const montoUSD = (t.monto_usd !== undefined && t.monto_usd > 0)
+        ? t.monto_usd
+        : (t.moneda === 'USD' ? t.monto : t.monto / (t.tipo_cambio || 40));
+      return sum + montoUSD;
+    }, 0);
 
   const egresosInsumosUSD = transaccionesVista
     .filter((t) => t.tipo === 'EGRESO')
-    .reduce((sum, t) => sum + (t.moneda === 'USD' ? t.monto : t.monto / 40), 0);
+    .reduce((sum, t) => {
+      const montoUSD = (t.monto_usd !== undefined && t.monto_usd > 0)
+        ? t.monto_usd
+        : (t.moneda === 'USD' ? t.monto : t.monto / (t.tipo_cambio || 40));
+      return sum + montoUSD;
+    }, 0);
 
   return (
     <div className="space-y-3 sm:space-y-4">

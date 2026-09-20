@@ -1,17 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFinanzasStore } from '../../stores/useFinanzasStore';
 import { useConceptosFinancierosStore } from '../../stores/useConceptosFinancierosStore';
 import { useEstanciasStore } from '../../stores/useEstanciasStore';
-import { calcularEjercicioYMesAgricola, obtenerEjercicioAgricolaActual } from '../../utils/periodoAgricola';
+import { calcularEjercicioYMesAgricola, obtenerEjercicioAgricolaActual, obtenerListaEjerciciosDinamica } from '../../utils/periodoAgricola';
 import {
   BarChart3,
   TrendingUp,
   TrendingDown,
   DollarSign,
   Tag,
-  ArrowRight
+  ArrowRight,
+  Calendar
 } from 'lucide-react';
+import type { TransaccionFinanciera } from '../../types';
 
 export const MetricasEjercicioCard: React.FC = () => {
   const navigate = useNavigate();
@@ -20,22 +22,34 @@ export const MetricasEjercicioCard: React.FC = () => {
   const { catalog } = useConceptosFinancierosStore();
 
   const transacciones = obtenerTransaccionesEstancia(estanciaSeleccionadaId);
+  const fechasTransacciones = transacciones.map((t) => t.fecha);
+  const ejerciciosDisponibles = obtenerListaEjerciciosDinamica(fechasTransacciones);
 
-  // Ejercicio agrícola actual dinámico (calculado según la fecha del sistema 1 Jul - 30 Jun)
-  const ejercicioActual = obtenerEjercicioAgricolaActual();
+  const ejercicioDefault = obtenerEjercicioAgricolaActual();
+  const [ejercicioSeleccionado, setEjercicioSeleccionado] = useState<string>(ejercicioDefault);
+
+  const obtenerMontoUSD = (t: TransaccionFinanciera): number => {
+    if (t.monto_usd !== undefined && t.monto_usd !== null && t.monto_usd > 0) {
+      return t.monto_usd;
+    }
+    if (t.moneda === 'USD') return t.monto;
+    const tc = t.tipo_cambio && t.tipo_cambio > 0 ? t.tipo_cambio : 40;
+    return Math.round((t.monto / tc) * 100) / 100;
+  };
+
   const transaccionesEjercicio = transacciones.filter((t) => {
     const { ejercicio } = calcularEjercicioYMesAgricola(t.fecha);
     const ef = t.ejercicio_agricola || ejercicio;
-    return ef === ejercicioActual && t.moneda === 'USD';
+    return ef === ejercicioSeleccionado;
   });
 
   const ingresos = transaccionesEjercicio
     .filter((t) => t.tipo === 'INGRESO')
-    .reduce((sum, t) => sum + t.monto, 0);
+    .reduce((sum, t) => sum + obtenerMontoUSD(t), 0);
 
   const egresos = transaccionesEjercicio
     .filter((t) => t.tipo === 'EGRESO')
-    .reduce((sum, t) => sum + t.monto, 0);
+    .reduce((sum, t) => sum + obtenerMontoUSD(t), 0);
 
   const resultadoNeto = ingresos - egresos;
 
@@ -47,17 +61,17 @@ export const MetricasEjercicioCard: React.FC = () => {
       const conc = catalog.find((c) => c.nombre === t.categoria);
       if (conc?.naturaleza_costo === 'FIJO') esFijo = true;
     }
-    return esFijo ? sum + t.monto : sum;
+    return esFijo ? sum + obtenerMontoUSD(t) : sum;
   }, 0);
 
-  const costosVariables = egresos - costosFijos;
+  const costosVariables = Math.max(0, egresos - costosFijos);
   const pctFijos = egresos > 0 ? Math.round((costosFijos / egresos) * 100) : 0;
   const pctVariables = egresos > 0 ? Math.round((costosVariables / egresos) * 100) : 0;
 
   // Top 3 Rubros con más gasto
   const rankingRubrosMap: Record<string, number> = {};
   egresosList.forEach((t) => {
-    rankingRubrosMap[t.categoria] = (rankingRubrosMap[t.categoria] || 0) + t.monto;
+    rankingRubrosMap[t.categoria] = (rankingRubrosMap[t.categoria] || 0) + obtenerMontoUSD(t);
   });
 
   const top3Rubros = Object.entries(rankingRubrosMap)
@@ -74,13 +88,29 @@ export const MetricasEjercicioCard: React.FC = () => {
             <BarChart3 className="w-4 h-4 text-emerald-700" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-              <span>Métricas del Ejercicio Agrícola ({ejercicioActual})</span>
-              <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-900 px-1.5 py-0.2 rounded border border-emerald-200">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-sm font-bold text-slate-900">
+                Métricas del Ejercicio Agrícola
+              </h3>
+              <div className="flex items-center gap-1 bg-slate-100 border border-slate-300 rounded-lg px-2 py-0.5 text-xs font-bold text-slate-800">
+                <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                <select
+                  value={ejercicioSeleccionado}
+                  onChange={(e) => setEjercicioSeleccionado(e.target.value)}
+                  className="bg-transparent font-bold text-slate-900 focus:outline-none cursor-pointer"
+                >
+                  {ejerciciosDisponibles.map((ej) => (
+                    <option key={ej} value={ej}>
+                      {ej} {ej === ejercicioDefault ? '(Actual)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-900 px-1.5 py-0.5 rounded border border-emerald-200">
                 USD
               </span>
-            </h3>
-            <p className="text-[11px] text-slate-500 font-medium">
+            </div>
+            <p className="text-[11px] text-slate-500 font-medium mt-0.5">
               Resumen en tiempo real del flujo de caja y estructura de costos en curso
             </p>
           </div>
