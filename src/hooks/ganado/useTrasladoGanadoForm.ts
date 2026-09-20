@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useEstanciasStore } from '../../stores/useEstanciasStore';
 import { useGanadoStore } from '../../stores/useGanadoStore';
 import { useToastStore } from '../../stores/useToastStore';
@@ -26,8 +26,13 @@ const CATEGORIAS_OVINAS: CategoriaOvino[] = [
 
 export const useTrasladoGanadoForm = (onClose: () => void) => {
   const { estancias, obtenerEstanciaActual } = useEstanciasStore();
-  const { stockList, registrarMovimiento } = useGanadoStore();
+  const { stockList, registrarMovimiento, cargarGanadoDesdeSupabase } = useGanadoStore();
   const { mostrarToast } = useToastStore();
+
+  // Asegurar que el stock esté fresco al abrir el formulario de traslado
+  useEffect(() => {
+    cargarGanadoDesdeSupabase();
+  }, [cargarGanadoDesdeSupabase]);
 
   const estanciaActual = obtenerEstanciaActual();
 
@@ -35,11 +40,43 @@ export const useTrasladoGanadoForm = (onClose: () => void) => {
     estanciaActual?.id || (estancias[0]?.id ?? '')
   );
   const [destinoId, setDestinoId] = useState<string>(
-    estancias.find((e) => e.id !== origenId)?.id || (estancias[1]?.id ?? '')
+    estancias.find((e) => e.id !== (estanciaActual?.id || estancias[0]?.id))?.id || (estancias[1]?.id ?? '')
   );
 
   const [especie, setEspecie] = useState<EspecieGanado>('VACUNO');
-  const [categoria, setCategoria] = useState<string>('TERNEROS');
+
+  // Obtener todas las categorías conocidas de esta especie (estándar + registradas en BD)
+  const categoriasBase = especie === 'VACUNO' ? CATEGORIAS_VACUNAS : CATEGORIAS_OVINAS;
+  const categoriasEnStock = stockList
+    .filter((s) => s.especie === especie)
+    .map((s) => s.categoria);
+  const todasLasCategorias = Array.from(new Set([...categoriasBase, ...categoriasEnStock]));
+
+  const [categoria, setCategoria] = useState<string>(
+    todasLasCategorias[0] || (especie === 'VACUNO' ? 'VACAS_DE_CRIA' : 'OVEJAS_CRIA')
+  );
+
+  // Auto-seleccionar una categoría que sí tenga stock positivo cuando cambie el origen o la especie
+  useEffect(() => {
+    if (!origenId) return;
+
+    const stockCatActual = stockList.find(
+      (s) => s.estancia_id === origenId && s.especie === especie && s.categoria === categoria
+    );
+
+    if (!stockCatActual || stockCatActual.cabezas <= 0) {
+      const primeraConStock = stockList.find(
+        (s) => s.estancia_id === origenId && s.especie === especie && s.cabezas > 0
+      );
+
+      if (primeraConStock) {
+        setCategoria(primeraConStock.categoria);
+      } else if (todasLasCategorias.length > 0) {
+        setCategoria(todasLasCategorias[0]);
+      }
+    }
+  }, [origenId, especie, stockList]);
+
   const [cabezas, setCabezas] = useState<string>('20');
   const [kilosPromedio, setKilosPromedio] = useState<string>('160');
   const [fecha, setFecha] = useState<string>(hoyISO());
@@ -49,11 +86,21 @@ export const useTrasladoGanadoForm = (onClose: () => void) => {
   const [valorizar, setValorizar] = useState<boolean>(true);
   const [precioCabeza, setPrecioCabeza] = useState<string>('350');
 
-  // Stock disponible en la estancia de origen seleccionada
+  // Stock disponible en la estancia de origen seleccionada para la categoría actual
   const stockOrigenItem = stockList.find(
     (s) => s.estancia_id === origenId && s.especie === especie && s.categoria === categoria
   );
   const stockDisponible = stockOrigenItem ? stockOrigenItem.cabezas : 0;
+
+  // Ajustar automáticamente la cantidad de cabezas por defecto si supera el stock disponible
+  useEffect(() => {
+    if (stockDisponible > 0) {
+      const numAct = parseInt(cabezas, 10) || 0;
+      if (numAct === 0 || numAct > stockDisponible) {
+        setCabezas(Math.min(20, stockDisponible).toString());
+      }
+    }
+  }, [stockDisponible]);
 
   const numCabezas = parseInt(cabezas, 10) || 0;
   const numKilosProm = parseFloat(kilosPromedio) || 0;
@@ -61,7 +108,7 @@ export const useTrasladoGanadoForm = (onClose: () => void) => {
   const totalKilos = numCabezas * numKilosProm;
   const totalImputado = valorizar ? numCabezas * numPrecioCab : 0;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!estancias || estancias.length < 2 || !origenId || !destinoId) {
@@ -104,7 +151,7 @@ export const useTrasladoGanadoForm = (onClose: () => void) => {
     const estanciaOrigenNom = estancias.find((e) => e.id === origenId)?.nombre || 'Origen';
     const estanciaDestinoNom = estancias.find((e) => e.id === destinoId)?.nombre || 'Destino';
 
-    registrarMovimiento({
+    await registrarMovimiento({
       estancia_origen_id: origenId,
       estancia_destino_id: destinoId,
       especie,
@@ -113,7 +160,7 @@ export const useTrasladoGanadoForm = (onClose: () => void) => {
       kilos_promedio: numKilosProm > 0 ? numKilosProm : undefined,
       kilos_totales: totalKilos > 0 ? totalKilos : undefined,
       fecha,
-      observaciones: observaciones || `Traslado de ${numCabezas} ${categoria} de ${estanciaOrigenNom} a ${estanciaDestinoNom}`,
+      observaciones: observaciones || `Traslado de ${numCabezas} ${categoria.replace(/_/g, ' ')} de ${estanciaOrigenNom} a ${estanciaDestinoNom}`,
       valorizar_transferencia: valorizar,
       precio_por_cabeza: valorizar ? numPrecioCab : undefined,
       precio_por_kilo: (valorizar && numKilosProm > 0) ? numPrecioCab / numKilosProm : undefined,
@@ -128,8 +175,6 @@ export const useTrasladoGanadoForm = (onClose: () => void) => {
       'EXITO'
     );
 
-    // Limpiar campos y cerrar
-    setCabezas('20');
     setObservaciones('');
     onClose();
   };
@@ -147,19 +192,21 @@ export const useTrasladoGanadoForm = (onClose: () => void) => {
     disabled: e.id === origenId,
   }));
 
-  const categoriaOptions: SelectOption[] = (
-    especie === 'VACUNO' ? CATEGORIAS_VACUNAS : CATEGORIAS_OVINAS
-  ).map((c) => {
-    const stockCat = stockList.find(
-      (s) => s.estancia_id === origenId && s.especie === especie && s.categoria === c
-    )?.cabezas || 0;
-    return {
-      value: c,
-      label: `${c.replace(/_/g, ' ')} (${stockCat} cab.)`,
-    };
-  });
+  // Opciones de categoría ordenadas para mostrar las que tienen stock primero
+  const categoriaOptions: SelectOption[] = todasLasCategorias
+    .map((c) => {
+      const stockCat = stockList.find(
+        (s) => s.estancia_id === origenId && s.especie === especie && s.categoria === c
+      )?.cabezas || 0;
+      return {
+        value: c,
+        label: `${c.replace(/_/g, ' ')} (${stockCat} cab. disponible${stockCat !== 1 ? 's' : ''})`,
+        stockCat,
+      };
+    })
+    .sort((a, b) => b.stockCat - a.stockCat)
+    .map(({ value, label }) => ({ value, label }));
 
-  // Retorno estructurado en submódulos legibles
   return {
     estancias,
     ubicacion: {

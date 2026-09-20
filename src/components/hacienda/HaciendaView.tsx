@@ -18,9 +18,7 @@ export const HaciendaView: React.FC = () => {
   const [categoriasBD, setCategoriasBD] = useState<{ especie: EspecieGanado; categoria: string; descripcion?: string }[]>([]);
 
   useEffect(() => {
-    if (!useGanadoStore.getState().inicializado) {
-      useGanadoStore.getState().cargarGanadoDesdeSupabase();
-    }
+    useGanadoStore.getState().cargarGanadoDesdeSupabase();
 
     const cargarCategoriasBD = async () => {
       try {

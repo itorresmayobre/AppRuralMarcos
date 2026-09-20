@@ -96,13 +96,6 @@ export const useGanadoStore = create<GanadoState>()(
       },
 
       registrarMovimiento: async (movData) => {
-        const newId = `mov-${Date.now()}`;
-        const nuevoMovimiento: MovimientoGanado = {
-          ...movData,
-          id: newId,
-          creado_por_usuario: 'usuario.actual',
-        };
-
         const currentStock = get().stockList;
         const stockOrigen = currentStock.find(
           (s) => s.estancia_id === movData.estancia_origen_id && s.especie === movData.especie && s.categoria === movData.categoria
@@ -130,16 +123,14 @@ export const useGanadoStore = create<GanadoState>()(
           }]);
 
           // 2. Persistir stock actualizado en Supabase (Origen y Destino)
-          if (stockOrigen) {
-            await guardarStockGanaderoBD({
-              id: stockOrigen.id,
-              estancia_id: movData.estancia_origen_id,
-              especie: movData.especie,
-              categoria: movData.categoria,
-              cabezas: cabezasOrigenNuevas,
-              kilos_promedio: stockOrigen.kilos_promedio || movData.kilos_promedio || 0,
-            });
-          }
+          await guardarStockGanaderoBD({
+            id: stockOrigen?.id,
+            estancia_id: movData.estancia_origen_id,
+            especie: movData.especie,
+            categoria: movData.categoria,
+            cabezas: cabezasOrigenNuevas,
+            kilos_promedio: stockOrigen?.kilos_promedio || movData.kilos_promedio || 0,
+          });
 
           await guardarStockGanaderoBD({
             id: stockDestino?.id,
@@ -153,45 +144,8 @@ export const useGanadoStore = create<GanadoState>()(
           console.warn('Error registrando movimiento y actualizando stock en Supabase:', e);
         }
 
-        // 3. Actualizar memoria local en Zustand
-        set((state) => {
-          let destinoEncontrado = false;
-          const updatedStock = state.stockList.map((item) => {
-            if (
-              item.estancia_id === movData.estancia_origen_id &&
-              item.especie === movData.especie &&
-              item.categoria === movData.categoria
-            ) {
-              return { ...item, cabezas: cabezasOrigenNuevas, ultima_actualizacion: movData.fecha };
-            }
-            if (
-              item.estancia_id === movData.estancia_destino_id &&
-              item.especie === movData.especie &&
-              item.categoria === movData.categoria
-            ) {
-              destinoEncontrado = true;
-              return { ...item, cabezas: cabezasDestinoNuevas, ultima_actualizacion: movData.fecha };
-            }
-            return item;
-          });
-
-          if (!destinoEncontrado) {
-            updatedStock.push({
-              id: stockDestino?.id || `temp-${Date.now()}`,
-              estancia_id: movData.estancia_destino_id,
-              especie: movData.especie,
-              categoria: movData.categoria,
-              cabezas: cabezasDestinoNuevas,
-              kilos_promedio: movData.kilos_promedio || 0,
-              ultima_actualizacion: movData.fecha,
-            });
-          }
-
-          return {
-            movimientos: [nuevoMovimiento, ...state.movimientos],
-            stockList: updatedStock,
-          };
-        });
+        // 3. Re-cargar desde Supabase para mantener sincronía total
+        await get().cargarGanadoDesdeSupabase();
       },
 
       obtenerStockEstancia: (estanciaId: string) => {
