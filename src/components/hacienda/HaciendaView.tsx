@@ -70,7 +70,19 @@ export const HaciendaView: React.FC = () => {
   const [altaKilos, setAltaKilos] = useState<number>(0);
 
   const stockActual = obtenerStockEstancia(estanciaSeleccionadaId);
-  const stockFiltrado = stockActual.filter((s) => filtroEspecie === 'TODOS' || s.especie === filtroEspecie);
+  let stockFiltrado = stockActual.filter((s) => filtroEspecie === 'TODOS' || s.especie === filtroEspecie);
+
+  if (estanciaSeleccionadaId === 'TODAS') {
+    stockFiltrado = [...stockFiltrado].sort((a, b) => {
+      const campoA = estancias.find((e) => e.id === a.estancia_id)?.nombre || '';
+      const campoB = estancias.find((e) => e.id === b.estancia_id)?.nombre || '';
+      const compCampo = campoA.localeCompare(campoB, undefined, { numeric: true, sensitivity: 'base' });
+      if (compCampo !== 0) return compCampo;
+      const dateA = new Date(a.ultima_actualizacion || 0).getTime();
+      const dateB = new Date(b.ultima_actualizacion || 0).getTime();
+      return dateB - dateA;
+    });
+  }
 
   const totalCabezasVacunos = stockActual.filter((s) => s.especie === 'VACUNO').reduce((acc, curr) => acc + curr.cabezas, 0);
   const totalCabezasOvinos = stockActual.filter((s) => s.especie === 'OVINO').reduce((acc, curr) => acc + curr.cabezas, 0);
@@ -304,6 +316,7 @@ export const HaciendaView: React.FC = () => {
           <table className="app-table">
             <thead>
               <tr>
+                {estanciaSeleccionadaId === 'TODAS' && <th>Establecimiento / Campo</th>}
                 <th>Especie</th>
                 <th>Categoría DICOSE</th>
                 <th>Cabezas</th>
@@ -316,8 +329,16 @@ export const HaciendaView: React.FC = () => {
               {stockFiltrado.length > 0 ? (
                 stockFiltrado.map((item) => {
                   const isEditing = editingId === item.id;
+                  const nombreEstancia = estancias.find((e) => e.id === item.estancia_id)?.nombre || 'Sin Campo';
                   return (
                     <tr key={item.id} className={isEditing ? 'bg-amber-50/60 transition-colors' : ''}>
+                      {estanciaSeleccionadaId === 'TODAS' && (
+                        <td className="font-bold text-slate-800">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                            {nombreEstancia}
+                          </span>
+                        </td>
+                      )}
                       <td className="font-bold">
                         <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                           item.especie === 'VACUNO' ? 'bg-emerald-100 text-emerald-900 border border-emerald-200' : 'bg-amber-100 text-amber-900 border border-amber-200'
@@ -404,7 +425,7 @@ export const HaciendaView: React.FC = () => {
                 })
               ) : (
                 <tr>
-                  <td colSpan={canEdit ? 6 : 5} className="py-6 text-center text-slate-500">
+                  <td colSpan={(estanciaSeleccionadaId === 'TODAS' ? 1 : 0) + (canEdit ? 6 : 5)} className="py-6 text-center text-slate-500">
                     <p className="text-sm font-bold text-slate-700">No hay hacienda registrada en esta estancia.</p>
                     {canEdit && (
                       <button

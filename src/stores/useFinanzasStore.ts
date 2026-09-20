@@ -73,19 +73,27 @@ export const useFinanzasStore = create<FinanzasState>((set, get) => ({
   obtenerTransaccionesEstancia: (estanciaId: string) => {
     const { transacciones } = get();
     if (estanciaId === 'TODAS') return transacciones;
-    
+
     return transacciones.map((t) => {
-      if (t.estancia_id === estanciaId) return t;
+      // 1. Si la transacción es prorrateada, obtener la cuota parte correspondiente a esta estancia
       if (t.es_prorrateado && t.distribucion_prorrateo) {
         const dist = t.distribucion_prorrateo.find((d) => d.estancia_id === estanciaId);
         if (dist && dist.monto > 0) {
+          const pctFactor = dist.porcentaje / 100;
           return {
             ...t,
             monto: dist.monto,
+            monto_usd: t.monto_usd ? Math.round((t.monto_usd * pctFactor) * 100) / 100 : undefined,
+            monto_uyu: t.monto_uyu ? Math.round((t.monto_uyu * pctFactor) * 100) / 100 : undefined,
             descripcion: `${t.descripcion} (Prorrateado ${dist.porcentaje}%)`,
           };
         }
+        return null;
       }
+
+      // 2. Si es una transacción directa sin prorrateo, verificar si pertenece a esta estancia
+      if (t.estancia_id === estanciaId) return t;
+
       return null;
     }).filter((t): t is TransaccionFinanciera => t !== null);
   },
