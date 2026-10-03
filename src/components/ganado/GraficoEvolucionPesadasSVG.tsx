@@ -216,7 +216,7 @@ export const GraficoEvolucionPesadasSVG: React.FC<GraficoEvolucionPesadasSVGProp
       </div>
 
       {/* Renderizado de SVG */}
-      <div className="relative w-full overflow-x-auto">
+      <div className="relative w-full">
         <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto max-h-[300px] select-none overflow-visible">
           
           {/* Líneas de Grilla Horizontales Eje Y */}
@@ -330,35 +330,44 @@ export const GraficoEvolucionPesadasSVG: React.FC<GraficoEvolucionPesadasSVGProp
           })}
         </svg>
 
-        {/* Tooltip Flotante en Hover (Completamente inmune a eventos del puntero) */}
-        {hoverPoint && (
-          <div
-            className="absolute z-50 bg-slate-900/95 text-white p-2.5 rounded-xl shadow-xl text-[11px] font-bold pointer-events-none select-none transform -translate-x-1/2 -translate-y-[calc(100%+10px)] whitespace-nowrap border border-slate-700 backdrop-blur-xs"
-            style={{
-              left: `${(hoverPoint.x / width) * 100}%`,
-              top: `${(hoverPoint.y / height) * 100}%`,
-              pointerEvents: 'none',
-            }}
-          >
-            <div className="text-emerald-400 border-b border-slate-800 pb-1 mb-1 flex items-center justify-between gap-3">
-              <span>{hoverPoint.categoria.replace(/_/g, ' ')}</span>
-              <span className="text-[10px] bg-slate-800 text-emerald-300 px-1.5 py-0.5 rounded font-mono">
-                {hoverPoint.cabezas} cab.
-              </span>
-            </div>
-            <div>Fecha: {formatearFechaUY(hoverPoint.fecha)}</div>
-            <div className="text-emerald-300 font-extrabold mt-0.5">
-              {metrica === 'KG_PROMEDIO'
-                ? `Peso: ${hoverPoint.valor} kg/cab`
-                : `GDP: ${hoverPoint.valor} g/día`}
-            </div>
-            {hoverPoint.gdp !== undefined && metrica === 'KG_PROMEDIO' && (
-              <div className="text-slate-400 text-[10px] font-medium mt-0.5">
-                Ganancia: {hoverPoint.gdp >= 0 ? `+${hoverPoint.gdp}` : hoverPoint.gdp} g/día
+        {/* Tooltip Flotante en Hover con Posicionamiento Inteligente Anti-Recorte */}
+        {hoverPoint && (() => {
+          const isNearTop = hoverPoint.y < 80;
+          const isNearLeft = hoverPoint.x < 140;
+          const isNearRight = hoverPoint.x > width - 140;
+
+          const alignX = isNearLeft ? 'translate-x-0' : isNearRight ? '-translate-x-full' : '-translate-x-1/2';
+          const alignY = isNearTop ? 'translate-y-4' : '-translate-y-[calc(100%+12px)]';
+
+          return (
+            <div
+              className={`absolute z-50 bg-slate-900/95 text-white p-2.5 rounded-xl shadow-xl text-[11px] font-bold pointer-events-none select-none transform transition-all duration-75 border border-slate-700 backdrop-blur-xs whitespace-nowrap ${alignX} ${alignY}`}
+              style={{
+                left: `${(hoverPoint.x / width) * 100}%`,
+                top: `${(hoverPoint.y / height) * 100}%`,
+                pointerEvents: 'none',
+              }}
+            >
+              <div className="text-emerald-400 border-b border-slate-800 pb-1 mb-1 flex items-center justify-between gap-3">
+                <span>{hoverPoint.categoria.replace(/_/g, ' ')}</span>
+                <span className="text-[10px] bg-slate-800 text-emerald-300 px-1.5 py-0.5 rounded font-mono">
+                  {hoverPoint.cabezas} cab.
+                </span>
               </div>
-            )}
-          </div>
-        )}
+              <div>Fecha: {formatearFechaUY(hoverPoint.fecha)}</div>
+              <div className="text-emerald-300 font-extrabold mt-0.5">
+                {metrica === 'KG_PROMEDIO'
+                  ? `Peso: ${hoverPoint.valor} kg/cab`
+                  : `GDP: ${hoverPoint.valor} g/día`}
+              </div>
+              {hoverPoint.gdp !== undefined && metrica === 'KG_PROMEDIO' && (
+                <div className="text-slate-400 text-[10px] font-medium mt-0.5">
+                  Ganancia: {hoverPoint.gdp >= 0 ? `+${hoverPoint.gdp}` : hoverPoint.gdp} g/día
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
     </article>
   );
