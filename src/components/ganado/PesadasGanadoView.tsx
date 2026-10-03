@@ -7,8 +7,8 @@ import { supabase } from '../../services/supabase';
 import { CustomSelect } from '../ui/CustomSelect';
 import { GraficoEvolucionPesadasSVG } from './GraficoEvolucionPesadasSVG';
 import { formatearFechaUY } from '../../utils/fechas';
-import { Scale, Save, TrendingUp, Calendar, Tag, Building2, Plus, Info } from 'lucide-react';
-import type { EspecieGanado, PesadaGanado } from '../../types';
+import { Scale, Save, TrendingUp, Building2, Plus } from 'lucide-react';
+import type { EspecieGanado } from '../../types';
 
 const FALLBACK_VACUNAS = [
   { value: 'TERNEROS', label: 'Terneros' },
@@ -30,7 +30,7 @@ const FALLBACK_OVINAS = [
 
 export const PesadasGanadoView: React.FC = () => {
   const { estancias, estanciaSeleccionadaId, seleccionarEstancia } = useEstanciasStore();
-  const { pesadas, cargarPesadasDesdeSupabase, registrarPesada, obtenerPesadasEstancia } = usePesadasStore();
+  const { cargarPesadasDesdeSupabase, registrarPesada, obtenerPesadasEstancia } = usePesadasStore();
   const { stockList, cargarGanadoDesdeSupabase: cargarStockBD } = useGanadoStore();
   const { mostrarToast } = useToastStore();
 
