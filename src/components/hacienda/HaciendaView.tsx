@@ -7,7 +7,7 @@ import { supabase } from '../../services/supabase';
 import { TrasladoGanadoModal } from '../modals/TrasladoGanadoModal';
 import { MortandadGanadoModal } from '../modals/MortandadGanadoModal';
 import { RecategorizarGanadoModal } from '../modals/RecategorizarGanadoModal';
-import { formatearFechaUY } from '../../utils/fechas';
+import { formatearFechaUY, formatearCategoriaGanado } from '../../utils/fechas';
 import { Plus, Beef, Truck, SlidersHorizontal, Check, X, Save, Building2, MapPin, Skull, RefreshCw } from 'lucide-react';
 import type { StockGanadero, EspecieGanado, CategoriaVacuno, CategoriaOvino } from '../../types';
 
@@ -419,7 +419,7 @@ export const HaciendaView: React.FC = () => {
                         </span>
                       </td>
                       <td className="font-bold text-slate-800">
-                        {item.categoria.replace(/_/g, ' ')}
+                        {formatearCategoriaGanado(item.categoria, categoriasBD)}
                       </td>
                       <td className="font-bold text-slate-900 text-xs">
                         {isEditing ? (
@@ -614,7 +614,7 @@ export const HaciendaView: React.FC = () => {
                         )}
                       </td>
                       <td className="font-bold text-slate-900">
-                        {m.cabezas} {m.categoria.replace(/_/g, ' ')} ({m.especie})
+                        {m.cabezas} {formatearCategoriaGanado(m.categoria, categoriasBD)} ({m.especie})
                         {m.kilos_totales ? <span className="text-xs font-normal text-slate-500 block">{m.kilos_totales} kg ({m.kilos_promedio || '-'} kg/cab)</span> : null}
                       </td>
                       <td className="text-slate-600 font-medium">

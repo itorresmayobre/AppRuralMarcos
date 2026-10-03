@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import type { PesadaGanado } from '../../types';
-import { formatearFechaUY } from '../../utils/fechas';
+import { formatearFechaUY, formatearCategoriaGanado } from '../../utils/fechas';
 import { TrendingUp, LineChart } from 'lucide-react';
 
 interface GraficoEvolucionPesadasSVGProps {

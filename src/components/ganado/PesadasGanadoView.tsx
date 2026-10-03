@@ -6,7 +6,7 @@ import { useToastStore } from '../../stores/useToastStore';
 import { supabase } from '../../services/supabase';
 import { CustomSelect } from '../ui/CustomSelect';
 import { GraficoEvolucionPesadasSVG } from './GraficoEvolucionPesadasSVG';
-import { formatearFechaUY } from '../../utils/fechas';
+import { formatearFechaUY, formatearCategoriaGanado } from '../../utils/fechas';
 import { Scale, Save, TrendingUp, Building2, Plus } from 'lucide-react';
 import type { EspecieGanado } from '../../types';
 
@@ -487,7 +487,7 @@ export const PesadasGanadoView: React.FC = () => {
                       </td>
                       <td className="font-bold text-slate-800">{nombreCampo}</td>
                       <td className="font-bold text-slate-900">
-                        {p.categoria.replace(/_/g, ' ')} <span className="text-slate-500 font-normal">({p.especie})</span>
+                        {formatearCategoriaGanado(p.categoria, categoriasBD)} <span className="text-slate-500 font-normal">({p.especie})</span>
                       </td>
                       <td className="font-bold text-slate-800">{p.cabezas} cab.</td>
                       <td className="font-extrabold text-slate-950 text-sm">{p.kilos_promedio} kg/cab</td>

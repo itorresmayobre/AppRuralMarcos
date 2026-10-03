@@ -1,3 +1,5 @@
+import { useGanadoStore } from '../stores/useGanadoStore';
+
 /**
  * Utilidades centralizadas para manejo de fechas en formato uruguayo (DD/MM/YYYY).
  * Resuelve desfasajes de días provocados por conversiones de zona horaria (UTC vs UYT local)
@@ -94,3 +96,49 @@ export function aFechaInputHTML(fecha: string | Date | null | undefined): string
 
   return hoyISO();
 }
+
+/**
+ * Formatea un código de categoría de ganado (ej. 'VAQUILLONAS_MAS_2')
+ * a una etiqueta clara y elegante (ej. 'Vaquillonas +2 años').
+ * Prioriza en un 100% las descripciones configuradas en la BD Supabase.
+ */
+export function formatearCategoriaGanado(
+  categoria: string,
+  categoriasBD?: { categoria: string; descripcion?: string }[]
+): string {
+  if (!categoria) return '-';
+
+  // 1. Si se le pasa un listado específico
+  if (categoriasBD && categoriasBD.length > 0) {
+    const encontrada = categoriasBD.find((c) => c.categoria === categoria);
+    if (encontrada?.descripcion) return encontrada.descripcion;
+  }
+
+  // 2. Si la tienda global useGanadoStore ya cargó la tabla de Supabase BD
+  const catsGlobales = useGanadoStore.getState().categoriasBD;
+  if (catsGlobales && catsGlobales.length > 0) {
+    const encontrada = catsGlobales.find((c) => c.categoria === categoria);
+    if (encontrada?.descripcion) return encontrada.descripcion;
+  }
+
+  const NOMBRES_ESTANDAR: Record<string, string> = {
+    TERNEROS: 'Terneros',
+    TERNERAS: 'Terneras',
+    NOVILLOS_1_2: 'Novillos 1-2 años',
+    NOVILLOS_2_3: 'Novillos 2-3 años',
+    NOVILLOS_MAS_2: 'Novillos +2 años',
+    NOVILLOS_MAS_3: 'Novillos +3 años',
+    VAQUILLONAS_1_2: 'Vaquillonas 1-2 años',
+    VAQUILLONAS_MAS_2: 'Vaquillonas +2 años',
+    VACAS_DE_CRIA: 'Vacas de Cría',
+    VACAS_INVERNADAS: 'Vacas Invernadas',
+    TOROS: 'Toros',
+    CORDEROS_AS: 'Corderos/as',
+    OVEJAS_CRIA: 'Ovejas de Cría',
+    CAPONES: 'Capones',
+    CARNEROS: 'Carneros',
+  };
+
+  return NOMBRES_ESTANDAR[categoria] || categoria.replace(/_/g, ' ');
+}
+

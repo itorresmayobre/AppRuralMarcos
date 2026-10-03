@@ -7,6 +7,7 @@ import { useAuthStore } from './useAuthStore';
 interface GanadoState {
   stockList: StockGanadero[];
   movimientos: MovimientoGanado[];
+  categoriasBD: { especie: EspecieGanado; categoria: string; descripcion: string }[];
   cargando: boolean;
   inicializado: boolean;
   cargarGanadoDesdeSupabase: () => Promise<void>;
@@ -28,12 +29,30 @@ export const useGanadoStore = create<GanadoState>()(
     (set, get) => ({
       stockList: [],
       movimientos: [],
+      categoriasBD: [],
       cargando: false,
       inicializado: false,
 
       cargarGanadoDesdeSupabase: async () => {
         set({ cargando: true });
         const datosStock = await obtenerStockGanaderoBD();
+
+        let datosCategorias: { especie: EspecieGanado; categoria: string; descripcion: string }[] = [];
+        try {
+          const { data: cats } = await supabase
+            .from('configuracion_equivalencias_ug')
+            .select('especie, categoria, descripcion');
+
+          if (cats && cats.length > 0) {
+            datosCategorias = cats.map((c) => ({
+              especie: c.especie as EspecieGanado,
+              categoria: c.categoria,
+              descripcion: c.descripcion || c.categoria.replace(/_/g, ' '),
+            }));
+          }
+        } catch (e) {
+          console.warn('Error cargando equivalencias UG de Supabase:', e);
+        }
 
         let datosMovimientos: MovimientoGanado[] = [];
         try {
@@ -72,6 +91,7 @@ export const useGanadoStore = create<GanadoState>()(
         set({
           stockList: datosStock || [],
           movimientos: datosMovimientos,
+          categoriasBD: datosCategorias,
           cargando: false,
           inicializado: true,
         });
