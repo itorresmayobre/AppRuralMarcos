@@ -356,6 +356,135 @@ export const TransaccionModal: React.FC<TransaccionModalProps> = ({ isOpen, onCl
             </div>
           )}
 
+          {/* Panel Especial de Hacienda y Descuento/Suma de Stock */}
+          <div className="space-y-2 bg-gradient-to-r from-amber-50/70 to-emerald-50/70 p-3 rounded-2xl border border-emerald-200/80">
+            <div className="flex items-center justify-between">
+              <label htmlFor="chk-sincro-ganado" className="font-extrabold text-slate-900 text-xs flex items-center gap-1.5 cursor-pointer">
+                <span>🐂 Detalle de Hacienda y Sincronización de Stock</span>
+              </label>
+              <input
+                id="chk-sincro-ganado"
+                type="checkbox"
+                checked={form.sincronizarGanado}
+                onChange={(e) => form.setSincronizarGanado(e.target.checked)}
+                className="w-4 h-4 accent-emerald-600 rounded cursor-pointer"
+              />
+            </div>
+
+            {form.sincronizarGanado && (
+              <div className="space-y-2.5 pt-2 border-t border-emerald-200/60 animate-fadeIn">
+                <p className="text-[11px] text-slate-600 font-medium">
+                  {form.tipoFinanciero === 'INGRESO'
+                    ? 'Al guardar la venta, se descontarán las cabezas del stock del campo seleccionado.'
+                    : 'Al guardar la compra, se sumarán las cabezas al stock del campo seleccionado.'}
+                </p>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label htmlFor="ganado-especie" className="font-extrabold text-slate-700 block text-[11px] mb-1">Especie</label>
+                    <select
+                      id="ganado-especie"
+                      value={form.ganadoEspecie}
+                      onChange={(e) => {
+                        const nEsp = e.target.value as any;
+                        form.setGanadoEspecie(nEsp);
+                        form.setGanadoCategoria(nEsp === 'VACUNO' ? 'NOVILLOS_1_2' : 'CORDEROS_AS');
+                      }}
+                      className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500"
+                    >
+                      <option value="VACUNO">🐂 Vacunos</option>
+                      <option value="OVINO">🐑 Ovinos</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="ganado-categoria" className="font-extrabold text-slate-700 block text-[11px] mb-1">Categoría</label>
+                    <select
+                      id="ganado-categoria"
+                      value={form.ganadoCategoria}
+                      onChange={(e) => form.setGanadoCategoria(e.target.value)}
+                      className="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500"
+                    >
+                      {form.ganadoEspecie === 'VACUNO' ? (
+                        <>
+                          <option value="TERNEROS">Terneros</option>
+                          <option value="TERNERAS">Terneras</option>
+                          <option value="NOVILLOS_1_2">Novillos 1-2 años</option>
+                          <option value="NOVILLOS_MAS_2">Novillos +2 años</option>
+                          <option value="VAQUILLONAS_1_2">Vaquillonas 1-2 años</option>
+                          <option value="VAQUILLONAS_MAS_2">Vaquillonas +2 años</option>
+                          <option value="VACAS_DE_CRIA">Vacas de Cría</option>
+                          <option value="TOROS">Toros</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="CORDEROS_AS">Corderos/as</option>
+                          <option value="OVEJAS_CRIA">Ovejas de Cría</option>
+                          <option value="CAPONES">Capones</option>
+                          <option value="CARNEROS">Carneros</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 gap-2">
+                  <div>
+                    <label htmlFor="ganado-cabezas" className="font-extrabold text-slate-800 block text-[10px] mb-1">Cabezas</label>
+                    <input
+                      id="ganado-cabezas"
+                      type="number"
+                      min="1"
+                      placeholder="ej: 40"
+                      value={form.ganadoCabezas}
+                      onChange={(e) => form.handleCabezasChange(e.target.value)}
+                      className="w-full bg-white border border-slate-300 rounded-xl px-2 py-1.5 text-xs font-black text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="ganado-kg-prom" className="font-extrabold text-slate-800 block text-[10px] mb-1">Kg/Cab Prom.</label>
+                    <input
+                      id="ganado-kg-prom"
+                      type="number"
+                      step="0.1"
+                      placeholder="ej: 460"
+                      value={form.ganadoKilosPromedio}
+                      onChange={(e) => form.handleKilosPromedioChange(e.target.value)}
+                      className="w-full bg-white border border-slate-300 rounded-xl px-2 py-1.5 text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="ganado-kg-tot" className="font-extrabold text-slate-800 block text-[10px] mb-1">Kg Totales</label>
+                    <input
+                      id="ganado-kg-tot"
+                      type="number"
+                      step="1"
+                      placeholder="ej: 18400"
+                      value={form.ganadoKilosTotales}
+                      onChange={(e) => form.handleKilosTotalesChange(e.target.value)}
+                      className="w-full bg-white border border-slate-300 rounded-xl px-2 py-1.5 text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="ganado-precio-kg" className="font-extrabold text-slate-800 block text-[10px] mb-1">USD / Kg</label>
+                    <input
+                      id="ganado-precio-kg"
+                      type="number"
+                      step="0.01"
+                      placeholder="ej: 2.10"
+                      value={form.ganadoPrecioKg}
+                      onChange={(e) => form.handlePrecioKgChange(e.target.value)}
+                      className="w-full bg-white border border-slate-300 rounded-xl px-2 py-1.5 text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Fecha y Período Agrícola */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">

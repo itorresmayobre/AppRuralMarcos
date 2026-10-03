@@ -20,10 +20,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 /**
  * Formatea errores provenientes de Supabase / PostgreSQL en un mensaje claro y legible en español.
- */
-export function formatearErrorSupabase(error: any): string {
+ */export function formatearErrorSupabase(error: any): string {
   if (!error) return 'Ocurrió un error desconocido.';
 
+  const status = error.status || error.statusCode || error.status_code || null;
   const code = error.code || '';
   const message = error.message || '';
   const details = error.details || '';
@@ -31,35 +31,49 @@ export function formatearErrorSupabase(error: any): string {
 
   let mensajeClaro = '';
 
-  switch (code) {
-    case '42501':
-      mensajeClaro = 'Error de permisos (RLS). Tu usuario o el cliente público no tiene permisos para insertar en esta tabla.';
-      break;
-    case '23505':
-      mensajeClaro = 'Registro duplicado. La Cédula de Identidad o el correo electrónico ya se encuentra registrado en el sistema.';
-      break;
-    case '23503':
-      mensajeClaro = 'Referencia inválida. Los datos asociados no existen o fueron eliminados.';
-      break;
-    case '23502':
-      mensajeClaro = 'Faltan campos obligatorios para completar este registro en la base de datos.';
-      break;
-    case 'PGRST116':
-      mensajeClaro = 'No se encontró el registro buscado en la base de datos.';
-      break;
-    default:
-      mensajeClaro = message || 'Error al procesar la solicitud en Supabase.';
+  // 1. Evaluar por Código de Estado HTTP de la respuesta de la API
+  if (status === 401) {
+    mensajeClaro = 'HTTP 401: Sesión no autorizada o token expirado. Vuelve a iniciar sesión.';
+  } else if (status === 403) {
+    mensajeClaro = 'HTTP 403 (Acceso Denegado): No tienes permisos suficientes o faltan reglas GRANT/RLS en la tabla.';
+  } else if (status === 404) {
+    mensajeClaro = 'HTTP 404: El recurso o tabla solicitada no existe en el servidor.';
+  } else if (status === 409) {
+    mensajeClaro = 'HTTP 409: Conflicto de datos. El registro ya existe o contraviene una restricción de unicidad.';
+  } else if (status >= 500) {
+    mensajeClaro = `HTTP ${status}: Error interno en el servidor de base de datos. Inténtalo más tarde.`;
+  }
+
+  // 2. Si no hubo coincidencia por estado HTTP, evaluar por Código Postgres/PostgREST
+  if (!mensajeClaro) {
+    switch (code) {
+      case '42501':
+        mensajeClaro = 'Error HTTP 403 / Permisos (42501): Faltan permisos de acceso (GRANT / RLS) en la tabla public.pesadas_ganado.';
+        break;
+      case '23505':
+        mensajeClaro = 'Error HTTP 409 / Registro Duplicado (23505): Ya existe un registro con esta clave en la base de datos.';
+        break;
+      case '23503':
+        mensajeClaro = 'Error HTTP 400 / Clave Foránea (23503): El campo o usuario referenciado no existe.';
+        break;
+      case '23502':
+        mensajeClaro = 'Error HTTP 400 / Campo Requerido (23502): Falta un campo obligatorio para completar el registro.';
+        break;
+      case 'PGRST116':
+        mensajeClaro = 'Error HTTP 404 / No Encontrado: No se encontró el registro solicitado.';
+        break;
+      default:
+        mensajeClaro = message
+          ? `Error ${status ? `HTTP ${status}` : code ? `Postgres (${code})` : ''}: ${message}`
+          : 'Error al procesar la solicitud.';
+    }
   }
 
   const anexos: string[] = [];
   if (details && details !== 'null') anexos.push(`Detalle: ${details}`);
   if (hint && hint !== 'null') anexos.push(`Sugerencia: ${hint}`);
 
-  if (anexos.length > 0) {
-    return `${mensajeClaro} [${anexos.join(' - ')}]`;
-  }
-
-  return mensajeClaro;
+  return anexos.length > 0 ? `${mensajeClaro} [${anexos.join(' - ')}]` : mensajeClaro;
 }
 
 // ==============================================================================
@@ -724,4 +738,91 @@ export async function obtenerKpisDashboardBD(estanciaId: string = 'TODAS'): Prom
     console.warn('Aviso obteniendo KPIs de Supabase RPC:', e);
     return null;
   }
+}
+
+/**
+ * Obtener pesadas de ganado de Supabase
+ */
+export async function obtenerPesadasBD(): Promise<any[]> {
+  try {
+    const { data, error } = await supabase
+      .from('pesadas_ganado')
+      .select('*')
+      .order('fecha', { ascending: false });
+
+    if (error) {
+      console.warn('Error al obtener pesadas de Supabase:', error.message);
+      return [];
+    }
+
+    return (data || []).map((item) => ({
+      id: item.id,
+      estancia_id: item.establecimiento_id,
+      especie: item.especie,
+      categoria: item.categoria,
+      cabezas: item.cabezas,
+      kilos_promedio: item.kilos_promedio,
+      kilos_totales: item.kilos_totales,
+      fecha: item.fecha,
+      observaciones: item.observaciones,
+      registrado_por: item.registrado_por,
+      created_at: item.created_at,
+    }));
+  } catch (e) {
+    console.warn('Excepción al obtener pesadas de Supabase:', e);
+    return [];
+  }
+}
+
+/**
+ * Guardar pesada de ganado en Supabase
+ */
+export async function guardarPesadaBD(pesada: {
+  estancia_id: string;
+  especie: string;
+  categoria: string;
+  cabezas: number;
+  kilos_promedio: number;
+  kilos_totales?: number;
+  fecha: string;
+  observaciones?: string;
+  registrado_por?: string;
+}): Promise<any> {
+  const payload = {
+    establecimiento_id: pesada.estancia_id,
+    especie: pesada.especie,
+    categoria: pesada.categoria,
+    cabezas: pesada.cabezas,
+    kilos_promedio: pesada.kilos_promedio,
+    kilos_totales: pesada.kilos_totales || (pesada.cabezas * pesada.kilos_promedio),
+    fecha: pesada.fecha,
+    observaciones: pesada.observaciones || null,
+    ...(pesada.registrado_por ? { registrado_por: pesada.registrado_por } : {}),
+  };
+
+  const { data, error } = await supabase
+    .from('pesadas_ganado')
+    .insert([payload])
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error('Error al guardar pesada en Supabase:', error);
+    const msg = formatearErrorSupabase(error);
+    throw new Error(msg);
+  }
+
+  return {
+    id: data.id,
+    estancia_id: data.establecimiento_id,
+    especie: data.especie,
+    categoria: data.categoria,
+    cabezas: data.cabezas,
+    kilos_promedio: data.kilos_promedio,
+    kilos_totales: data.kilos_totales,
+    fecha: data.fecha,
+    observaciones: data.observaciones,
+    registrado_por: data.registrado_por,
+    created_at: data.created_at,
+  };
 }

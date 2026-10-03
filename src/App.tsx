@@ -9,6 +9,7 @@ import { EstanciasPage } from './pages/EstanciasPage';
 import { UsuariosPage } from './pages/UsuariosPage';
 import { DashboardView } from './components/dashboard/DashboardView';
 import { HaciendaView } from './components/hacienda/HaciendaView';
+import { PesadasGanadoView } from './components/ganado/PesadasGanadoView';
 import { FinanzasView } from './components/finanzas/FinanzasView';
 import { EstadisticasView } from './components/estadisticas/EstadisticasView';
 import { RegistroEmpresaView } from './components/registro/RegistroEmpresaView';
@@ -87,6 +88,15 @@ export function App() {
             element={
               <ProtectedRoute>
                 <HaciendaView />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/pesadas"
+            element={
+              <ProtectedRoute>
+                <PesadasGanadoView />
               </ProtectedRoute>
             }
           />

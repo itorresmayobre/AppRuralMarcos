@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useEstanciasStore } from '../../stores/useEstanciasStore';
 import { useFinanzasStore } from '../../stores/useFinanzasStore';
+import { useGanadoStore } from '../../stores/useGanadoStore';
 import { useConceptosFinancierosStore } from '../../stores/useConceptosFinancierosStore';
 import { useToastStore } from '../../stores/useToastStore';
 import { useCotizacionDolar } from './useCotizacionDolar';
 import { useProrrateoCampos } from './useProrrateoCampos';
 import { calcularEjercicioYMesAgricola } from '../../utils/periodoAgricola';
 import { hoyISO } from '../../utils/fechas';
-import type { Moneda, TipoTransaccion, TransaccionFinanciera } from '../../types';
+import type { Moneda, TipoTransaccion, TransaccionFinanciera, EspecieGanado } from '../../types';
 
 export const useTransaccionForm = (
   onClose: () => void,
@@ -17,6 +18,7 @@ export const useTransaccionForm = (
   const { usuario } = useAuthStore();
   const { estancias, obtenerEstanciaActual } = useEstanciasStore();
   const { agregarTransaccion, actualizarTransaccion } = useFinanzasStore();
+  const { registrarMovimiento } = useGanadoStore();
   const { catalog, obtenerConceptosActivosPorTipo } = useConceptosFinancierosStore();
   const { mostrarToast } = useToastStore();
 
@@ -43,9 +45,24 @@ export const useTransaccionForm = (
   const [comprobanteTipo, setComprobanteTipo] = useState<'IMAGE' | 'PDF' | undefined>(undefined);
   const [nroFactura, setNroFactura] = useState<string>('');
 
+  // Campos de hacienda vinculados a stock
+  const [sincronizarGanado, setSincronizarGanado] = useState<boolean>(false);
+  const [ganadoEspecie, setGanadoEspecie] = useState<EspecieGanado>('VACUNO');
+  const [ganadoCategoria, setGanadoCategoria] = useState<string>('NOVILLOS_1_2');
+  const [ganadoCabezas, setGanadoCabezas] = useState<string>('');
+  const [ganadoKilosPromedio, setGanadoKilosPromedio] = useState<string>('');
+  const [ganadoKilosTotales, setGanadoKilosTotales] = useState<string>('');
+  const [ganadoPrecioKg, setGanadoPrecioKg] = useState<string>('');
+
   // Consumir Sub-Hooks
   const cotizacion = useCotizacionDolar(fecha);
   const prorrateo = useProrrateoCampos();
+
+  // Activar automáticamente el panel de hacienda si la categoría es Venta o Compra de Hacienda
+  useEffect(() => {
+    const esHacienda = categoria.toLowerCase().includes('hacienda');
+    setSincronizarGanado(esHacienda);
+  }, [categoria]);
 
   useEffect(() => {
     if (transaccionAEditar) {
@@ -83,7 +100,58 @@ export const useTransaccionForm = (
     if (fileType) setComprobanteTipo(fileType);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Handlers sincronizados para kilos y cabezas
+  const handleCabezasChange = (val: string) => {
+    setGanadoCabezas(val);
+    const numCab = parseInt(val) || 0;
+    const numProm = parseFloat(ganadoKilosPromedio) || 0;
+    if (numCab > 0 && numProm > 0) {
+      const tot = Math.round(numCab * numProm);
+      setGanadoKilosTotales(tot.toString());
+      const numMonto = parseFloat(monto) || 0;
+      if (numMonto > 0 && tot > 0) {
+        setGanadoPrecioKg((numMonto / tot).toFixed(2));
+      }
+    }
+  };
+
+  const handleKilosPromedioChange = (val: string) => {
+    setGanadoKilosPromedio(val);
+    const numCab = parseInt(ganadoCabezas) || 0;
+    const numProm = parseFloat(val) || 0;
+    if (numCab > 0 && numProm > 0) {
+      const tot = Math.round(numCab * numProm);
+      setGanadoKilosTotales(tot.toString());
+      const numMonto = parseFloat(monto) || 0;
+      if (numMonto > 0 && tot > 0) {
+        setGanadoPrecioKg((numMonto / tot).toFixed(2));
+      }
+    }
+  };
+
+  const handleKilosTotalesChange = (val: string) => {
+    setGanadoKilosTotales(val);
+    const numTot = parseFloat(val) || 0;
+    const numCab = parseInt(ganadoCabezas) || 0;
+    if (numCab > 0 && numTot > 0) {
+      setGanadoKilosPromedio((numTot / numCab).toFixed(1));
+    }
+    const numMonto = parseFloat(monto) || 0;
+    if (numMonto > 0 && numTot > 0) {
+      setGanadoPrecioKg((numMonto / numTot).toFixed(2));
+    }
+  };
+
+  const handlePrecioKgChange = (val: string) => {
+    setGanadoPrecioKg(val);
+    const numPrecio = parseFloat(val) || 0;
+    const numTot = parseFloat(ganadoKilosTotales) || 0;
+    if (numPrecio > 0 && numTot > 0) {
+      setMonto(Math.round(numPrecio * numTot).toString());
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!estancias || estancias.length === 0 || (!prorrateo.esProrrateado && !estanciaFormId)) {
@@ -132,32 +200,65 @@ export const useTransaccionForm = (
       nro_factura: nroFactura || undefined,
     };
 
-    if (transaccionAEditar?.id) {
-      actualizarTransaccion(transaccionAEditar.id, payload);
-      mostrarToast(
-        'Transacción Actualizada',
-        `Se modificó la transacción por ${moneda} ${valMonto.toLocaleString('es-UY')}`,
-        'EXITO'
-      );
-    } else {
-      agregarTransaccion(payload);
-      mostrarToast(
-        'Transacción Guardada',
-        `Se registró el ${tipoFinanciero.toLowerCase()} por ${moneda} ${valMonto.toLocaleString('es-UY')}`,
-        'EXITO'
-      );
-    }
+    try {
+      if (transaccionAEditar?.id) {
+        await actualizarTransaccion(transaccionAEditar.id, payload);
+        mostrarToast(
+          'Transacción Actualizada',
+          `Se modificó la transacción por ${moneda} ${valMonto.toLocaleString('es-UY')}`,
+          'EXITO'
+        );
+      } else {
+        const transGuardada = await agregarTransaccion(payload);
 
-    // Limpiar formulario y cerrar
-    setMonto('');
-    setDescripcionFinanciera('');
-    setComprobanteUrl('');
-    setComprobanteTipo(undefined);
-    setNroFactura('');
-    onClose();
+        // Si se activó la sincronización con el stock de hacienda
+        const numCab = parseInt(ganadoCabezas) || 0;
+        if (sincronizarGanado && numCab > 0) {
+          const numKgTot = parseFloat(ganadoKilosTotales) || undefined;
+          const numKgProm = parseFloat(ganadoKilosPromedio) || undefined;
+          const numPrecKg = parseFloat(ganadoPrecioKg) || undefined;
+
+          const esVenta = tipoFinanciero === 'INGRESO';
+          await registrarMovimiento({
+            tipo_movimiento: esVenta ? 'VENTA' : 'COMPRA',
+            estancia_origen_id: esVenta ? estanciaIdReal : null,
+            estancia_destino_id: esVenta ? null : estanciaIdReal,
+            especie: ganadoEspecie,
+            categoria: ganadoCategoria as any,
+            cabezas: numCab,
+            kilos_totales: numKgTot,
+            kilos_promedio: numKgProm,
+            precio_por_kilo: numPrecKg,
+            monto_total_imputado: conversion.monto_usd,
+            fecha,
+            observaciones: descripcionFinanciera || (esVenta ? 'Venta de hacienda' : 'Compra de hacienda'),
+            transaccion_id: transGuardada || null,
+          });
+
+          mostrarToast(
+            'Stock de Ganado Actualizado',
+            `Se ${esVenta ? 'descontaron' : 'sumaron'} ${numCab} cabezas (${ganadoCategoria}) en el stock.`,
+            'EXITO'
+          );
+        }
+      }
+
+      // Limpiar formulario y cerrar
+      setMonto('');
+      setDescripcionFinanciera('');
+      setComprobanteUrl('');
+      setComprobanteTipo(undefined);
+      setNroFactura('');
+      setGanadoCabezas('');
+      setGanadoKilosPromedio('');
+      setGanadoKilosTotales('');
+      setGanadoPrecioKg('');
+      onClose();
+    } catch (err) {
+      console.error('Error al guardar transacción:', err);
+    }
   };
 
-  // Retorno estructurado por submódulos legibles
   return {
     puedeVerFinanzas,
     estanciaFormId,
@@ -187,5 +288,20 @@ export const useTransaccionForm = (
     prorrateo,
     handleSeleccionarCategoria,
     handleSubmit,
+    // Estados de Hacienda
+    sincronizarGanado,
+    setSincronizarGanado,
+    ganadoEspecie,
+    setGanadoEspecie,
+    ganadoCategoria,
+    setGanadoCategoria,
+    ganadoCabezas,
+    handleCabezasChange,
+    ganadoKilosPromedio,
+    handleKilosPromedioChange,
+    ganadoKilosTotales,
+    handleKilosTotalesChange,
+    ganadoPrecioKg,
+    handlePrecioKgChange,
   };
 };

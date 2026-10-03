@@ -191,13 +191,19 @@ export interface ConceptoEmpresaConfig {
   monto_recurrente_default?: number;
 }
 
+export type TipoMovimientoGanado = 'TRASLADO' | 'VENTA' | 'COMPRA' | 'MUERTE' | 'ALTA' | 'CAMBIO_CATEGORIA';
+
 export interface MovimientoGanado {
   id: string;
-  estancia_origen_id: string;
-  estancia_destino_id: string;
+  estancia_origen_id?: string | null;
+  estancia_destino_id?: string | null;
   empresa_id?: string;
+  tipo_movimiento?: TipoMovimientoGanado;
+  causa_baja?: string;
+  transaccion_id?: string | null;
   especie: EspecieGanado;
   categoria: CategoriaVacuno | CategoriaOvino;
+  categoria_destino?: CategoriaVacuno | CategoriaOvino | string;
   cabezas: number;
   kilos_totales?: number;
   kilos_promedio?: number;
@@ -249,4 +255,18 @@ export interface NotaCampo {
   prioridad: 'BAJA' | 'MEDIA' | 'ALTA';
   imagen_url?: string;
   creado_por: string;
+}
+
+export interface PesadaGanado {
+  id: string;
+  estancia_id: string;
+  especie: EspecieGanado;
+  categoria: CategoriaVacuno | CategoriaOvino | string;
+  cabezas: number;
+  kilos_promedio: number;
+  kilos_totales?: number;
+  fecha: string;
+  observaciones?: string;
+  registrado_por?: string;
+  created_at?: string;
 }

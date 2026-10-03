@@ -113,15 +113,77 @@ export const useGanadoStore = create<GanadoState>()(
 
       registrarMovimiento: async (movData) => {
         const currentStock = get().stockList;
-        const stockOrigen = currentStock.find(
-          (s) => s.estancia_id === movData.estancia_origen_id && s.especie === movData.especie && s.categoria === movData.categoria
-        );
-        const stockDestino = currentStock.find(
-          (s) => s.estancia_id === movData.estancia_destino_id && s.especie === movData.especie && s.categoria === movData.categoria
-        );
+        const tipo = movData.tipo_movimiento || 'TRASLADO';
 
-        const cabezasOrigenNuevas = Math.max(0, (stockOrigen?.cabezas || 0) - movData.cabezas);
-        const cabezasDestinoNuevas = (stockDestino?.cabezas || 0) + movData.cabezas;
+        if (tipo === 'CAMBIO_CATEGORIA' && movData.estancia_origen_id && movData.categoria_destino) {
+          const catDestino = movData.categoria_destino as any;
+
+          const stockOrigen = currentStock.find(
+            (s) => s.estancia_id === movData.estancia_origen_id && s.especie === movData.especie && s.categoria === movData.categoria
+          );
+          const stockDestino = currentStock.find(
+            (s) => s.estancia_id === movData.estancia_origen_id && s.especie === movData.especie && s.categoria === catDestino
+          );
+
+          try {
+            const usuario = useAuthStore.getState().usuario;
+            const usuarioId = usuario?.id || null;
+
+            await supabase.from('movimientos_ganado').insert([{
+              estancia_origen_id: movData.estancia_origen_id,
+              estancia_destino_id: movData.estancia_origen_id,
+              tipo_movimiento: 'CAMBIO_CATEGORIA',
+              especie: movData.especie,
+              categoria: movData.categoria,
+              cabezas: movData.cabezas,
+              kilos_totales: movData.kilos_totales || null,
+              kilos_promedio: movData.kilos_promedio || null,
+              fecha: movData.fecha,
+              observaciones: movData.observaciones || `Recategorización a ${catDestino.replace(/_/g, ' ')}`,
+              monto_total_imputado: 0,
+              ...(usuarioId ? { creado_por: usuarioId } : {}),
+            }]);
+
+            // Restar de categoría origen
+            const cabezasOrigenNuevas = Math.max(0, (stockOrigen?.cabezas || 0) - movData.cabezas);
+            await guardarStockGanaderoBD({
+              id: stockOrigen?.id,
+              estancia_id: movData.estancia_origen_id,
+              especie: movData.especie,
+              categoria: movData.categoria,
+              cabezas: cabezasOrigenNuevas,
+              kilos_promedio: stockOrigen?.kilos_promedio || movData.kilos_promedio || 0,
+            });
+
+            // Sumar a categoría destino
+            const cabezasDestinoNuevas = (stockDestino?.cabezas || 0) + movData.cabezas;
+            await guardarStockGanaderoBD({
+              id: stockDestino?.id,
+              estancia_id: movData.estancia_origen_id,
+              especie: movData.especie,
+              categoria: catDestino,
+              cabezas: cabezasDestinoNuevas,
+              kilos_promedio: movData.kilos_promedio || stockOrigen?.kilos_promedio || stockDestino?.kilos_promedio || 0,
+            });
+          } catch (e) {
+            console.warn('Error al registrar recategorización de ganado:', e);
+          }
+
+          await get().cargarGanadoDesdeSupabase();
+          return;
+        }
+
+        const stockOrigen = movData.estancia_origen_id
+          ? currentStock.find(
+              (s) => s.estancia_id === movData.estancia_origen_id && s.especie === movData.especie && s.categoria === movData.categoria
+            )
+          : undefined;
+
+        const stockDestino = movData.estancia_destino_id
+          ? currentStock.find(
+              (s) => s.estancia_id === movData.estancia_destino_id && s.especie === movData.especie && s.categoria === movData.categoria
+            )
+          : undefined;
 
         try {
           const usuario = useAuthStore.getState().usuario;
@@ -129,42 +191,52 @@ export const useGanadoStore = create<GanadoState>()(
 
           // 1. Guardar el movimiento en Supabase
           await supabase.from('movimientos_ganado').insert([{
-            estancia_origen_id: movData.estancia_origen_id,
-            estancia_destino_id: movData.estancia_destino_id,
+            estancia_origen_id: movData.estancia_origen_id || null,
+            estancia_destino_id: movData.estancia_destino_id || null,
+            tipo_movimiento: tipo,
+            causa_baja: movData.causa_baja || null,
+            transaccion_id: movData.transaccion_id || null,
             especie: movData.especie,
             categoria: movData.categoria,
             cabezas: movData.cabezas,
-            kilos_totales: movData.kilos_totales,
-            kilos_promedio: movData.kilos_promedio,
+            kilos_totales: movData.kilos_totales || null,
+            kilos_promedio: movData.kilos_promedio || null,
             fecha: movData.fecha,
-            observaciones: movData.observaciones,
+            observaciones: movData.observaciones || null,
             monto_total_imputado: movData.monto_total_imputado || 0,
             ...(usuarioId ? { creado_por: usuarioId } : {}),
           }]);
 
-          // 2. Persistir stock actualizado en Supabase (Origen y Destino)
-          await guardarStockGanaderoBD({
-            id: stockOrigen?.id,
-            estancia_id: movData.estancia_origen_id,
-            especie: movData.especie,
-            categoria: movData.categoria,
-            cabezas: cabezasOrigenNuevas,
-            kilos_promedio: stockOrigen?.kilos_promedio || movData.kilos_promedio || 0,
-          });
+          // 2. Si hay estancia de Origen (Resta stock: Traslado, Venta, Mortandad)
+          if (movData.estancia_origen_id) {
+            const cabezasOrigenNuevas = Math.max(0, (stockOrigen?.cabezas || 0) - movData.cabezas);
+            await guardarStockGanaderoBD({
+              id: stockOrigen?.id,
+              estancia_id: movData.estancia_origen_id,
+              especie: movData.especie,
+              categoria: movData.categoria,
+              cabezas: cabezasOrigenNuevas,
+              kilos_promedio: stockOrigen?.kilos_promedio || movData.kilos_promedio || 0,
+            });
+          }
 
-          await guardarStockGanaderoBD({
-            id: stockDestino?.id,
-            estancia_id: movData.estancia_destino_id,
-            especie: movData.especie,
-            categoria: movData.categoria,
-            cabezas: cabezasDestinoNuevas,
-            kilos_promedio: stockDestino?.kilos_promedio || movData.kilos_promedio || 0,
-          });
+          // 3. Si hay estancia de Destino (Suma stock: Traslado, Compra, Nacimiento)
+          if (movData.estancia_destino_id) {
+            const cabezasDestinoNuevas = (stockDestino?.cabezas || 0) + movData.cabezas;
+            await guardarStockGanaderoBD({
+              id: stockDestino?.id,
+              estancia_id: movData.estancia_destino_id,
+              especie: movData.especie,
+              categoria: movData.categoria,
+              cabezas: cabezasDestinoNuevas,
+              kilos_promedio: movData.kilos_promedio || stockDestino?.kilos_promedio || 0,
+            });
+          }
         } catch (e) {
           console.warn('Error registrando movimiento y actualizando stock en Supabase:', e);
         }
 
-        // 3. Re-cargar desde Supabase para mantener sincronía total
+        // 4. Re-cargar desde Supabase para mantener sincronía total
         await get().cargarGanadoDesdeSupabase();
       },
 

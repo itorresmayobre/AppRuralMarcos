@@ -59,6 +59,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { path: '/dashboard', label: 'Dashboard General', icon: LayoutDashboard, allowed: true },
     { path: '/estancias', label: 'Establecimientos y Campos', icon: Building2, allowed: true },
     { path: '/ganado', label: 'Ganado y Stock', icon: Beef, allowed: true },
+    { path: '/pesadas', label: 'Pesadas de Ganado', icon: Scale, allowed: true },
     { path: '/finanzas', label: 'Ingresos / Egresos', icon: DollarSign, allowed: canViewFinances },
     { path: '/estadisticas', label: 'Estadísticas & Análisis', icon: BarChart3, allowed: canViewFinances },
     { path: '/historico', label: 'Histórico Completo', icon: History, allowed: canViewFinances },

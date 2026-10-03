@@ -7,7 +7,7 @@ interface FinanzasState {
   cargando: boolean;
   inicializado: boolean;
   cargarTransaccionesDesdeSupabase: () => Promise<void>;
-  agregarTransaccion: (nueva: Omit<TransaccionFinanciera, 'id' | 'creado_por_usuario'>) => Promise<void>;
+  agregarTransaccion: (nueva: Omit<TransaccionFinanciera, 'id' | 'creado_por_usuario'>) => Promise<string | null>;
   actualizarTransaccion: (id: string, datos: Partial<TransaccionFinanciera>) => Promise<void>;
   eliminarTransaccion: (id: string) => Promise<void>;
   obtenerTransaccionesEstancia: (estanciaId: string) => TransaccionFinanciera[];
@@ -29,8 +29,9 @@ export const useFinanzasStore = create<FinanzasState>((set, get) => ({
   },
 
   agregarTransaccion: async (nuevaData) => {
-    await guardarTransaccionBD(nuevaData);
+    const res = await guardarTransaccionBD(nuevaData);
     await get().cargarTransaccionesDesdeSupabase();
+    return res;
   },
 
   actualizarTransaccion: async (id, datos) => {
