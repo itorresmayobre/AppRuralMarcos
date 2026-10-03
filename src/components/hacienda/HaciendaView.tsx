@@ -529,7 +529,7 @@ export const HaciendaView: React.FC = () => {
               <Truck className="w-4 h-4 text-emerald-600" />
               <span>Bitácora de Movimientos y Stock (Kardex)</span>
             </h3>
-            <p className="text-[11px] text-slate-500">Historial completo de Traslados, Ventas, Compras, Mortandad y Altas por campo</p>
+            <p className="text-[11px] text-slate-500">Historial completo de Traslados, Ventas, Compras, Muertes y Altas por campo</p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -571,7 +571,7 @@ export const HaciendaView: React.FC = () => {
                       <td>
                         {tipoEv === 'MUERTE' && (
                           <span className="inline-flex items-center gap-1 text-[11px] font-black bg-rose-100 text-rose-800 px-2 py-0.5 rounded-md border border-rose-300">
-                            💀 MORTANDAD
+                            💀 MUERTE
                           </span>
                         )}
                         {tipoEv === 'VENTA' && (
@@ -623,8 +623,13 @@ export const HaciendaView: React.FC = () => {
                       </td>
                       <td className="text-right">
                         {(m.monto_total_imputado || 0) > 0 ? (
-                          <span className="inline-block text-xs font-extrabold bg-emerald-50 text-emerald-900 px-2 py-0.5 rounded border border-emerald-300">
-                            USD {(m.monto_total_imputado || 0).toLocaleString('es-UY')}
+                          <span className={`inline-block text-xs font-extrabold px-2 py-0.5 rounded border ${
+                            m.tipo_movimiento === 'MUERTE'
+                              ? 'bg-rose-50 text-rose-900 border-rose-300'
+                              : 'bg-emerald-50 text-emerald-900 border-emerald-300'
+                          }`}>
+                            {m.tipo_movimiento === 'MUERTE' ? '- USD ' : 'USD '}
+                            {(m.monto_total_imputado || 0).toLocaleString('es-UY')}
                           </span>
                         ) : (
                           <span className="text-slate-400 font-medium">-</span>

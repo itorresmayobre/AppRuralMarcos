@@ -223,7 +223,11 @@ export const useGanadoStore = create<GanadoState>()(
             kilos_promedio: movData.kilos_promedio || null,
             fecha: movData.fecha,
             observaciones: movData.observaciones || null,
-            monto_total_imputado: movData.monto_total_imputado || 0,
+            monto_total_imputado: movData.monto_usd !== undefined ? movData.monto_usd : (movData.monto_total_imputado || 0),
+            moneda: movData.moneda || 'USD',
+            monto_usd: movData.monto_usd !== undefined ? movData.monto_usd : (movData.monto_total_imputado || 0),
+            monto_uyu: movData.monto_uyu || null,
+            tipo_cambio: movData.tipo_cambio || null,
             ...(usuarioId ? { creado_por: usuarioId } : {}),
           }]);
 

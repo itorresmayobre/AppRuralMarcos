@@ -3,7 +3,8 @@ import { useGanadoStore } from '../../stores/useGanadoStore';
 import { useEstanciasStore } from '../../stores/useEstanciasStore';
 import { supabase } from '../../services/supabase';
 import { CustomSelect } from '../ui/CustomSelect';
-import type { EspecieGanado } from '../../types';
+import { useCotizacionDolar } from '../../hooks/finanzas/useCotizacionDolar';
+import type { EspecieGanado, Moneda } from '../../types';
 
 interface MortandadGanadoModalProps {
   isOpen: boolean;
@@ -48,10 +49,24 @@ export const MortandadGanadoModal: React.FC<MortandadGanadoModalProps> = ({ isOp
   const [cabezas, setCabezas] = useState<string>('1');
   const [kilosPromedio, setKilosPromedio] = useState<string>('0');
   const [kilosTotales, setKilosTotales] = useState<string>('0');
+  
+  // Cotización y Moneda
+  const [fecha, setFecha] = useState<string>(new Date().toISOString().split('T')[0]);
+  const { tipoCambio } = useCotizacionDolar(fecha);
+  const [tcInput, setTcInput] = useState<string>('');
+  const [moneda, setMoneda] = useState<Moneda>('USD');
+  const [montoIngresado, setMontoIngresado] = useState<string>('');
+
   const [causaBaja, setCausaBaja] = useState<string>(CAUSAS_COMUNES[0].value);
   const [observaciones, setObservaciones] = useState<string>('');
-  const [fecha, setFecha] = useState<string>(new Date().toISOString().split('T')[0]);
   const [guardando, setGuardando] = useState<boolean>(false);
+
+  // Actualizar cotización por defecto cuando cambia la fecha o la API responde
+  useEffect(() => {
+    if (tipoCambio > 0) {
+      setTcInput(tipoCambio.toString());
+    }
+  }, [tipoCambio]);
 
   // Cargar categorías dinámicas desde Supabase
   useEffect(() => {
@@ -124,6 +139,11 @@ export const MortandadGanadoModal: React.FC<MortandadGanadoModalProps> = ({ isOp
     try {
       const numKgProm = parseFloat(kilosPromedio) || 0;
       const numKgTot = parseFloat(kilosTotales) || 0;
+      const numMonto = parseFloat(montoIngresado) || 0;
+      const numTC = parseFloat(tcInput) || tipoCambio || 40;
+
+      const montoUsd = moneda === 'USD' ? numMonto : (numTC > 0 ? numMonto / numTC : 0);
+      const montoUyu = moneda === 'UYU' ? numMonto : (numMonto * numTC);
 
       await registrarMovimiento({
         tipo_movimiento: 'MUERTE',
@@ -137,7 +157,11 @@ export const MortandadGanadoModal: React.FC<MortandadGanadoModalProps> = ({ isOp
         causa_baja: causaBaja,
         fecha,
         observaciones,
-        monto_total_imputado: 0,
+        moneda,
+        monto_usd: montoUsd,
+        monto_uyu: montoUyu,
+        tipo_cambio: numTC,
+        monto_total_imputado: montoUsd,
       });
 
       onClose();
@@ -164,6 +188,9 @@ export const MortandadGanadoModal: React.FC<MortandadGanadoModalProps> = ({ isOp
       }))
     : especie === 'VACUNO' ? FALLBACK_VACUNAS : FALLBACK_OVINAS;
 
+  const tcEfectivo = parseFloat(tcInput) || tipoCambio || 40;
+  const numMontoVal = parseFloat(montoIngresado) || 0;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs">
       <div className="bg-white rounded-2xl border border-slate-300 shadow-xl w-full max-w-md overflow-hidden flex flex-col">
@@ -172,7 +199,7 @@ export const MortandadGanadoModal: React.FC<MortandadGanadoModalProps> = ({ isOp
         <header className="bg-slate-800 text-white px-5 py-4 flex items-center justify-between border-b border-slate-700">
           <div>
             <h3 className="text-sm font-bold text-white">Registrar Muertes de Ganado</h3>
-            <p className="text-xs text-slate-300">Descuenta animales del stock y registra la pérdida en kilos</p>
+            <p className="text-xs text-slate-300">Descuenta animales del stock y registra la pérdida en kilos y valor</p>
           </div>
           <button
             type="button"
@@ -184,7 +211,7 @@ export const MortandadGanadoModal: React.FC<MortandadGanadoModalProps> = ({ isOp
         </header>
 
         {/* Formulario Práctico y Limpio */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-3.5 text-xs text-slate-800">
+        <form onSubmit={handleSubmit} className="p-5 space-y-3 text-xs text-slate-800">
           
           {/* Estancia */}
           <div>
@@ -282,6 +309,78 @@ export const MortandadGanadoModal: React.FC<MortandadGanadoModalProps> = ({ isOp
             />
           </div>
 
+          {/* Valorización Económica (Multi-moneda USD / UYU) */}
+          <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="font-bold text-slate-800 text-xs">Valor Pérdida Estimada (Opcional)</label>
+              <div className="flex items-center gap-1.5 text-[11px] text-slate-600 font-medium">
+                <span>TC USD/UYU:</span>
+                <input
+                  type="number"
+                  step="0.05"
+                  value={tcInput}
+                  onChange={(e) => setTcInput(e.target.value)}
+                  className="w-16 bg-white border border-slate-300 rounded px-1.5 py-0.5 font-bold text-slate-800 outline-none text-right focus:border-slate-500"
+                />
+              </div>
+            </div>
+
+            {/* Selector de Moneda */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setMoneda('USD')}
+                className={`py-1.5 px-3 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                  moneda === 'USD'
+                    ? 'bg-slate-800 text-white border-slate-800 shadow-xs'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                💵 Dólares (USD)
+              </button>
+              <button
+                type="button"
+                onClick={() => setMoneda('UYU')}
+                className={`py-1.5 px-3 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                  moneda === 'UYU'
+                    ? 'bg-slate-800 text-white border-slate-800 shadow-xs'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                🇺🇾 Pesos (UYU)
+              </button>
+            </div>
+
+            {/* Input de Monto */}
+            <div className="relative">
+              <span className="absolute left-2.5 top-2 text-slate-400 font-bold text-xs">
+                {moneda === 'USD' ? '$' : '$U'}
+              </span>
+              <input
+                id="mort-monto"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="Ej: 450"
+                value={montoIngresado}
+                onChange={(e) => setMontoIngresado(e.target.value)}
+                className="w-full bg-white border border-slate-300 rounded-lg p-2 pl-8 font-extrabold text-slate-900 outline-none focus:border-rose-500 text-xs"
+              />
+            </div>
+
+            {/* Vista Previa de Conversión Automática */}
+            {numMontoVal > 0 && (
+              <div className="text-[11px] text-slate-600 font-medium flex justify-between bg-white px-2.5 py-1 rounded-md border border-slate-200">
+                <span>Equivalente:</span>
+                <span className="font-bold text-slate-900">
+                  {moneda === 'USD'
+                    ? `$U ${(numMontoVal * tcEfectivo).toLocaleString('es-UY', { maximumFractionDigits: 2 })} UYU`
+                    : `USD $ ${(numMontoVal / (tcEfectivo || 1)).toLocaleString('es-UY', { maximumFractionDigits: 2 })}`}
+                </span>
+              </div>
+            )}
+          </div>
+
           {/* Fecha */}
           <div>
             <label htmlFor="mort-fecha" className="font-bold block mb-1">Fecha de la Muerte</label>
@@ -330,3 +429,4 @@ export const MortandadGanadoModal: React.FC<MortandadGanadoModalProps> = ({ isOp
     </div>
   );
 };
+

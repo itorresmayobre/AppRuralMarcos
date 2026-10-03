@@ -213,6 +213,10 @@ export interface MovimientoGanado {
   precio_por_cabeza?: number;
   precio_por_kilo?: number;
   monto_total_imputado: number;
+  moneda?: Moneda;
+  monto_usd?: number;
+  monto_uyu?: number;
+  tipo_cambio?: number;
   creado_por_usuario: string;
 }
 
