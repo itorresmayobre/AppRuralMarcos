@@ -294,7 +294,26 @@ export const GraficoEvolucionPesadasSVG: React.FC<GraficoEvolucionPesadasSVGProp
                   const cy = getY(val);
 
                   return (
-                    <g key={pIdx}>
+                    <g
+                      key={pIdx}
+                      className="cursor-pointer"
+                      onMouseEnter={() =>
+                        setHoverPoint({
+                          fecha: p.fecha,
+                          categoria: p.categoria,
+                          valor: val,
+                          cabezas: p.cabezas,
+                          gdp: p.gdpGramos,
+                          x: cx,
+                          y: cy,
+                        })
+                      }
+                      onMouseLeave={() => setHoverPoint(null)}
+                    >
+                      {/* Zona de contacto invisible más amplia (14px) para evitar parpadeos */}
+                      <circle cx={cx} cy={cy} r="14" fill="transparent" />
+                      
+                      {/* Círculo visual */}
                       <circle
                         cx={cx}
                         cy={cy}
@@ -302,19 +321,6 @@ export const GraficoEvolucionPesadasSVG: React.FC<GraficoEvolucionPesadasSVGProp
                         fill="#ffffff"
                         stroke={colorLine}
                         strokeWidth="2.5"
-                        className="cursor-pointer transition-transform hover:scale-125"
-                        onMouseEnter={() =>
-                          setHoverPoint({
-                            fecha: p.fecha,
-                            categoria: p.categoria,
-                            valor: val,
-                            cabezas: p.cabezas,
-                            gdp: p.gdpGramos,
-                            x: cx,
-                            y: cy,
-                          })
-                        }
-                        onMouseLeave={() => setHoverPoint(null)}
                       />
                     </g>
                   );
@@ -324,26 +330,30 @@ export const GraficoEvolucionPesadasSVG: React.FC<GraficoEvolucionPesadasSVGProp
           })}
         </svg>
 
-        {/* Tooltip Flotante en Hover */}
+        {/* Tooltip Flotante en Hover (Completamente inmune a eventos del puntero) */}
         {hoverPoint && (
           <div
-            className="absolute z-30 bg-slate-900 text-white p-2 rounded-xl shadow-lg text-[11px] font-bold pointer-events-none transform -translate-x-1/2 -translate-y-full mb-2 whitespace-nowrap border border-slate-700"
+            className="absolute z-50 bg-slate-900/95 text-white p-2.5 rounded-xl shadow-xl text-[11px] font-bold pointer-events-none select-none transform -translate-x-1/2 -translate-y-[calc(100%+10px)] whitespace-nowrap border border-slate-700 backdrop-blur-xs"
             style={{
               left: `${(hoverPoint.x / width) * 100}%`,
               top: `${(hoverPoint.y / height) * 100}%`,
+              pointerEvents: 'none',
             }}
           >
-            <div className="text-emerald-400 border-b border-slate-800 pb-1 mb-1">
-              {hoverPoint.categoria.replace(/_/g, ' ')} ({hoverPoint.cabezas} cab.)
+            <div className="text-emerald-400 border-b border-slate-800 pb-1 mb-1 flex items-center justify-between gap-3">
+              <span>{hoverPoint.categoria.replace(/_/g, ' ')}</span>
+              <span className="text-[10px] bg-slate-800 text-emerald-300 px-1.5 py-0.5 rounded font-mono">
+                {hoverPoint.cabezas} cab.
+              </span>
             </div>
             <div>Fecha: {formatearFechaUY(hoverPoint.fecha)}</div>
-            <div>
+            <div className="text-emerald-300 font-extrabold mt-0.5">
               {metrica === 'KG_PROMEDIO'
                 ? `Peso: ${hoverPoint.valor} kg/cab`
                 : `GDP: ${hoverPoint.valor} g/día`}
             </div>
             {hoverPoint.gdp !== undefined && metrica === 'KG_PROMEDIO' && (
-              <div className="text-slate-400 text-[10px]">
+              <div className="text-slate-400 text-[10px] font-medium mt-0.5">
                 Ganancia: {hoverPoint.gdp >= 0 ? `+${hoverPoint.gdp}` : hoverPoint.gdp} g/día
               </div>
             )}
