@@ -61,7 +61,7 @@ export const useTrasladoGanadoForm = (onClose: () => void) => {
     estancias.find((e) => e.id !== (estanciaActual?.id || estancias[0]?.id))?.id || (estancias[1]?.id ?? '')
   );
 
-  const [especie, setEspecie] = useState<EspecieGanado>('VACUNO');
+  const [especie, setEspecieState] = useState<EspecieGanado>('VACUNO');
 
   // Obtener todas las categorías conocidas de esta especie (estándar + configuradas en BD + registradas en Stock)
   const categoriasBase = especie === 'VACUNO' ? CATEGORIAS_VACUNAS : CATEGORIAS_OVINAS;
@@ -72,6 +72,23 @@ export const useTrasladoGanadoForm = (onClose: () => void) => {
   const [categoria, setCategoria] = useState<string>(
     todasLasCategorias[0] || (especie === 'VACUNO' ? 'VACAS_DE_CRIA' : 'OVEJAS_CRIA')
   );
+
+  const setEspecie = (nuevaEspecie: EspecieGanado) => {
+    setEspecieState(nuevaEspecie);
+
+    // Calcular inmediatamente la categoría óptima con stock para la nueva especie
+    const catsBase = nuevaEspecie === 'VACUNO' ? CATEGORIAS_VACUNAS : CATEGORIAS_OVINAS;
+    const catsBD = categoriasBD.filter((c) => c.especie === nuevaEspecie).map((c) => c.categoria);
+    const catsStock = stockList.filter((s) => s.especie === nuevaEspecie).map((s) => s.categoria);
+    const todas = Array.from(new Set([...catsBase, ...catsBD, ...catsStock]));
+
+    const primeraConStock = stockList.find(
+      (s) => s.estancia_id === origenId && s.especie === nuevaEspecie && s.cabezas > 0
+    );
+
+    const nuevaCat = primeraConStock?.categoria || todas[0] || (nuevaEspecie === 'VACUNO' ? 'TERNEROS' : 'OVEJAS_CRIA');
+    setCategoria(nuevaCat);
+  };
 
   // Auto-seleccionar una categoría que sí tenga stock positivo cuando cambie el origen o la especie
   useEffect(() => {

@@ -93,10 +93,7 @@ export const TrasladoGanadoModal: React.FC<TrasladoGanadoModalProps> = ({ isOpen
               <div className="grid grid-cols-2 gap-1.5">
                 <button
                   type="button"
-                  onClick={() => {
-                    form.hacienda.setEspecie('VACUNO');
-                    form.hacienda.setCategoria('TERNEROS');
-                  }}
+                  onClick={() => form.hacienda.setEspecie('VACUNO')}
                   className={`p-2.5 rounded-xl text-xs font-extrabold border transition-all cursor-pointer min-h-[42px] ${
                     form.hacienda.especie === 'VACUNO' ? 'bg-emerald-900 text-white border-emerald-700 shadow-sm' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                   }`}
@@ -105,10 +102,7 @@ export const TrasladoGanadoModal: React.FC<TrasladoGanadoModalProps> = ({ isOpen
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    form.hacienda.setEspecie('OVINO');
-                    form.hacienda.setCategoria('OVEJAS_CRIA');
-                  }}
+                  onClick={() => form.hacienda.setEspecie('OVINO')}
                   className={`p-2.5 rounded-xl text-xs font-extrabold border transition-all cursor-pointer min-h-[42px] ${
                     form.hacienda.especie === 'OVINO' ? 'bg-amber-900 text-white border-amber-700 shadow-sm' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                   }`}
@@ -125,7 +119,7 @@ export const TrasladoGanadoModal: React.FC<TrasladoGanadoModalProps> = ({ isOpen
                 options={form.hacienda.categoriaOptions}
                 onChange={(val) => form.hacienda.setCategoria(val)}
               />
-              <p className={`text-[11px] font-medium mt-1 ${form.hacienda.stockDisponible > 0 ? 'text-slate-500' : 'text-amber-800 font-medium'}`}>
+              <p className={`text-[11px] font-medium mt-1 min-h-[18px] ${form.hacienda.stockDisponible > 0 ? 'text-slate-500' : 'text-amber-800 font-medium'}`}>
                 {form.hacienda.stockDisponible > 0
                   ? `Stock disponible en origen: ${form.hacienda.stockDisponible} cab.`
                   : 'Sin stock disponible de esta categoría en origen.'}
